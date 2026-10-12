@@ -17,6 +17,16 @@ O directamente, sin abrir el editor:
 
 La partida se guarda sola (cada 20 s si hay cambios, al pausar, al completar una sala, al hallar un tesoro y al cerrar). Está en `%APPDATA%\Godot\app_userdata\Thread by Thread\savegame.json`; borrar ese fichero empieza de cero.
 
+## Ejecutable de Windows
+
+Doble clic en `build\ThreadByThread.exe` (un solo fichero, sin instalar nada). Se genera con:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Godot\Godot_v4.7.2-stable_win64.exe" --headless --path . --export-release "Windows Desktop" build/ThreadByThread.exe
+```
+
+Usa los mismos guardados y ajustes que el juego abierto desde el editor. (`export_presets.cfg` y `build/` no se suben a Git.)
+
 ## Controles
 
 | Acción | Tecla |
