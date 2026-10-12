@@ -217,6 +217,8 @@ func _process_empty() -> void:
 		var proxy := hit["collider"] as Area3D
 		if proxy != null:
 			item = proxy.get_parent() as PickableItem
+	if item == null:
+		item = _treasure_in_view()
 	_set_hover(item)
 	if item:
 		_publish({
@@ -227,6 +229,29 @@ func _process_empty() -> void:
 		})
 	else:
 		_publish({})
+
+
+## Los tesoros sobre una estantería alta quedan tapados por el canto de la estantería (la cámara va a
+## 1,6 m y la balda de arriba está a 1,92 m). Se apuntan con un rayo que solo ve los volúmenes de
+## puntería, y vale si entre la cámara y el tesoro no hay nada más que estanterías.
+func _treasure_in_view() -> PickableItem:
+	var hit := _raycast(MASK_PICK, true)
+	if hit.is_empty():
+		return null
+	var proxy := hit["collider"] as Area3D
+	var item := proxy.get_parent() as PickableItem if proxy != null else null
+	if item == null or not item.data.treasure or item.room == null:
+		return null
+	var exclude: Array[RID] = []
+	for unit in item.room.get_units():
+		var body := unit.get_node_or_null("Body") as CollisionObject3D
+		if body != null:
+			exclude.append(body.get_rid())
+	var q := PhysicsRayQueryParameters3D.create(_camera.global_position, hit["position"], MASK_WORLD)
+	q.exclude = exclude
+	if not _camera.get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+		return null
+	return item
 
 
 func _process_picking(delta: float) -> void:

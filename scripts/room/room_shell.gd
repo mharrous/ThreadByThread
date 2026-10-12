@@ -42,6 +42,8 @@ var treasure_spots: Array[Vector3] = []
 
 var _decor: Dictionary = {}
 var _display_slots: Array[Vector3] = []
+var _display_pad_mats: Array[StandardMaterial3D] = []
+var _display_plates: Array[Label3D] = []
 var _mats: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
@@ -568,8 +570,11 @@ func _build_display_shelf() -> void:
 	_box(self, Vector3(1.1, 0.035, 0.22), Vector3(x0, y, z), wood, false)
 	for sx in [-0.42, 0.42]:
 		_box(self, Vector3(0.04, 0.12, 0.2), Vector3(x0 + sx, y - 0.075, z), wood, false)
-	var felt := _mat(Color("2f5f58"), 0.95)
 	for sx in [-0.26, 0.26]:
+		var felt := StandardMaterial3D.new()
+		felt.albedo_color = Color("2f5f58")
+		felt.roughness = 0.95
+		_display_pad_mats.append(felt)
 		var pad := MeshInstance3D.new()
 		var cyl := CylinderMesh.new()
 		cyl.top_radius = 0.075
@@ -583,6 +588,25 @@ func _build_display_shelf() -> void:
 		pad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(pad)
 		_display_slots.append(Vector3(x0 + sx, y + 0.0175 + 0.006, z))
+		# Placa con el nombre del tesoro en el canto de la repisa (mira hacia el interior de la sala, -Z).
+		var plate := Label3D.new()
+		plate.font_size = 34
+		plate.pixel_size = 0.0007
+		plate.outline_size = 0
+		plate.modulate = Color("3a2a1c")
+		plate.rotation.y = PI
+		plate.position = Vector3(x0 + sx, y, z - 0.113)
+		add_child(plate)
+		_display_plates.append(plate)
+
+
+## Cada sitio de la repisa lleva el color del tesoro que le toca (la pastilla) y su nombre en el canto,
+## así se sabe qué falta por encontrar.
+func set_display_slot(i: int, color: Color, text: String) -> void:
+	if i < 0 or i >= _display_pad_mats.size():
+		return
+	_display_pad_mats[i].albedo_color = Color(color.r, color.g, color.b, 1.0)
+	_display_plates[i].text = text
 
 
 ## Registra una decoración oculta hasta que se desbloquee (`unlock_decor`).

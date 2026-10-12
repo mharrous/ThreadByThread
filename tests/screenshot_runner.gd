@@ -165,6 +165,10 @@ func _run() -> void:
 		for i in 12:
 			await get_tree().process_frame
 		await _shot("libro")
+		menu._show_book(false)
+		for i in 12:
+			await get_tree().process_frame
+		await _shot("menu")
 		get_tree().quit()
 		return
 	if _treasures:

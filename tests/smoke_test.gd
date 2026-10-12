@@ -245,6 +245,13 @@ func _test_treasures(room: RoomController) -> void:
 		var t: PickableItem = spots[i]
 		var tdata := t.data
 		var tid := t.get_instance_id()
+		if t.global_position.y - room.global_position.y > 1.0:
+			# Tesoro alto (encima de una estantería): debe poder apuntarse de pie a una distancia normal.
+			player.teleport(Vector3(t.global_position.x, room.global_position.y, t.global_position.z + 1.8))
+			await _settle()
+			player.look_at_point(t.global_position)
+			await _frames(3)
+			_check(holder.hover_item == t, "el tesoro alto '%s' se apunta desde 1,8 m (aparece la acción de recoger)" % tdata.id)
 		var ok := await _stand_and_look_at_item(room, t)
 		_check(ok, "se puede apuntar al tesoro '%s'" % tdata.id)
 		if not ok:

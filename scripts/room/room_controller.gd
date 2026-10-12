@@ -282,6 +282,8 @@ func _spawn_treasures() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed + 99
 	for i in treasure_catalog.items.size():
+		shell.set_display_slot(i, treasure_catalog.items[i].color, treasure_catalog.items[i].display_name)
+	for i in treasure_catalog.items.size():
 		if i >= shell.treasure_spots.size():
 			push_warning("La sala %s no tiene sitio para el tesoro %d" % [room_id, i])
 			break

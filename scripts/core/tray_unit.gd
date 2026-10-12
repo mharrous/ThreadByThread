@@ -160,11 +160,11 @@ func _build_fallback_visual(width: float) -> void:
 
 func _build_labels() -> void:
 	for r in rows:
-		# Fondo de la celda teñido con el color de su tipo.
+		# Fondo de la celda del color de su tipo (se ve a qué celda va cada cosa); sin color hasta que se asigna el tipo.
 		var floor_mat := StandardMaterial3D.new()
 		floor_mat.albedo_color = Color(1, 1, 1, 0.0)
 		floor_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		floor_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		floor_mat.roughness = 0.85
 		_cell_mats.append(floor_mat)
 		var quad := MeshInstance3D.new()
 		var qm := QuadMesh.new()
@@ -184,21 +184,25 @@ func _build_labels() -> void:
 		plaque_mat.emission = Color("d9c4a0")
 		plaque_mat.emission_energy_multiplier = 0.0
 		_plaque_mats.append(plaque_mat)
-		var plaque := MeshInstance3D.new()
-		var pm := BoxMesh.new()
-		pm.size = Vector3(cell_width - 0.02, 0.026, 0.004)
-		plaque.mesh = pm
-		plaque.material_override = plaque_mat
-		plaque.position = Vector3(_cell_cx(r), HEIGHT * 0.5 - 0.005, tray_depth * 0.5 + 0.002)
-		add_child(plaque)
-		var label := Label3D.new()
-		label.font_size = 24
-		label.pixel_size = 0.0007
-		label.outline_size = 0
-		label.modulate = Color("2e2118")
-		label.position = Vector3(_cell_cx(r), HEIGHT * 0.5 - 0.005, tray_depth * 0.5 + 0.0048)
-		add_child(label)
-		_plaque_labels.append(label)
+		# Etiqueta en los dos bordes largos: la bandeja está en medio de la mesa y se mira desde ambos lados.
+		for side in [1.0, -1.0]:
+			var plaque := MeshInstance3D.new()
+			var pm := BoxMesh.new()
+			pm.size = Vector3(cell_width - 0.02, 0.026, 0.004)
+			plaque.mesh = pm
+			plaque.material_override = plaque_mat
+			plaque.position = Vector3(_cell_cx(r), HEIGHT * 0.5 - 0.005, side * (tray_depth * 0.5 + 0.002))
+			add_child(plaque)
+			var label := Label3D.new()
+			label.font_size = 30
+			label.pixel_size = 0.0007
+			label.outline_size = 0
+			label.modulate = Color("2e2118")
+			label.position = Vector3(_cell_cx(r), HEIGHT * 0.5 - 0.005, side * (tray_depth * 0.5 + 0.0048))
+			if side < 0.0:
+				label.rotation.y = PI
+			add_child(label)
+			_plaque_labels.append(label)
 
 
 func _refresh_row_visuals(row: int) -> void:
@@ -207,20 +211,18 @@ func _refresh_row_visuals(row: int) -> void:
 		return
 	_plaque_mats[row].albedo_color = data.color
 	_plaque_mats[row].emission = _plaque_mats[row].albedo_color
-	_plaque_labels[row].text = data.sort_label
 	var lum := _plaque_mats[row].albedo_color.get_luminance()
-	_plaque_labels[row].modulate = Color("2e2118") if lum > 0.5 else Color("fff6e6")
+	for label in [_plaque_labels[row * 2], _plaque_labels[row * 2 + 1]]:
+		label.text = data.sort_label
+		label.modulate = Color("2e2118") if lum > 0.5 else Color("fff6e6")
+	# El fondo de la celda lleva el color del tipo (sin transparencia del color: el cristal también se ve).
 	var c := _plaque_mats[row].albedo_color
-	_cell_mats[row].albedo_color = Color(c.r, c.g, c.b, 0.28)
+	_cell_mats[row].albedo_color = Color(c.r, c.g, c.b, 1.0)
 
 
-func _set_marker_visible(row: int, _slot: int, _visible: bool) -> void:
-	# La celda se tiñe mientras tenga sitio; al llenarse se apaga el tinte.
-	if _row_data[row] == null:
-		return
-	var c := _plaque_mats[row].albedo_color
-	var free := first_free_slot(row) >= 0
-	_cell_mats[row].albedo_color = Color(c.r, c.g, c.b, 0.28 if free else 0.0)
+func _set_marker_visible(_row: int, _slot: int, _visible: bool) -> void:
+	# El color de la celda no cambia al llenarse: sigue indicando a qué tipo pertenece.
+	pass
 
 
 func _cell_cx(row: int) -> float:
