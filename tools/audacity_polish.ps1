@@ -8,7 +8,7 @@
 #   tick   golpes y roces: baja un poco los graves + un toque de sala pequeña
 #   chime  campanas: quita graves + sala media con cola
 #   bird   pájaros: sin graves ni agudos duros + reverb de exterior (sensación de distancia)
-# wind (bucle) no se procesa: un filtro rompería la unión del bucle.
+# Los bucles (viento, motores) y los sonidos de la calle no se procesan (ver Get-Chain).
 # -Revert borra los WAV de sfx/ generados por este script y vuelve a la síntesis.
 param(
     [string[]]$Only = @(),
@@ -64,9 +64,11 @@ $Chains = @{
 function Get-Chain([string]$name) {
     $base = $name -replace '_\d+$', ''
     switch -Regex ($base) {
-        '^(place|collection|room_complete)$' { return 'chime' }
+        '^(place|collection|room_complete|treasure|decor_unlock)$' { return 'chime' }
         '^bird$' { return 'bird' }
-        '^wind$' { return $null }
+        # Bucles (un filtro rompería la unión) y sonidos de la calle: ya pasan por el bus "Outdoor" del juego
+        # (filtro paso bajo + reverb), así que no se procesan dos veces.
+        '^(wind|car_loop|van_loop|moto_loop|bike_loop|horn|bike_bell|dog_bark)$' { return $null }
         default { return 'tick' }
     }
 }

@@ -24,12 +24,13 @@ var is_completed := false
 var is_unlocked := true
 
 const CLUSTER_COUNT := 8
+const ROOM_FALLBACK_Z := 1.9
 
 var shell: RoomShell
 var _clusters: Array[Vector2] = []
 var _taken: Array[Vector4] = []        # x, y, z, radio de lo ya colocado en el reparto
 var _items: Array[PickableItem] = []
-var _treasures: Array[PickableItem] = []      # tesoros aÃºn sin encontrar
+var _treasures: Array[PickableItem] = []      # tesoros aún sin encontrar
 var _found: Dictionary = {}                   # id del tesoro -> true
 var _displays: Dictionary = {}                # id del tesoro -> copia expuesta en la repisa
 var _units: Array[StorageUnit] = []
@@ -147,44 +148,53 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 	var r := item.radius
 	var h := item.half_height
 	var tables := shell.tables
-	for attempt in 160:
-		var want_table := false
-		match data.spawn_zone:
-			ItemData.SpawnZone.TABLE:
-				want_table = not tables.is_empty()
-			ItemData.SpawnZone.ANY:
-				want_table = not tables.is_empty() and rng.randf() < 0.25
-		var p: Vector3
-		if want_table:
-			var t: Dictionary = tables[rng.randi() % tables.size()]
-			var rect: Rect2 = t["rect"]
-			var m := minf(r + 0.02, rect.size.x * 0.4)
-			p = Vector3(
-				rng.randf_range(rect.position.x + m, rect.end.x - m),
-				float(t["top_y"]) + h,
-				rng.randf_range(rect.position.y + m, rect.end.y - m))
-		else:
-			var c := _clusters[rng.randi() % _clusters.size()]
-			var spread := 0.35 + attempt * 0.005   # si el montón está lleno, se ensancha
-			var flat := Vector2(c.x + rng.randfn(0.0, spread), c.y + rng.randfn(0.0, spread))
-			if not shell.floor_bounds.has_point(flat) or shell.is_blocked(flat, r):
-				continue
-			p = Vector3(flat.x, h, flat.y)
-		if _is_free(p, r):
-			_taken.append(Vector4(p.x, p.y, p.z, r))
-			return p
-	var fallback := Vector3(rng.randf_range(-1.0, 1.0), h, rng.randf_range(0.0, 1.5))
-	_taken.append(Vector4(fallback.x, fallback.y, fallback.z, r))
-	return fallback
+	# Primero con la separación normal entre objetos; si la sala está muy llena (telas largas,
+	# muchas piezas), se aprieta un poco. Así nunca queda nada inalcanzable.
+	for spacing in [1.15, 0.9, 0.7]:
+		for attempt in 160:
+			var want_table := false
+			match data.spawn_zone:
+				ItemData.SpawnZone.TABLE:
+					want_table = not tables.is_empty()
+				ItemData.SpawnZone.ANY:
+					want_table = not tables.is_empty() and rng.randf() < 0.25
+			var p: Vector3
+			if want_table:
+				var t: Dictionary = tables[rng.randi() % tables.size()]
+				var rect: Rect2 = t["rect"]
+				var m := minf(r + 0.02, rect.size.x * 0.4)
+				p = Vector3(
+					rng.randf_range(rect.position.x + m, rect.end.x - m),
+					float(t["top_y"]) + h,
+					rng.randf_range(rect.position.y + m, rect.end.y - m))
+			else:
+				var c := _clusters[rng.randi() % _clusters.size()]
+				var spread := 0.35 + attempt * 0.005   # si el montón está lleno, se ensancha
+				var flat := Vector2(c.x + rng.randfn(0.0, spread), c.y + rng.randfn(0.0, spread))
+				if not shell.floor_bounds.has_point(flat) or shell.is_blocked(flat, r):
+					continue
+				p = Vector3(flat.x, h, flat.y)
+			if _is_free(p, r, spacing):
+				_taken.append(Vector4(p.x, p.y, p.z, r))
+				return p
+	# Último recurso: cualquier punto del suelo que no esté dentro de un mueble (nunca bajo una mesa).
+	var b := shell.floor_bounds
+	for attempt in 600:
+		var flat := Vector2(rng.randf_range(b.position.x, b.end.x), rng.randf_range(b.position.y, b.end.y))
+		if not shell.is_blocked(flat, r):
+			var q := Vector3(flat.x, h, flat.y)
+			_taken.append(Vector4(q.x, q.y, q.z, r))
+			return q
+	push_warning("Sala %s: no hay sitio libre para %s" % [room_id, data.id])
+	return Vector3(0.0, h, ROOM_FALLBACK_Z)
 
 
-func _is_free(p: Vector3, radius: float) -> bool:
+func _is_free(p: Vector3, radius: float, spacing: float = 1.15) -> bool:
 	for q in _taken:
-		var min_d := (radius + q.w) * 1.15
+		var min_d := (radius + q.w) * spacing
 		if Vector3(q.x, q.y, q.z).distance_squared_to(p) < min_d * min_d:
 			return false
 	return true
-
 
 func _make_clusters(rng: RandomNumberGenerator) -> void:
 	var b := shell.floor_bounds

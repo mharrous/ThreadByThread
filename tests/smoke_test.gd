@@ -2,9 +2,10 @@ extends Node
 ## Prueba de humo de extremo a extremo (sin ventana): arranca la escena principal y, con
 ## eventos de entrada reales, recoge, rechaza, deja, lanza, recoloca y ordena TODOS los objetos
 ## de TODAS las salas, comprobando que las puertas se abren al completar cada una.
-## Ejecutar:  godot --headless --path . res://tests/smoke_test.tscn -- --test-mode [--count=N] [--rooms=K]
+## Ejecutar:  godot --headless --path . res://tests/smoke_test.tscn -- --test-mode [--count=N] [--rooms=K] [--from=J]
 ##   --count=N  cada tipo de objeto genera N unidades (por defecto 1; 0 = las del juego completo)
 ##   --rooms=K  prueba solo las K primeras salas
+##   --from=J   empieza en la sala J (0 = la primera); con --rooms=K prueba las salas J..K-1
 ## Código de salida 0 = todo correcto.
 
 var _failures := 0
@@ -100,7 +101,7 @@ func _pick(room: RoomController, item: PickableItem) -> bool:
 	await _press(&"interact")
 	var ok := await _wait_until(func(): return holder.state == ItemHolder.State.HOLDING)
 	if not (ok and holder.held == item):
-		print("    (diagnóstico) tras E: estado=", holder.state, " sostenido=", holder.held, " item.state=", item.state, " hover=", holder.hover_item)
+		print("    (diagnóstico) tras E: objeto=%s en %s jugador=%s estado=%d sostenido=%s item.state=%d hover=%s" % [item.data.id, item.global_position.snapped(Vector3.ONE * 0.01), player.global_position.snapped(Vector3.ONE * 0.01), holder.state, holder.held, item.state, holder.hover_item])
 	return ok and holder.held == item
 
 
@@ -121,11 +122,14 @@ func _run() -> void:
 	print("== Thread by Thread · prueba de humo ==")
 	var per_color := 1
 	var max_rooms := 99
+	var first_room := 0
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--count="):
 			per_color = int(arg.trim_prefix("--count="))
 		elif arg.begins_with("--rooms="):
 			max_rooms = int(arg.trim_prefix("--rooms="))
+		elif arg.begins_with("--from="):
+			first_room = int(arg.trim_prefix("--from="))
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	main = packed.instantiate()
 	shop = main.get_node("Shop")
@@ -151,7 +155,7 @@ func _run() -> void:
 	_check(shop.rooms.size() >= 1, "la mercería tiene %d sala(s)" % shop.rooms.size())
 	_check(shop.rooms[0].is_unlocked and (shop.rooms.size() < 2 or not shop.rooms[1].is_unlocked), "solo la primera sala empieza desbloqueada")
 
-	for room_i in mini(shop.rooms.size(), max_rooms):
+	for room_i in range(first_room, mini(shop.rooms.size(), max_rooms)):
 		await _test_room(shop.rooms[room_i], room_i)
 
 	print("-- Calle")
@@ -249,6 +253,24 @@ func _test_treasures(room: RoomController) -> void:
 	_check((st["treasures"] as Array).size() == total, "el estado de la sala guarda los tesoros hallados")
 
 
+## Deja el objeto sostenido en algún punto libre del suelo (con las cantidades del juego completo el
+## suelo está lleno de objetos y un punto fijo puede estar ocupado: se prueban varios).
+func _set_down_somewhere_free(room: RoomController, item: PickableItem) -> bool:
+	var candidates: Array[Vector2] = []
+	for gz in [0.4, 1.0, -0.4, 1.5]:
+		for gx in [0.0, -1.0, 1.0, -1.8, 1.8, -0.5, 0.5]:
+			if room.shell.floor_bounds.has_point(Vector2(gx, gz)) and not room.shell.is_blocked(Vector2(gx, gz), 0.35):
+				candidates.append(Vector2(gx, gz))
+	for c in candidates:
+		player.teleport(room.global_position + Vector3(c.x, 0.0, c.y + 0.9))
+		await _settle()
+		player.look_at_point(room.global_position + Vector3(c.x, 0.0, c.y))
+		await _frames(3)
+		await _press(&"set_down")
+		if await _wait_until(func(): return item.state == PickableItem.State.LOOSE, 1.2):
+			return true
+	return false
+
 func _test_room(room: RoomController, room_i: int) -> void:
 	print("== Sala %d: %s ==" % [room_i + 1, room.display_name])
 	player.teleport(room.entry_point())
@@ -300,12 +322,7 @@ func _test_room(room: RoomController, room_i: int) -> void:
 		_check(_rejected == 1 and room.placed_items == 0, "evento de rechazo emitido y progreso intacto")
 
 		print("-- Dejar sobre una superficie")
-		player.teleport(room.global_position + Vector3(0.0, 0.0, 1.3))
-		await _settle()
-		player.look_at_point(room.global_position + Vector3(0.0, 0.0, 0.4))
-		await _frames(3)
-		await _press(&"set_down")
-		_check(await _wait_until(func(): return first.state == PickableItem.State.LOOSE), "dejar en el suelo con clic derecho")
+		_check(await _set_down_somewhere_free(room, first), "dejar en el suelo con clic derecho")
 		_check(holder.state == ItemHolder.State.EMPTY, "las manos quedan libres")
 		_check(absf(first.global_position.y - first.half_height - room.global_position.y) < 0.01, "el objeto reposa sobre el suelo")
 

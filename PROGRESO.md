@@ -1,77 +1,98 @@
 # THREAD BY THREAD — Progreso
 
-Última actualización: 2026-10-12 · Fase 1 cerrada · **Fase 2 en curso (primera entrega lista para revisar)**
+Última actualización: 2026-10-12 · Fases 1 y 2 cerradas · **Fase 3 (progresión) lista para revisar**
 
-## Fase 1 — Prototipo jugable (cerrada, aprobada por el usuario)
+## Resumen de fases
 
-- Sala jugable con **150 ovillos** (10 colores × 15) en montones por el suelo y sobre la mesa.
-- Recoger, sostener, girar, colocar con vista previa, rechazo en fila equivocada, dejar en superficies, progreso, banner final.
-- Verificado con prueba automática de extremo a extremo con 10 y con 150 objetos (ver "Pruebas").
+| Fase | Estado |
+|---|---|
+| 1 · Prototipo jugable (sala de ovillos) | Cerrada y aprobada |
+| 2 · Mejorar la experiencia (física, sonido, paisaje, mobiliario) | Cerrada (pendiente solo tu opinión sobre sonidos y *feel*) |
+| 3 · Progresión (familias, estanterías, salas, colecciones, desbloqueos, guardado) | **Lista para revisar**: espera tu aprobación |
+| 4 · Demo comercial (15–25 min, ejecutable de Windows) | No empezada |
+| 5 · Pruebas y expansión | No empezada |
 
-## Fase 2 — Mejorar la experiencia (primera entrega)
+## Fase 3 — Qué funciona (verificado con pruebas automáticas salvo lo marcado)
 
-Hecho y verificado:
+**Familias de objetos** (todas por datos: un `.tres` por tipo, sin código por objeto):
 
-- **Lanzar objetos (F)**: toque = lanzamiento suave, mantener = más fuerza (anillo de carga alrededor del punto de mira, la mano se recoge hacia atrás al cargar). Rebota, rueda y se detiene.
-- **Física solo cuando hace falta**: los objetos en reposo están congelados (coste de un cuerpo estático). Al lanzarlos se activa su simulación y, al quedar quietos, se vuelven a congelar. Medido: 40 ovillos rebotando a la vez a 420 FPS (1080p, sin VSync, RX 7900 XT).
-- **Perfiles de material** (`data/motion/*.tres`): lana, plástico, madera, metal y tela. Cada uno define rebote, fricción, masa, rodadura, intensidad del aplastamiento y banco de sonido. Los ovillos usan "lana". Los materiales futuros (botones, carretes, cremalleras...) solo necesitan apuntar a un perfil; no hace falta código.
-- **Animación al impactar**: aplastamiento y rebote elástico (muelle amortiguado) a lo largo de la normal del golpe, polvillo suave, sonido según material y fuerza del golpe.
-- **Modelo 3D de ovillo hecho en Blender** (`art/blender/make_yarn_ball.py` → `art/models/yarn_ball.glb`): forma orgánica, hebra suelta, ~1.8k triángulos.
-- **Shader de lana con relieve** (hebras cruzadas con normal perturbada, fibra, borde esponjoso).
-- **Paisaje en la ventana**: prado con 1600 flores, estanque, valla, 30 árboles (algunos en flor) que se mecen con el viento, colinas con bruma, montañas azuladas con nieve y nubes que se desplazan. Sin sombras ni colisiones.
-- **Ambiente sonoro**: brisa en bucle por la ventana y pájaros lejanos ocasionales (posicionales).
-- **Tutorial de 4 pasos** que avanza solo al recoger, apuntar, colocar y lanzar; no vuelve a salir. Interfaz: anillo de carga, ayuda de teclas en el menú de pausa.
-- Cristal y techo con colisión: lo lanzado no escapa de la sala.
+- Lanas: 10 colores de ovillo (sala 1, 150 objetos).
+- Hilos: 10 carretes (algodón en 8 colores y 2 metálicos: dorado y plateado), con shader de hebras.
+- Botones: 10 tipos (madera ×2, plástico ×2, metal ×2, cristal ×2, nácar, vintage), con varias formas (planos, con borde, de pie).
+- Telas: 10 rollos (lisas y estampadas: lino, vichy, rayas, flores, lunares, tartán, vaquero, terciopelo, pana, encaje) y 5 telas dobladas, con shader de tejido y dibujo.
+- Cintas: carretes (satén, vichy, encaje, dorada) y lazos.
+- Accesorios: cremalleras, tijeras (grandes y de bordar), cinta métrica, reglas, dedales (latón y plata), estuches de agujas, acericos, tizas, cajas de costura, latas, patrones, bastidores y planchas.
+- Datos en `data/items/` (generados por `tools/make_item_data.gd`: añadir una variante es añadir una fila a la tabla).
 
-Entrega 2 (hecho y verificado con capturas + pruebas):
+**Contenedores** (`StorageUnit`): estantería (`ShelfUnit`), bandeja de celdas (`TrayUnit`) y panel de ganchos (`PegBoard`). Cada fila/celda acepta un tipo; el resto se rechaza con "negación".
 
-- **Mobiliario modelado en Blender** (`art/blender/make_furniture.py`): estantería con molduras y bordes biselados (2.4k triángulos), mesa con patas cónicas y faldón, cajón de listones, caja de cartón con solapas, planta con maceta y hojas arqueadas. UVs en metros y veta en la dirección correcta de cada pieza. La colisión sigue siendo de cajas simples.
-- **Texturas propias** (`art/textures/`, generadas por `tools/make_textures.gd`, PNG editables en Krita/GIMP): suelo de tablas con veta y nudos, madera clara, cartón ondulado, yeso, friso machihembrado con mapa de normales, alfombra tejida con orla y rombos. Mapas de normales para el relieve.
-- **Materiales compartidos** (`MaterialLibrary`): una instancia por material y mapeo triplanar en paredes y suelo.
-- **Detalles de personalidad**: tres cuadros enmarcados y un reloj en la pared este.
-- **Sonido de colocación melódico**: cada hueco de la fila tiene su nota (escala pentatónica); rellenar una fila de izquierda a derecha toca una escala.
+**Cuatro salas conectadas** (`Shop`, `RoomController`, `RoomShell*`): ovillos, botones y carretes, telas y cintas, almacén de sastrería. 450 objetos en total. La puerta de cada sala (corredera) se abre al ordenar la anterior. Las salas lejanas se ocultan por rendimiento.
 
-Pendiente de la Fase 2 (siguientes entregas):
+**Colecciones**: cada tipo de objeto es una colección; al completar una suena una melodía breve y al completar la sala, otra más larga con banner. El **libro de colecciones** (Esc → *Libro de colecciones*) lista por sala cada colección con su progreso y los tesoros.
 
-- Iluminación: ajuste fino con tus comentarios (hoy sol por la ventana, lámpara y focos; sin iluminación global).
-- Sonidos: **pulidos con Audacity 3.7.9** de forma automática (`tools/audacity_polish.ps1`, por mod-script-pipe): 38 WAV en `art/audio/sfx/` (15 bancos), con graves recortados, sala suave y cola de reverb, al mismo nivel que el original (verificado midiendo picos y energía de la cola). El viento no se procesa (es un bucle). **Nadie los ha escuchado todavía**: los efectos son deliberadamente suaves; ajusta `$Chains` o edita a mano en Audacity (`art/audio/LEEME.txt`). `-Revert` vuelve a la síntesis.
-- Cuadros, reloj y lámpara siguen siendo geometría sencilla; se pueden modelar más adelante.
-- Estantería con otras medidas (filas/anchura distintas) vuelve a usar cajas; el modelo de Blender solo vale para las medidas por defecto.
+**Tesoros escondidos** (opcionales, 2 por sala, 8 en total): versiones de lujo y mayor tamaño de objetos de cada sala, escondidos sobre estanterías, cajones o pilas de cajas. Destellan muy poco y solo de cerca. Al cogerlos se enseñan un instante delante de la cámara y pasan a una repisa de la pared sur de la sala (las pastillas de fieltro vacías son la pista de que hay algo que buscar). No cuentan para ordenar la sala.
+
+**Decoración desbloqueable**: al ordenar una sala por completo aparece una guirnalda de banderines entre las paredes.
+
+**Guardado y carga** (`SaveGame`, `Shop`): JSON, escritura atómica con copia `.bak`, autoguardado cada 20 s si hay cambios, al pausar, al completar sala, al hallar un tesoro y al cerrar. Guarda qué objetos están colocados (y en qué hueco), dónde están los sueltos, salas desbloqueadas, tesoros hallados y sala activa. Un guardado que no encaja con el contenido actual de la sala se ignora con un aviso. Verificado **entre procesos** (`tests\run_persist.ps1`).
+
+**Vista de la ventana** (sala 1 mira a una calle de barrio; salas 2–4 miran a un jardín trasero con montañas):
+
+- Calle con calzada, aceras, bordillos, paso de cebra, farolas, setos y casas de dos y tres plantas modeladas en Blender; árboles de tres tipos, prado con hierba texturizada, estanque y montañas con bruma. Cielo con nubes que se desplazan y sol.
+- **Vida en la calle** (`StreetLife`): un suceso cada 14–40 s como máximo (hasta 3 a la vez, nunca el mismo tipo dos veces seguidas): coche, berlina, furgoneta, bicicleta (a veces con timbre), moto, peatón, peatón con perro (a veces ladra). Las ruedas giran, las personas caminan y los perros trotan. Sonido por un bus "Outdoor" filtrado: ronroneo de motor con efecto Doppler, alguna bocina suave, timbre y ladridos ocasionales.
+- Aparte del sol que entra por la ventana, los objetos de la calle reciben una luz de relleno sin sombras (si no, las fachadas que miran a la ventana quedarían a contraluz).
+
+**Sonidos nuevos** (sintetizados): colocación por material (clic, madera, tela, metal), apertura de puerta, tesoro, decoración y todo el sonido de la calle.
 
 ## Rendimiento medido
 
-Ryzen 7 3700X + RX 7900 XT, 1920×1080, sin VSync, 150 objetos, MSAA 4x, SSAO, glow, niebla volumétrica:
+Ryzen 7 3700X + RX 7900 XT, 1920×1080, sin VSync, 450 objetos en 4 salas, MSAA 4x, SSAO, glow, niebla volumétrica, calle y paisaje:
 
-| Escena | FPS | Frame medio |
-|---|---|---|
-| Vista general | 617 | 1.6 ms |
-| Estanterías | 678 | 1.5 ms |
-| Ventana y paisaje | 654 | 1.5 ms |
-| Suelo lleno de ovillos | 420 | 2.4 ms |
-| 40 ovillos rebotando | 419 | 2.4 ms |
+| Escena | FPS | Frame medio | Draw calls |
+|---|---|---|---|
+| Sala 1 · entrada | 767 | 1.3 ms | 261 |
+| Sala 3 · suelo | 588 | 1.7 ms | 617 |
+| Todas las salas visibles (peor caso) | 380 | 2.6 ms | 995 |
+| 40 objetos rebotando | 441 | 2.3 ms | 560 |
 
-Esto es hardware de gama alta: **no demuestra** los 60 FPS en gama media. Hay margen amplio (≈10×), pero falta probar en un equipo más modesto. Hubo un pico puntual de 37 ms en una escena (probablemente primera vez que se dibuja algo); a vigilar.
+Es hardware de gama alta: **no demuestra** los 60 FPS en gama media. Hay margen amplio (≈6×), pero falta probar en un equipo más modesto.
 
 ## Pruebas automáticas
 
-- `tests\run_smoke.ps1` (10 objetos) y `-ItemsPerColor 15` (150): arranque, recoger, rechazo, dejar, lanzar (rebote, aplastamiento, reposo), ordenar todo, sacar y recolocar, pausa. **Pasan los dos.**
-- `tests\run_shots.ps1`: capturas de render. `tests\run_perf.ps1`: FPS.
+```powershell
+powershell -File tests\run_smoke.ps1 -Count 1 -Rooms 4   # humo de extremo a extremo (1 objeto por tipo)
+powershell -File tests\run_smoke.ps1 -Count 0            # cantidades del juego completo (450 objetos)
+powershell -File tests\run_persist.ps1                   # guardado y carga entre dos procesos
+powershell -File tests\run_perf.ps1                      # FPS a 1080p sin VSync
+powershell -File tests\run_shots.ps1                     # capturas de las salas
+powershell -File tests\run_street_shots.ps1              # capturas de la ventana con cada suceso de la calle
+```
+
+La prueba de humo recoge, rechaza, deja, lanza, ordena todos los objetos de cada sala, comprueba puertas, tesoros (apuntar, coger, exponer, contar), guirnalda, cada tipo de suceso de la calle (avanza, ruedas/piernas giran, lleva sonido), pausa y guardado.
+
+Resultados de hoy: `-Count 1 -Rooms 4` **pasa** (todas las comprobaciones); `run_persist.ps1` **pasa**. `-Count 0` (450 objetos) se ha lanzado tras los últimos cambios; el resultado está en el apartado siguiente.
+
+## Cosas que no puedo comprobar yo (necesitan tus ojos y oídos)
+
+- **Nada de audio se ha escuchado.** Volumen, tono y frecuencia de bocinas, timbres, ladridos, motores y del resto de sonidos son una primera versión. Prueba: abre el juego, ve a la ventana de la sala 1 y espera un par de minutos.
+- El *feel* del lanzamiento, de la sensibilidad y de la distancia de la mano solo se valida a mano.
+- Si la calle te parece demasiado tranquila o demasiado animada: `StreetLife.min_gap` / `max_gap` (hoy 14 y 40 s) en `scripts/room/street_life.gd`.
+- Estética de personas, coches y árboles: es estilo "low-poly" cálido hecho con Blender; si quieres más realismo hay que decidir cuánto presupuesto de arte dedicarle.
 
 ## Problemas conocidos
 
-- No he podido **escuchar** nada: volumen, tono y ritmo de los sonidos (rebotes, viento, pájaros) son una primera versión que debes juzgar tú.
-- El *feel* del lanzamiento (fuerza, arco, rodadura) y de la sensibilidad solo se valida a mano.
 - Un ovillo lanzado dentro de una estantería queda sobre la balda como objeto suelto (se puede recoger); no cuenta como colocado.
-- Pico puntual de frame (37 ms) visto una vez en las medidas.
 - Los trozos de tela y botones del suelo son decoración (MultiMesh), no recogibles.
-- Al salir, Godot avisa de instancias de audio sin liberar: es el autoload de sonido, inofensivo.
-- Sin guardado de partida todavía (Fase 3). Solo configuración y "tutorial visto".
+- Al salir, Godot avisa de instancias de audio sin liberar: son los reproductores del autoload de sonido, inofensivo.
+- Las ventanas sur de las salas 2–4 tienen un travesaño a la altura de los ojos (en la sala 1 se quitó para no tapar la calle).
+- Los sonidos de la calle y los nuevos de colocación/tesoro/puerta aún no están pulidos con Audacity (la cadena actual de `tools/audacity_polish.ps1` pule los 38 sonidos anteriores).
+- Los tesoros sobre estanterías altas solo se pueden apuntar desde algo más de un metro; no es un fallo, pero conviene que lo notes al jugar.
 
 ## Próximas tareas
 
-1. Tu prueba manual de esta entrega y tu opinión (lanzar, paisaje, sonidos, tutorial).
-2. Resto de la Fase 2 según tus comentarios.
-3. Con tu OK explícito: Fase 3 (progresión, nuevas familias de objetos, segunda sala, guardado).
+1. Tu prueba manual de la Fase 3 y tu opinión.
+2. Con tu OK explícito: **Fase 4** (demo de 15–25 min con variedad suficiente + ejecutable de Windows).
+3. Ideas pendientes del documento inicial, sin construir (el prompt las marca como propuestas): pedidos opcionales de materiales, secretos extra, mejoras de organización, más decoración desbloqueable, niveles 5 y 6.
 
 ## Cómo probar
 

@@ -16,7 +16,7 @@ var _out_dir := ""
 var _filled := false
 var _only_room := -1
 var _treasures := false  # --treasures: tesoros escondidos, repisa con los hallados y guirnalda de cada sala
-var _book := false      # --book: libro de colecciones del menÃº de pausa
+var _book := false      # --book: libro de colecciones del menú de pausa
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
 
