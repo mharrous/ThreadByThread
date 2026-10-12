@@ -339,6 +339,15 @@ func _build_main() -> Control:
 		AudioManager.play(&"ui_click")
 		_show_book(true))
 	left.add_child(book_btn)
+	# Atajo de desarrollo/pruebas: da la sala actual por ordenada (abre la puerta de la siguiente).
+	var skip_btn := _sewn_button("Saltar sala (completar)", Color("c98a1e"), Color("94620f"))
+	skip_btn.pressed.connect(func():
+		AudioManager.play(&"ui_click")
+		var shop := get_tree().get_first_node_in_group(&"shop") as Shop
+		close()   # primero se reanuda: los avisos de "sala completada" usan temporizadores que respetan la pausa
+		if shop != null:
+			shop.skip_active_room())
+	left.add_child(skip_btn)
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(spacer)

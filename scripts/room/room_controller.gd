@@ -248,6 +248,33 @@ func _announce_completion() -> void:
 
 # --- Tesoros y colecciones -------------------------------------------------
 
+## Coloca de golpe todos los objetos de la sala en su sitio, como si el jugador lo hubiera hecho (los
+## eventos son los mismos: contadores, colecciones, final de sala, puerta, guirnalda y guardado).
+func solve_instantly() -> void:
+	for it in _items:
+		if it.state == PickableItem.State.PLACED:
+			continue
+		if it.state == PickableItem.State.THROWN:
+			it.freeze = true
+			it._settle()
+		var found := find_row(it.data.sort_key)
+		if found.is_empty():
+			continue
+		var unit: StorageUnit = found["unit"]
+		var row: int = found["row"]
+		var slot := unit.first_free_slot(row)
+		if slot < 0:
+			continue
+		unit.reserve(row, slot, it)
+		it.container = unit
+		it.slot_row = row
+		it.slot_index = slot
+		it.state = PickableItem.State.PLACED
+		it.set_pickable(true)
+		it.global_transform = unit.slot_transform(row, slot, it)
+		Events.item_placed.emit(it, unit)
+
+
 ## Tesoros que se pueden apuntar ahora: los escondidos y las copias expuestas (que se examinan).
 func get_treasure_candidates() -> Array[PickableItem]:
 	var out: Array[PickableItem] = []

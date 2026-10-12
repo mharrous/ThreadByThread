@@ -154,6 +154,20 @@ func _collect_treasure(item: PickableItem) -> void:
 	item.play_collect(show_pos, end_pos)
 
 
+## Suelta lo que haya en la mano sin colocarlo (lo deja suelto donde está) y deja las manos libres.
+func release_held() -> void:
+	_cancel_charge()
+	if held != null and is_instance_valid(held):
+		held.set_pickable(true)
+		held.state = PickableItem.State.LOOSE
+	held = null
+	state = State.EMPTY
+	_ghost.visible = false
+	_last_info = {&"stale": true}
+	aim_status = StorageUnit.SlotStatus.NONE
+	Events.held_item_changed.emit(null)
+
+
 ## Anula la carga del lanzamiento (al pausar, dejar, colocar o coger otra cosa) y apaga el arco del HUD:
 ## si no, una tecla F soltada durante la pausa dejaria la carga subiendo sola.
 func _cancel_charge() -> void:

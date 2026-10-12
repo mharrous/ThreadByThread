@@ -97,6 +97,21 @@ func _on_room_completed(room: RoomController) -> void:
 	save_game()
 
 
+## Da por ordenada la sala en la que está el jugador (botón del menú de pausa). Suelta antes lo que lleve
+## en la mano para que también cuente.
+func skip_active_room() -> void:
+	if active_room == null:
+		return
+	if active_room.is_completed:
+		Events.hint_requested.emit("Esta sala ya está completa")
+		return
+	var holder := _player.get_node_or_null("ItemHolder") as ItemHolder if _player != null else null
+	if holder != null:
+		holder.release_held()
+	active_room.solve_instantly()
+	Events.hint_requested.emit("Sala completada con el atajo")
+
+
 ## El contador del HUD sigue a la sala en la que estás.
 func _on_room_progress(room: RoomController, placed: int, total: int) -> void:
 	if room == active_room:
