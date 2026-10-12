@@ -34,7 +34,7 @@ Entrega 2 (hecho y verificado con capturas + pruebas):
 Pendiente de la Fase 2 (siguientes entregas):
 
 - Iluminación: ajuste fino con tus comentarios (hoy sol por la ventana, lámpara y focos; sin iluminación global).
-- Sonidos editados a mano: **flujo listo** (ver `README.md`, "Editar sonidos con Audacity"). Audacity 4.0.1 está instalado pero no tiene scripting, así que la edición la haces tú: abres `art/audio/raw/*.wav`, exportas a `art/audio/sfx/` con el mismo nombre y el juego usa tu versión (verificado con ficheros de prueba). Hasta entonces suena la síntesis por código, que nadie ha escuchado todavía.
+- Sonidos: **pulidos con Audacity 3.7.9** de forma automática (`tools/audacity_polish.ps1`, por mod-script-pipe): 38 WAV en `art/audio/sfx/` (15 bancos), con graves recortados, sala suave y cola de reverb, al mismo nivel que el original (verificado midiendo picos y energía de la cola). El viento no se procesa (es un bucle). **Nadie los ha escuchado todavía**: los efectos son deliberadamente suaves; ajusta `$Chains` o edita a mano en Audacity (`art/audio/LEEME.txt`). `-Revert` vuelve a la síntesis.
 - Cuadros, reloj y lámpara siguen siendo geometría sencilla; se pueden modelar más adelante.
 - Estantería con otras medidas (filas/anchura distintas) vuelve a usar cajas; el modelo de Blender solo vale para las medidas por defecto.
 

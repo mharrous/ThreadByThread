@@ -106,16 +106,29 @@ Los materiales viven en `data/motion/`: `wool`, `plastic`, `wood`, `metal`, `fab
 
 Las texturas son PNG normales: puedes retocarlas en Krita o GIMP y Godot las reimporta solo.
 
-## Editar sonidos con Audacity
+## Sonidos: Audacity
 
-Audacity 4.0.1 está instalado (`C:\Program Files\Audacity 4\bin\Audacity4.exe`). Esta versión no tiene scripting, así que se edita a mano:
+Hay dos Audacity instalados: la **3.7.9** (`C:\Program Files\Audacity\Audacity.exe`) tiene scripting y la usa el proyecto; la 4.0.1 no tiene scripting.
 
-1. Los sonidos originales están en `art/audio/raw/` (39 WAV, p. ej. `place_1.wav`). Si faltan: `godot --headless --path . --script res://tools/export_sfx.gd`.
-2. Ábrelos en Audacity y edítalos (reverb, ecualizador, tono, recorte, fundidos).
-3. Exporta como WAV 16 bit, mono, 44100 Hz a `art/audio/sfx/` con **el mismo nombre**.
-4. Abre el proyecto en Godot para que lo importe y prueba. Borra el fichero de `sfx/` para volver al sintetizado.
+**Automático (Audacity 3.7.9):**
 
-Se pueden reemplazar solo algunas variantes o añadir más (`pick_4.wav`). Más detalle en `art/audio/LEEME.txt`.
+```
+powershell -File tools\audacity_polish.ps1              # pule los 38 sonidos (menos el viento, que es un bucle)
+powershell -File tools\audacity_polish.ps1 -Only place_1 # solo uno
+powershell -File tools\audacity_polish.ps1 -Revert       # vuelve a los sonidos sintetizados
+```
+
+Abre Audacity si hace falta, importa cada WAV de `art/audio/raw/`, aplica una cadena de efectos (graves recortados + sala suave; campanas con más cola; pájaros con reverb de distancia), normaliza al nivel original y exporta a `art/audio/sfx/`. No toques Audacity mientras corre. Las cadenas se ajustan en `$Chains` dentro del script.
+Requiere el módulo `mod-script-pipe` activo en Audacity (ya activado; copia de seguridad de la configuración: `%APPDATA%\audacity\audacity.cfg.bak-tbt`).
+Nota: el efecto `ClassicFilters` cierra Audacity 3.7.9 si se llama por scripting, por eso no se usa.
+
+**A mano:**
+
+1. Los originales están en `art/audio/raw/` (39 WAV). Si faltan: `godot --headless --path . --script res://tools/export_sfx.gd`.
+2. Edítalos en Audacity y exporta como WAV 16 bit, mono, 44100 Hz a `art/audio/sfx/` con **el mismo nombre**.
+3. Abre el proyecto en Godot para que lo importe. Borra el fichero de `sfx/` para volver al sintetizado.
+
+El juego usa lo que haya en `sfx/` y, si falta, la síntesis. Se pueden reemplazar solo algunas variantes o añadir más (`pick_4.wav`). Más detalle en `art/audio/LEEME.txt`.
 
 ## Capas de física
 

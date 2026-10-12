@@ -153,7 +153,8 @@ func _run() -> void:
 			spread_ok = false
 	_check(spread_ok, "todos los objetos nacen dentro de la sala")
 	await _wait_until(func(): return AudioManager.ready_to_play, 6.0)
-	_check(AudioManager.ready_to_play, "sonidos sintetizados")
+	_check(AudioManager.ready_to_play, "sonidos cargados")
+	print("        bancos con audio editado (art/audio/sfx): %d  %s" % [AudioManager.overridden.size(), str(AudioManager.overridden)])
 
 	print("-- Recoger y rechazo en fila equivocada")
 	var first: PickableItem = items[0]
