@@ -28,6 +28,8 @@ static func build_banks() -> Dictionary:
 		&"set_down": [set_down(2), set_down(9), set_down(14)],
 		&"collection": [collection()],
 		&"room_complete": [room_complete()],
+		&"treasure": [treasure()],
+		&"decor_unlock": [decor_unlock()],
 		&"step": [step(1), step(4), step(7), step(12)],
 		&"wind": [wind_loop()],
 		&"bird": [bird(4), bird(15), bird(26), bird(41)],
@@ -179,6 +181,34 @@ static func room_complete() -> AudioStreamWAV:
 	for n: float in [NOTE_C5, NOTE_E5, NOTE_G5, NOTE_C6]:
 		_add_bell(b, 0.78, n, 0.20, 1.1)
 	return _to_stream(b, 0.65)
+
+
+## Tesoro encontrado: destello de campanillas que suben y un brillo final.
+static func treasure() -> AudioStreamWAV:
+	var b := _buf(2.6)
+	var run := [NOTE_E5, NOTE_G5, NOTE_C6, NOTE_E6, NOTE_G5 * 2.0]
+	for k in run.size():
+		_add_bell(b, k * 0.085, run[k], 0.26, 0.42)
+	# Brillo: dos campanillas muy agudas que se apagan despacio.
+	_add_bell(b, 0.46, NOTE_C6 * 2.0, 0.12, 0.9)
+	_add_bell(b, 0.50, NOTE_E6 * 2.0, 0.08, 1.1)
+	return _to_stream(b, 0.55)
+
+
+## Decoración desbloqueada: pequeño "pop" suave y una nota cálida.
+static func decor_unlock() -> AudioStreamWAV:
+	var rng := _rng(21)
+	var b := _buf(1.1)
+	var ph := 0.0
+	var lp := 0.0
+	for i in int(0.12 * RATE):
+		var t := float(i) / RATE
+		ph += TAU * (180.0 + 520.0 * minf(t / 0.08, 1.0)) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.2
+		b[i] = (sin(ph) * 0.7 + lp * 0.2) * _ad(t, 0.004, 0.05)
+	_add_bell(b, 0.09, NOTE_G5, 0.3, 0.45)
+	_add_bell(b, 0.17, NOTE_C6, 0.22, 0.55)
+	return _to_stream(b, 0.5)
 
 
 ## Paso sobre suelo de madera.

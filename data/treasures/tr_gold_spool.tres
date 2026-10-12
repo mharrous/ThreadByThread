@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_hb2lc"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_36xf0"]
+[ext_resource type="PackedScene" path="res://art/models/items/spool.glb" id="3_n3wvo"]
+
+[resource]
+script = ExtResource("2_36xf0")
+id = &"tr_gold_spool"
+display_name = "Carrete de oro macizo"
+detail = "Hilo de oro para vestidos de gala"
+family = 1
+sort_key = &"tr_gold_spool"
+sort_label = "Carrete de oro macizo"
+treasure = true
+shape = 1
+radius = 0.05616
+size = Vector3(0.056160003, 0.12096, 0.056160003)
+pick_radius = 0.08000000000000002
+variants = Array[PackedScene]([ExtResource("3_n3wvo")])
+model_scale = 2.16
+material_kind = &"thread"
+color = Color(1, 0.78, 0.22, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+metallic = 1.0
+roughness = 0.45
+motion = ExtResource("1_hb2lc")

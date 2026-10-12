@@ -22,4 +22,7 @@ func _build_furniture() -> void:
 	_add_picture(ROOM_W * 0.5, 0.9, 1.8, 0.5, 0.4, Color("f3c98b"), Color("e08a5c"), Color("8e3b46"))
 	_add_picture(ROOM_W * 0.5, 1.7, 1.75, 0.34, 0.46, Color("a8d5ba"), Color("5fa37b"), Color("2f5e4a"))
 	_add_clock(-ROOM_W * 0.5, 1.8, 2.15)
+	# Tesoros escondidos: sobre los dos cajones de las esquinas del fondo.
+	treasure_spots.append(Vector3(-2.62, 0.32, -1.92))
+	treasure_spots.append(Vector3(2.65, 0.32, -1.9))
 	_scatter_scraps(24)

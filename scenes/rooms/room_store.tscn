@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/shelves/peg_board.tscn" id="5_peg"]
 [ext_resource type="PackedScene" path="res://scenes/items/item.tscn" id="6_item"]
 [ext_resource type="Resource" path="res://data/catalog_store.tres" id="7_catalog"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_store.tres" id="tr_catalog"]
 
 [node name="RoomStore" type="Node3D"]
 script = ExtResource("1_room")
@@ -15,6 +16,7 @@ display_name = "Almacén de sastrería"
 objective = "Objetivo: ordena las herramientas y accesorios de sastrería"
 catalog = ExtResource("7_catalog")
 item_scene = ExtResource("6_item")
+treasure_catalog = ExtResource("tr_catalog")
 rng_seed = 7373
 
 [node name="Shell" type="Node3D" parent="."]

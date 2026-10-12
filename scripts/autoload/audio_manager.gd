@@ -172,6 +172,8 @@ func _connect_events() -> void:
 		play(sound, pos, lerpf(-22.0, 0.0, clampf(speed / 6.0, 0.0, 1.0)), 0.08))
 	Events.collection_completed.connect(func(_key): play(&"collection", null, -2.0, 0.0))
 	Events.room_completed.connect(func(_room): play(&"room_complete", null, -1.0, 0.0))
+	Events.treasure_found.connect(func(_item): play(&"treasure", null, -2.0, 0.0))
+	Events.decor_unlocked.connect(func(_room, _id): play(&"decor_unlock", null, -3.0, 0.0))
 
 
 # Corre en un hilo de trabajo.

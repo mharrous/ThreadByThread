@@ -18,6 +18,7 @@ func _init() -> void:
 	_make_spools_and_buttons()
 	_make_fabrics_and_ribbons()
 	_make_store()
+	_make_treasures()
 	print("Datos de objetos generados.")
 	quit()
 
@@ -295,3 +296,62 @@ func _make_store() -> void:
 		_save(d)
 		ids.append(d.id)
 	_catalog("catalog_store", ids)
+
+
+# --- Tesoros escondidos -----------------------------------------------------
+
+## Versiones de lujo y mayor tamaño de objetos de cada sala. No cuentan para ordenar la sala:
+## se esconden en un sitio alto o apartado y, al encontrarlos, se exponen en la repisa de la sala.
+func _make_treasures() -> void:
+	DirAccess.make_dir_recursive_absolute("res://data/treasures")
+	# [sala, id, objeto base, nombre, detalle, factor de tamaño, color, metálico (-1 = el del objeto base)]
+	var table := [
+		["yarn", "tr_golden_yarn", "yarn_red", "Ovillo de lana dorada", "Hilada a mano con hebras de oro", 1.3, Color(0.97, 0.76, 0.25), -1.0],
+		["yarn", "tr_silver_yarn", "yarn_white", "Ovillo de seda plateada", "Seda de luna, suave como una nube", 1.3, Color(0.78, 0.82, 0.92), -1.0],
+		["buttons", "tr_sapphire_button", "btn_glass_blue", "Botón de zafiro", "El botón más bonito de la tienda", 2.6, Color(0.12, 0.28, 0.9, 0.75), -1.0],
+		["buttons", "tr_gold_spool", "spool_gold", "Carrete de oro macizo", "Hilo de oro para vestidos de gala", 1.6, Color(1.0, 0.78, 0.22), 1.0],
+		["fabrics", "tr_royal_ribbon", "ribbon_gold", "Cinta real", "Seda bordada con hilo de oro", 1.7, Color(0.78, 0.10, 0.28), 0.7],
+		["fabrics", "tr_silk_bow", "ribbon_bow", "Lazo de seda de gala", "Se estrenó en un baile de 1925", 2.2, Color(0.95, 0.80, 0.85), -1.0],
+		["store", "tr_gold_thimble", "thimble_brass", "Dedal de oro", "Perteneció a una gran modista", 2.6, Color(1.0, 0.80, 0.28), 1.0],
+		["store", "tr_pearl_scissors", "scissors_small", "Tijeras de nácar", "Cortaron el primer vestido de la tienda", 1.5, Color(0.94, 0.92, 0.88), 0.3],
+	]
+	var by_room := {}
+	for t in table:
+		var base: ItemData = _by_id.get(t[2], null)
+		if base == null:
+			base = load("res://data/items/%s.tres" % t[2])
+		var d := base.duplicate() as ItemData
+		var k: float = t[5]
+		d.id = StringName(t[1])
+		d.sort_key = d.id
+		d.sort_label = t[3]
+		d.display_name = t[3]
+		d.detail = t[4]
+		d.treasure = true
+		d.spawn_count = 1
+		d.spawn_zone = ItemData.SpawnZone.ANY
+		d.radius = base.radius * k
+		d.size = base.size * k
+		if base.rest_half_height >= 0.0:
+			d.rest_half_height = base.rest_half_height * k
+		d.pick_radius = maxf(base.pick_radius * k, 0.07)
+		d.model_scale = base.model_scale * k
+		d.color = t[6]
+		if t[7] >= 0.0:
+			d.metallic = t[7]
+		if t[1] == "tr_silk_bow":
+			d.color_b = Color(0.98, 0.9, 0.7)
+		var err := ResourceSaver.save(d, "res://data/treasures/%s.tres" % d.id)
+		if err != OK:
+			push_error("No se pudo guardar el tesoro %s" % d.id)
+		if not by_room.has(t[0]):
+			by_room[t[0]] = []
+		by_room[t[0]].append(d)
+	for room_id in by_room:
+		var cat := ItemCatalog.new()
+		var list: Array[ItemData] = []
+		for d in by_room[room_id]:
+			list.append(d)
+		cat.items = list
+		ResourceSaver.save(cat, "res://data/treasures/catalog_%s.tres" % room_id)
+		print("  tesoros %s: %d" % [room_id, list.size()])

@@ -16,4 +16,7 @@ func _build_furniture() -> void:
 	blocked_rects.append(Rect2(2.4, 0.2, 0.7, 2.4))
 	_add_picture(ROOM_W * 0.5, -2.0, 1.9, 0.34, 0.46, Color("f3b6c8"), Color("e58f9f"), Color("f7e6c4"))
 	_add_clock(-ROOM_W * 0.5, -2.0, 2.15)
+	# Tesoros escondidos: encima del bastidor derecho y sobre el cajón de la esquina.
+	treasure_spots.append(Vector3(1.2, 1.92, -2.08))
+	treasure_spots.append(Vector3(-2.62, 0.32, -1.92))
 	_scatter_scraps(60)

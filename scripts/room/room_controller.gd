@@ -10,6 +10,8 @@ extends Node3D
 @export var catalog: ItemCatalog
 ## Escena por defecto de los objetos (la de cada ItemData la sustituye si la tiene).
 @export var item_scene: PackedScene
+## Tesoros escondidos de la sala (opcionales: no cuentan para ordenarla).
+@export var treasure_catalog: ItemCatalog
 ## > 0: cada tipo genera exactamente este número de objetos (pruebas). 0 = el `spawn_count` de cada tipo.
 @export var count_override := 0
 @export var rng_seed := 4242
@@ -27,6 +29,9 @@ var shell: RoomShell
 var _clusters: Array[Vector2] = []
 var _taken: Array[Vector4] = []        # x, y, z, radio de lo ya colocado en el reparto
 var _items: Array[PickableItem] = []
+var _treasures: Array[PickableItem] = []      # tesoros aÃºn sin encontrar
+var _found: Dictionary = {}                   # id del tesoro -> true
+var _displays: Dictionary = {}                # id del tesoro -> copia expuesta en la repisa
 var _units: Array[StorageUnit] = []
 var _total_by_key: Dictionary = {}
 var _placed_by_key: Dictionary = {}
@@ -42,8 +47,10 @@ func _ready() -> void:
 			_units.append(child)
 	_assign_rows()
 	_spawn_items()
+	_spawn_treasures()
 	Events.item_placed.connect(_on_item_placed)
 	Events.item_removed.connect(_on_item_removed)
+	Events.treasure_found.connect(_on_treasure_found)
 	_emit_progress.call_deferred()
 
 
@@ -105,17 +112,22 @@ func _spawn_items() -> void:
 		list[j] = tmp
 
 	for data in list:
-		var scene := data.scene if data.scene != null else item_scene
-		var item := scene.instantiate() as PickableItem
-		_items_root.add_child(item)
-		item.room = self
-		item.index = _items.size()
 		var variant := rng.randi()
-		item.setup(data, rng.randf_range(0.93, 1.07), variant)
+		var item := _instantiate_item(data, rng.randf_range(0.93, 1.07), variant)
+		item.index = _items.size()
 		item.position = _find_spot(rng, item)
 		item.basis = _random_basis(rng, data)
 		_items.append(item)
 	total_items = _items.size()
+
+
+func _instantiate_item(data: ItemData, jitter: float, variant: int) -> PickableItem:
+	var scene := data.scene if data.scene != null else item_scene
+	var item := scene.instantiate() as PickableItem
+	_items_root.add_child(item)
+	item.room = self
+	item.setup(data, jitter, variant)
+	return item
 
 
 ## Esferas con orientación libre (cada ovillo enseña otra cara); el resto, de pie y con giro al azar.
@@ -218,6 +230,97 @@ func _on_item_removed(item: PickableItem, _unit: StorageUnit) -> void:
 func _announce_completion() -> void:
 	await get_tree().create_timer(0.7).timeout
 	Events.room_completed.emit(self)
+	# Premio visual: la guirnalda de banderines aparece cuando ya se ha leído el cartel de sala ordenada.
+	await get_tree().create_timer(1.6).timeout
+	shell.unlock_decor(&"bunting", true)
+	Events.decor_unlocked.emit(self, &"bunting")
+
+
+# --- Tesoros y colecciones -------------------------------------------------
+
+func treasures_total() -> int:
+	return treasure_catalog.items.size() if treasure_catalog != null else 0
+
+
+func treasures_found() -> int:
+	return _found.size()
+
+
+## Para el libro de colecciones: nombre, detalle y si ya se encontró cada tesoro.
+func treasure_status() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if treasure_catalog == null:
+		return out
+	for data in treasure_catalog.items:
+		out.append({"name": data.display_name, "detail": data.detail, "found": _found.has(data.id)})
+	return out
+
+
+## Para el libro de colecciones: cada tipo de objeto con cuántos hay ya colocados.
+func collection_status() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for data in catalog.items:
+		var total: int = _total_by_key.get(data.sort_key, 0)
+		var placed: int = _placed_by_key.get(data.sort_key, 0)
+		out.append({"label": data.sort_label, "placed": placed, "total": total, "done": total > 0 and placed == total})
+	return out
+
+
+func _spawn_treasures() -> void:
+	if treasure_catalog == null or shell == null:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = rng_seed + 99
+	for i in treasure_catalog.items.size():
+		if i >= shell.treasure_spots.size():
+			push_warning("La sala %s no tiene sitio para el tesoro %d" % [room_id, i])
+			break
+		var item := _instantiate_item(treasure_catalog.items[i], 1.0, 0)
+		item.position = shell.treasure_spots[i] + Vector3(0.0, item.half_height, 0.0)
+		item.basis = Basis(Vector3.UP, rng.randf() * TAU)
+		_treasures.append(item)
+
+
+func _on_treasure_found(item: PickableItem) -> void:
+	if item.room != self or not item.data.treasure or _found.has(item.data.id):
+		return
+	_found[item.data.id] = true
+	_treasures.erase(item)
+	_show_display(item.data, true)
+
+
+## Copia del tesoro sobre la repisa de la sala (solo decorativa: no se puede recoger).
+func _show_display(data: ItemData, animate: bool) -> void:
+	if _displays.has(data.id) or shell == null:
+		return
+	var item := _instantiate_item(data, 1.0, 0)
+	item.set_pickable(false)
+	item.freeze = true
+	var slot := shell.display_slot(treasure_catalog.items.find(data))
+	item.position = slot + Vector3(0.0, item.half_height, 0.0)
+	item.rotation.y = 0.5
+	_displays[data.id] = item
+	if animate:
+		# Aparece cuando el tesoro recién hallado ya se ha enseñado y guardado.
+		item.visible = false
+		await get_tree().create_timer(1.9).timeout
+		item.visible = true
+		item.play_appear()
+
+
+## Marca un tesoro como encontrado al cargar una partida: desaparece del sitio donde estaba y se expone.
+func _restore_treasure(id: StringName) -> void:
+	if treasure_catalog == null or _found.has(id):
+		return
+	for data in treasure_catalog.items:
+		if data.id != id:
+			continue
+		_found[id] = true
+		for it in _treasures.duplicate():
+			if it.data.id == id:
+				_treasures.erase(it)
+				it.queue_free()
+		_show_display(data, false)
 
 
 # --- Guardado ------------------------------------------------------------
@@ -245,7 +348,10 @@ func capture_state() -> Dictionary:
 				"p": [snappedf(local.x, 0.001), snappedf(local.y, 0.001), snappedf(local.z, 0.001)],
 				"q": [snappedf(q.x, 0.0001), snappedf(q.y, 0.0001), snappedf(q.z, 0.0001), snappedf(q.w, 0.0001)],
 			})
-	return {"sig": signature(), "completed": is_completed, "items": items_state}
+	var found_ids: Array = []
+	for id in _found:
+		found_ids.append(String(id))
+	return {"sig": signature(), "completed": is_completed, "items": items_state, "treasures": found_ids}
 
 
 ## Restaura el estado guardado. Devuelve false (sin tocar nada) si no encaja con esta sala.
@@ -283,5 +389,9 @@ func apply_state(state: Dictionary) -> bool:
 				Basis(Quaternion(float(q[0]), float(q[1]), float(q[2]), float(q[3])).normalized()),
 				to_global(Vector3(float(p[0]), float(p[1]), float(p[2]))))
 	is_completed = bool(state.get("completed", false)) or placed_items == total_items
+	for id in state.get("treasures", []):
+		_restore_treasure(StringName(id))
+	if is_completed:
+		shell.unlock_decor(&"bunting", false)
 	_emit_progress()
 	return true

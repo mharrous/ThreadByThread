@@ -36,7 +36,12 @@ var blocked_rects: Array[Rect2] = []
 ## Zona del suelo donde se reparten montones de objetos.
 var floor_bounds := Rect2(-2.55, -1.15, 5.0, 3.3)
 var east_door: Door
+## Sitios donde se esconden los tesoros de la sala (base del objeto, coordenadas locales).
+## Cada sala los define en _build_furniture(); el tesoro n-ésimo del catálogo va al sitio n-ésimo.
+var treasure_spots: Array[Vector3] = []
 
+var _decor: Dictionary = {}
+var _display_slots: Array[Vector3] = []
 var _mats: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
@@ -49,6 +54,8 @@ func _ready() -> void:
 	_build_ceiling()
 	_build_furniture()
 	_build_sign()
+	_build_display_shelf()
+	_build_decor()
 
 
 ## ¿Está ocupado por mobiliario este punto del suelo (con margen)?
@@ -541,3 +548,138 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material, collide: b
 		body.add_child(cs)
 		parent.add_child(body)
 	return mi
+
+
+# --- Tesoros y decoración desbloqueable ------------------------------------
+
+## Dónde se exhiben los tesoros hallados: pastillas de fieltro sobre una repisa de la pared sur
+## (base del objeto, coordenadas locales). Sirven de pista de que hay algo que buscar.
+func display_slot(i: int) -> Vector3:
+	if _display_slots.is_empty():
+		return Vector3(0.0, 1.5, ROOM_D * 0.5 - 0.1)
+	return _display_slots[i % _display_slots.size()]
+
+
+func _build_display_shelf() -> void:
+	var z := ROOM_D * 0.5 - 0.11
+	var x0 := -1.85
+	var y := 1.45
+	var wood := MaterialLibrary.get_material(&"shelf")
+	_box(self, Vector3(1.1, 0.035, 0.22), Vector3(x0, y, z), wood, false)
+	for sx in [-0.42, 0.42]:
+		_box(self, Vector3(0.04, 0.12, 0.2), Vector3(x0 + sx, y - 0.075, z), wood, false)
+	var felt := _mat(Color("2f5f58"), 0.95)
+	for sx in [-0.26, 0.26]:
+		var pad := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.075
+		cyl.bottom_radius = 0.075
+		cyl.height = 0.006
+		cyl.radial_segments = 24
+		cyl.rings = 1
+		pad.mesh = cyl
+		pad.material_override = felt
+		pad.position = Vector3(x0 + sx, y + 0.0175 + 0.003, z)
+		pad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(pad)
+		_display_slots.append(Vector3(x0 + sx, y + 0.0175 + 0.006, z))
+
+
+## Registra una decoración oculta hasta que se desbloquee (`unlock_decor`).
+func add_decor(id: StringName, node: Node3D) -> void:
+	node.visible = false
+	add_child(node)
+	_decor[id] = node
+
+
+func is_decor_unlocked(id: StringName) -> bool:
+	var node := _decor.get(id) as Node3D
+	return node != null and node.visible
+
+
+## Muestra una decoración; con `animate`, aparece con un pequeño rebote elástico.
+func unlock_decor(id: StringName, animate: bool = true) -> void:
+	var node := _decor.get(id) as Node3D
+	if node == null or node.visible:
+		return
+	node.visible = true
+	if animate:
+		node.scale = Vector3.ONE * 0.01
+		var tw := create_tween()
+		tw.tween_property(node, "scale", Vector3.ONE, 0.9).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Decoración de la sala; las subclases pueden añadir más con add_decor().
+func _build_decor() -> void:
+	add_decor(&"bunting", _make_bunting())
+
+
+## Guirnalda de banderines entre las dos paredes laterales: premio por ordenar la sala entera.
+func _make_bunting() -> Node3D:
+	var root := Node3D.new()
+	root.name = "Bunting"
+	root.position = Vector3(0.0, ROOM_H - 0.28, 0.0)
+	var palette: Array[Color] = [wainscot_color, Color("e8a0b0"), Color("f2c14e"), Color("8ec5e8"), Color("c9a2e0"), Color("f5f0e6"), wall_color.darkened(0.12)]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77 + get_index()
+
+	var tri := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3(-0.075, 0.0, 0.0), Vector3(0.075, 0.0, 0.0), Vector3(0.0, -0.2, 0.0)])
+	arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.BACK, Vector3.BACK, Vector3.BACK])
+	tri.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var flag_mat := StandardMaterial3D.new()
+	flag_mat.vertex_color_use_as_albedo = true
+	flag_mat.vertex_color_is_srgb = true
+	flag_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	flag_mat.roughness = 0.85
+
+	var rows: Array[Dictionary] = [{"z": -0.6, "sag": 0.28}, {"z": 1.2, "sag": 0.22}]
+	var segs := 24
+	var half := ROOM_W * 0.5 - 0.04
+	var flag_t: Array[Transform3D] = []
+	var flag_c: Array[Color] = []
+	var seg_t: Array[Transform3D] = []
+	for row in rows:
+		var pts: Array[Vector3] = []
+		for i in segs + 1:
+			var x := lerpf(-half, half, float(i) / segs)
+			pts.append(Vector3(x, -float(row["sag"]) * (1.0 - pow(x / half, 2.0)), float(row["z"])))
+		for i in segs:
+			var a := pts[i]
+			var b := pts[i + 1]
+			var dir := b - a
+			seg_t.append(Transform3D(Basis.looking_at(dir.normalized(), Vector3.UP) * Basis.from_scale(Vector3(1, 1, dir.length())), (a + b) * 0.5))
+		for i in range(2, segs - 1, 2):
+			flag_t.append(Transform3D(Basis(Vector3.RIGHT, rng.randf_range(-0.12, 0.12)), pts[i]))
+			flag_c.append(palette[rng.randi() % palette.size()])
+
+	var flags := MultiMesh.new()
+	flags.transform_format = MultiMesh.TRANSFORM_3D
+	flags.use_colors = true
+	flags.mesh = tri
+	flags.instance_count = flag_t.size()
+	for i in flag_t.size():
+		flags.set_instance_transform(i, flag_t[i])
+		flags.set_instance_color(i, flag_c[i])
+	var fm := MultiMeshInstance3D.new()
+	fm.multimesh = flags
+	fm.material_override = flag_mat
+	fm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(fm)
+
+	var strings := MultiMesh.new()
+	strings.transform_format = MultiMesh.TRANSFORM_3D
+	var sm := BoxMesh.new()
+	sm.size = Vector3(0.006, 0.006, 1.0)
+	strings.mesh = sm
+	strings.instance_count = seg_t.size()
+	for i in seg_t.size():
+		strings.set_instance_transform(i, seg_t[i])
+	var st := MultiMeshInstance3D.new()
+	st.multimesh = strings
+	st.material_override = _mat(Color("5a4630"), 0.8)
+	st.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(st)
+	return root

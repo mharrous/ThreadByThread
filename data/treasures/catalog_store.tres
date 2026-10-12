@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="ItemCatalog" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_pm7bw"]
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="2_qxmvi"]
+[ext_resource type="PackedScene" path="res://art/models/items/thimble.glb" id="3_xityk"]
+[ext_resource type="PackedScene" path="res://art/models/items/scissors.glb" id="4_grwl7"]
+[ext_resource type="Script" path="res://scripts/core/item_catalog.gd" id="5_bxyh2"]
+
+[sub_resource type="Resource" id="Resource_w480i"]
+script = ExtResource("1_pm7bw")
+id = &"tr_gold_thimble"
+display_name = "Dedal de oro"
+detail = "Perteneció a una gran modista"
+family = 5
+sort_key = &"tr_gold_thimble"
+sort_label = "Dedal de oro"
+treasure = true
+shape = 1
+radius = 0.0403
+size = Vector3(0.040299997, 0.0728, 0.040299997)
+pick_radius = 0.09100000000000001
+variants = Array[PackedScene]([ExtResource("3_xityk")])
+model_scale = 2.6
+material_kind = &"metal"
+color = Color(1, 0.8, 0.28, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+metallic = 1.0
+roughness = 0.3
+motion = ExtResource("2_qxmvi")
+
+[sub_resource type="Resource" id="Resource_pfmqx"]
+script = ExtResource("1_pm7bw")
+id = &"tr_pearl_scissors"
+display_name = "Tijeras de nácar"
+detail = "Cortaron el primer vestido de la tienda"
+family = 5
+sort_key = &"tr_pearl_scissors"
+sort_label = "Tijeras de nácar"
+treasure = true
+shape = 2
+radius = 0.0825
+size = Vector3(0.2142, 0.008925, 0.08670001)
+pick_radius = 0.135
+variants = Array[PackedScene]([ExtResource("4_grwl7")])
+model_scale = 1.275
+hang_offset = Vector3(-0.053125, 0, -0.0153)
+material_kind = &"plastic"
+color = Color(0.94, 0.92, 0.88, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+metallic = 0.3
+roughness = 0.35
+motion = ExtResource("2_qxmvi")
+
+[resource]
+script = ExtResource("5_bxyh2")
+items = Array[ExtResource("1_pm7bw")]([SubResource("Resource_w480i"), SubResource("Resource_pfmqx")])

@@ -7,6 +7,9 @@ const ACCENT := Color("f2a65a")
 
 var _root: Control
 var _resume: Button
+var _main_panel: PanelContainer
+var _book_panel: PanelContainer
+var _book_content: VBoxContainer
 var _opened := false
 var _auto_pause := true
 
@@ -41,6 +44,7 @@ func open() -> void:
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Events.pause_toggled.emit(true)
+	_show_book(false)
 	_resume.grab_focus()
 
 
@@ -82,6 +86,8 @@ func _build() -> void:
 	psb.content_margin_bottom = 36
 	panel.add_theme_stylebox_override(&"panel", psb)
 	center.add_child(panel)
+	_main_panel = panel
+	_build_book(center, psb)
 
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override(&"separation", 10)
@@ -101,6 +107,13 @@ func _build() -> void:
 		AudioManager.play(&"ui_click")
 		close())
 	vb.add_child(_resume)
+
+	var book_btn := Button.new()
+	book_btn.text = "Libro de colecciones"
+	book_btn.pressed.connect(func():
+		AudioManager.play(&"ui_click")
+		_show_book(true))
+	vb.add_child(book_btn)
 
 	vb.add_child(_section("Controles"))
 	vb.add_child(_slider_row("Sensibilidad del ratón", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
@@ -131,6 +144,92 @@ func _build() -> void:
 	quit.text = "Salir del juego"
 	quit.pressed.connect(func(): get_tree().quit())
 	vb.add_child(quit)
+
+
+# --- Libro de colecciones --------------------------------------------------
+
+func _build_book(parent: Control, style: StyleBox) -> void:
+	_book_panel = PanelContainer.new()
+	_book_panel.theme = _make_theme()
+	_book_panel.add_theme_stylebox_override(&"panel", style)
+	parent.add_child(_book_panel)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override(&"separation", 10)
+	_book_panel.add_child(vb)
+	var title := Label.new()
+	title.text = "Libro de colecciones"
+	title.add_theme_font_size_override(&"font_size", 34)
+	title.add_theme_color_override(&"font_color", Color("ffe7b8"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(720, 430)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vb.add_child(scroll)
+	_book_content = VBoxContainer.new()
+	_book_content.add_theme_constant_override(&"separation", 8)
+	_book_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_book_content)
+	var back := Button.new()
+	back.text = "Volver"
+	back.pressed.connect(func():
+		AudioManager.play(&"ui_click")
+		_show_book(false))
+	vb.add_child(back)
+
+
+func _show_book(on: bool) -> void:
+	_book_panel.visible = on
+	_main_panel.visible = not on
+	if on:
+		_fill_book()
+
+
+## Rellena el libro con el estado actual: por sala, las colecciones (tipos de objeto) y los tesoros.
+func _fill_book() -> void:
+	for c in _book_content.get_children():
+		c.queue_free()
+	var shop := get_tree().get_first_node_in_group(&"shop") as Shop
+	if shop == null:
+		return
+	var found_total := 0
+	var treasure_total := 0
+	for room in shop.rooms:
+		found_total += room.treasures_found()
+		treasure_total += room.treasures_total()
+	_book_content.add_child(_book_label("Tesoros encontrados: %d de %d" % [found_total, treasure_total], 17, Color("f6c453")))
+	for room in shop.rooms:
+		_book_content.add_child(HSeparator.new())
+		if not room.is_unlocked:
+			_book_content.add_child(_book_label("%s  ·  sala por descubrir" % room.display_name, 18, SOFT))
+			continue
+		var head := "%s  ·  ordenados %d de %d" % [room.display_name, room.placed_items, room.total_items]
+		if room.is_completed:
+			head += "  ·  completada"
+		_book_content.add_child(_book_label(head, 19, ACCENT))
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override(&"h_separation", 14)
+		flow.add_theme_constant_override(&"v_separation", 4)
+		for entry in room.collection_status():
+			var chip := _book_label("%s %d/%d" % [entry["label"], entry["placed"], entry["total"]], 14, Color("b8f0c0") if entry["done"] else SOFT)
+			chip.autowrap_mode = TextServer.AUTOWRAP_OFF
+			flow.add_child(chip)
+		_book_content.add_child(flow)
+		for treasure in room.treasure_status():
+			if treasure["found"]:
+				_book_content.add_child(_book_label("Tesoro: %s  ·  %s" % [treasure["name"], treasure["detail"]], 15, Color("f6c453")))
+			else:
+				_book_content.add_child(_book_label("Tesoro: ???  ·  escondido en algún rincón de la sala", 15, Color(0.7, 0.6, 0.5)))
+
+
+func _book_label(text: String, size: int, color: Color) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override(&"font_size", size)
+	l.add_theme_color_override(&"font_color", color)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(0, 0)
+	return l
 
 
 func _section(text: String) -> Label:

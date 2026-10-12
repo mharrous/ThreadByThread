@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_i2k00"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_tkbbw"]
+[ext_resource type="PackedScene" path="res://art/models/items/scissors.glb" id="3_dh1m2"]
+
+[resource]
+script = ExtResource("2_tkbbw")
+id = &"tr_pearl_scissors"
+display_name = "Tijeras de nácar"
+detail = "Cortaron el primer vestido de la tienda"
+family = 5
+sort_key = &"tr_pearl_scissors"
+sort_label = "Tijeras de nácar"
+treasure = true
+shape = 2
+radius = 0.0825
+size = Vector3(0.2142, 0.008925, 0.08670001)
+pick_radius = 0.135
+variants = Array[PackedScene]([ExtResource("3_dh1m2")])
+model_scale = 1.275
+hang_offset = Vector3(-0.053125, 0, -0.0153)
+material_kind = &"plastic"
+color = Color(0.94, 0.92, 0.88, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+metallic = 0.3
+roughness = 0.35
+motion = ExtResource("1_i2k00")

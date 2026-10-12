@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemCatalog" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_dykwh"]
+[ext_resource type="Resource" path="res://data/motion/wool.tres" id="2_0osmu"]
+[ext_resource type="Script" path="res://scripts/core/item_catalog.gd" id="3_cuss5"]
+
+[sub_resource type="Resource" id="Resource_tdi3a"]
+script = ExtResource("1_dykwh")
+id = &"tr_golden_yarn"
+display_name = "Ovillo de lana dorada"
+detail = "Hilada a mano con hebras de oro"
+sort_key = &"tr_golden_yarn"
+sort_label = "Ovillo de lana dorada"
+treasure = true
+radius = 0.078
+size = Vector3(0.14299999, 0.14299999, 0.14299999)
+pick_radius = 0.0975
+model_scale = 1.3
+color = Color(0.97, 0.76, 0.25, 1)
+thread_density = 28.0
+motion = ExtResource("2_0osmu")
+
+[sub_resource type="Resource" id="Resource_ub7vm"]
+script = ExtResource("1_dykwh")
+id = &"tr_silver_yarn"
+display_name = "Ovillo de seda plateada"
+detail = "Seda de luna, suave como una nube"
+sort_key = &"tr_silver_yarn"
+sort_label = "Ovillo de seda plateada"
+treasure = true
+radius = 0.078
+size = Vector3(0.14299999, 0.14299999, 0.14299999)
+pick_radius = 0.0975
+model_scale = 1.3
+color = Color(0.78, 0.82, 0.92, 1)
+thread_density = 24.0
+motion = ExtResource("2_0osmu")
+
+[resource]
+script = ExtResource("3_cuss5")
+items = Array[ExtResource("1_dykwh")]([SubResource("Resource_tdi3a"), SubResource("Resource_ub7vm")])

@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="5_shelf"]
 [ext_resource type="PackedScene" path="res://scenes/items/yarn_ball.tscn" id="6_ball"]
 [ext_resource type="Resource" path="res://data/catalog_yarn.tres" id="7_catalog"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_yarn.tres" id="tr_catalog"]
 
 [node name="RoomYarn" type="Node3D"]
 script = ExtResource("1_room")
@@ -13,6 +14,7 @@ display_name = "Sala de ovillos"
 objective = "Objetivo: ordena los ovillos por color"
 catalog = ExtResource("7_catalog")
 item_scene = ExtResource("6_ball")
+treasure_catalog = ExtResource("tr_catalog")
 
 [node name="Shell" type="Node3D" parent="."]
 script = ExtResource("2_shell")

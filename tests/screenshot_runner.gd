@@ -15,6 +15,8 @@ const POSES := [
 var _out_dir := ""
 var _filled := false
 var _only_room := -1
+var _treasures := false  # --treasures: tesoros escondidos, repisa con los hallados y guirnalda de cada sala
+var _book := false      # --book: libro de colecciones del menÃº de pausa
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
 
@@ -28,6 +30,10 @@ func _ready() -> void:
 			_only_room = int(arg.trim_prefix("--room="))
 		elif arg == "--street":
 			_street = true
+		elif arg == "--book":
+			_book = true
+		elif arg == "--treasures":
+			_treasures = true
 	if _out_dir == "":
 		_out_dir = ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -59,6 +65,39 @@ func _fill_room(room: RoomController) -> void:
 		it.state = PickableItem.State.PLACED
 		it.global_transform = unit.slot_transform(row, slot, it)
 
+
+## Cada sala: el escondite de un tesoro (sin hallar), luego la repisa con los dos hallados y la guirnalda.
+func _run_treasures(shop: Shop, player: Player) -> void:
+	for room in shop.rooms:
+		if _only_room >= 0 and room.index != _only_room:
+			continue
+		room.visible = true
+		var spot := room.shell.treasure_spots[0]
+		var stand := Vector3(spot.x, 0.0, minf(spot.z + 1.5, 1.6))
+		player.teleport(room.to_global(stand))
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		player.look_at_point(room.to_global(spot + Vector3(0, 0.1, 0)))
+		for i in 12:
+			await get_tree().process_frame
+		await _shot("sala%d_tesoro_escondido" % (room.index + 1))
+		for data in room.treasure_catalog.items:
+			room._restore_treasure(data.id)
+		room.shell.unlock_decor(&"bunting", false)
+		player.teleport(room.to_global(Vector3(-0.6, 0.0, 0.4)))
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		player.look_at_point(room.to_global(Vector3(-1.85, 1.55, 2.4)))
+		for i in 12:
+			await get_tree().process_frame
+		await _shot("sala%d_repisa" % (room.index + 1))
+		player.teleport(room.to_global(Vector3(0.0, 0.0, 2.0)))
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		player.look_at_point(room.to_global(Vector3(0.0, 2.3, -1.5)))
+		for i in 12:
+			await get_tree().process_frame
+		await _shot("sala%d_guirnalda" % (room.index + 1))
 
 ## Vista de la ventana: primero la calle vacía y luego cada tipo de suceso congelado delante de la ventana.
 func _run_street(main: Node, player: Player) -> void:
@@ -102,6 +141,21 @@ func _run() -> void:
 	var player: Player = main.get_node("Player")
 	if _street:
 		await _run_street(main, player)
+		get_tree().quit()
+		return
+	if _book:
+		var room: RoomController = shop.rooms[0]
+		room._restore_treasure(room.treasure_catalog.items[0].id)
+		var menu := main.get_node("PauseMenu")
+		menu.open()
+		menu._show_book(true)
+		for i in 12:
+			await get_tree().process_frame
+		await _shot("libro")
+		get_tree().quit()
+		return
+	if _treasures:
+		await _run_treasures(shop, player)
 		get_tree().quit()
 		return
 	var tag := "lleno" if _filled else "caos"

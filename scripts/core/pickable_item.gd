@@ -86,6 +86,10 @@ func setup(item_data: ItemData, size_jitter: float = 1.0, variant: int = 0) -> v
 	linear_damp = _profile.linear_damp
 	angular_damp = _profile.angular_damp
 	set_process(false)
+	if item_data.treasure:
+		var sparkle := TreasureSparkle.new()
+		sparkle.emission_sphere_radius = maxf(radius * 0.9, 0.04)
+		add_child(sparkle)
 
 
 ## Malla y escala del modelo (para dibujar la "sombra" translúcida de colocación).
@@ -104,6 +108,29 @@ func get_collision_shape() -> Shape3D:
 
 func shape_transform_at(object_transform: Transform3D) -> Transform3D:
 	return object_transform * Transform3D(Basis.from_euler(data.shape_rotation_deg * (PI / 180.0)), Vector3.ZERO)
+
+
+## Un tesoro recién hallado sube hasta `show_pos` (delante de la cámara), gira un momento y se
+## encoge hacia `end_pos` antes de desaparecer en la colección.
+func play_collect(show_pos: Vector3, end_pos: Vector3) -> void:
+	set_pickable(false)
+	freeze = true
+	state = State.MOVING
+	var move := create_tween()
+	move.tween_property(self, "global_position", show_pos, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	move.tween_interval(0.9)
+	move.tween_property(self, "global_position", end_pos, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	move.parallel().tween_property(_squash, "scale", Vector3.ONE * 0.05, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	move.tween_callback(queue_free)
+	var spin := create_tween()
+	spin.tween_property(self, "rotation:y", rotation.y + TAU * 1.6, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## Aparece con un "pop" elástico (decoración desbloqueada, tesoro expuesto).
+func play_appear() -> void:
+	_squash.scale = Vector3.ONE * 0.01
+	var tw := create_tween()
+	tw.tween_property(_squash, "scale", Vector3.ONE, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Activa o desactiva que el objeto pueda ser apuntado y que colisione.

@@ -104,6 +104,9 @@ func try_pick() -> bool:
 		return false
 	var item := hover_item
 	_set_hover(null)
+	if item.data.treasure:
+		_collect_treasure(item)
+		return true
 	if item.state == PickableItem.State.PLACED and item.container != null:
 		var old_unit := item.container
 		old_unit.release(item.slot_row, item.slot_index, item)
@@ -128,6 +131,16 @@ func try_pick() -> bool:
 	Events.item_picked.emit(held)
 	Events.held_item_changed.emit(held)
 	return true
+
+
+## Los tesoros escondidos no se sostienen ni se colocan: se enseñan un instante delante de la
+## cámara y pasan a la colección de la sala (las manos siguen libres).
+func _collect_treasure(item: PickableItem) -> void:
+	var cam := _camera.global_transform
+	var show_pos := cam.origin - cam.basis.z * 0.55 + cam.basis.y * 0.03
+	var end_pos := cam.origin - cam.basis.z * 0.35 - cam.basis.x * 0.28 + cam.basis.y * 0.22
+	Events.treasure_found.emit(item)
+	item.play_collect(show_pos, end_pos)
 
 
 func try_place() -> void:
@@ -209,6 +222,7 @@ func _process_empty() -> void:
 		_publish({
 			"key": "E", "action": "Recoger",
 			"title": item.data.display_name, "detail": item.data.detail,
+			"hint": "Tesoro escondido" if item.data.treasure else "",
 			"kind": "pick",
 		})
 	else:

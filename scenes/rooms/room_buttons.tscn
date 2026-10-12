@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/shelves/tray_unit.tscn" id="4_tray"]
 [ext_resource type="PackedScene" path="res://scenes/items/item.tscn" id="5_item"]
 [ext_resource type="Resource" path="res://data/catalog_buttons_spools.tres" id="6_catalog"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_buttons.tres" id="tr_catalog"]
 
 [node name="RoomButtons" type="Node3D"]
 script = ExtResource("1_room")
@@ -14,6 +15,7 @@ display_name = "Botones y carretes"
 objective = "Objetivo: carretes por color y botones por material"
 catalog = ExtResource("6_catalog")
 item_scene = ExtResource("5_item")
+treasure_catalog = ExtResource("tr_catalog")
 rng_seed = 5151
 
 [node name="Shell" type="Node3D" parent="."]

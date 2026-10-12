@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_vk1xo"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_xdqpd"]
+[ext_resource type="PackedScene" path="res://art/models/items/thimble.glb" id="3_n87q6"]
+
+[resource]
+script = ExtResource("2_xdqpd")
+id = &"tr_gold_thimble"
+display_name = "Dedal de oro"
+detail = "Perteneció a una gran modista"
+family = 5
+sort_key = &"tr_gold_thimble"
+sort_label = "Dedal de oro"
+treasure = true
+shape = 1
+radius = 0.0403
+size = Vector3(0.040299997, 0.0728, 0.040299997)
+pick_radius = 0.09100000000000001
+variants = Array[PackedScene]([ExtResource("3_n87q6")])
+model_scale = 2.6
+material_kind = &"metal"
+color = Color(1, 0.8, 0.28, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+metallic = 1.0
+roughness = 0.3
+motion = ExtResource("1_vk1xo")

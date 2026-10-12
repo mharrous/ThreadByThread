@@ -31,6 +31,7 @@ func _ready() -> void:
 	Events.item_removed.connect(func(_i, _u): _dirty = true)
 	Events.item_set_down.connect(func(_i): _dirty = true)
 	Events.item_landed.connect(func(_i): _dirty = true)
+	Events.treasure_found.connect(func(_i): save_game())
 	Events.pause_toggled.connect(func(paused: bool):
 		if paused:
 			save_game())

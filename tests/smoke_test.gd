@@ -187,6 +187,9 @@ func _test_street() -> void:
 	if life == null:
 		return
 	life.enabled = false
+	for stray in life._actors.duplicate():
+		stray.queue_free()
+	life._actors.clear()
 	for kind: StringName in [&"car", &"van", &"bike", &"moto", &"walker", &"dogwalker"]:
 		var actor := life.spawn(kind)
 		var z0 := actor.position.z
@@ -203,6 +206,47 @@ func _test_street() -> void:
 		actor.queue_free()
 		life._actors.erase(actor)
 	_check(life._actors.is_empty(), "la calle queda vacía tras retirar los sucesos de prueba")
+
+
+## Tesoros escondidos: cada uno tiene un apoyo bajo él, se puede apuntar y recoger, no cuenta
+## para ordenar la sala, se expone en la repisa y queda guardado en el estado de la sala.
+func _test_treasures(room: RoomController) -> void:
+	print("-- Tesoros escondidos")
+	var total := room.treasures_total()
+	_check(total == 2, "la sala esconde %d tesoros" % total)
+	var spots: Array = room._treasures.duplicate()
+	_check(spots.size() == total, "todos los tesoros están en su sitio sin recoger")
+	for t: PickableItem in spots:
+		var space := room.get_world_3d().direct_space_state
+		var from := t.global_position + Vector3(0, 0.1, 0)
+		var q := PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -0.4, 0), 1 | 16)
+		var hit := space.intersect_ray(q)
+		_check(not hit.is_empty() and from.y - hit["position"].y < t.half_height + 0.1 + 0.03, "'%s' reposa sobre un apoyo (a %.3f m)" % [t.data.id, (from.y - hit["position"].y) if not hit.is_empty() else -1.0])
+	var total_before := room.total_items
+	var seen: Array = []
+	var handler := func(item): seen.append(item)
+	Events.treasure_found.connect(handler)
+	for i in spots.size():
+		var t: PickableItem = spots[i]
+		var tdata := t.data
+		var tid := t.get_instance_id()
+		var ok := await _stand_and_look_at_item(room, t)
+		_check(ok, "se puede apuntar al tesoro '%s'" % tdata.id)
+		if not ok:
+			continue
+		await _press(&"interact")
+		await _wait_until(func(): return room.treasures_found() == i + 1, 2.0)
+		_check(room.treasures_found() == i + 1, "recoger '%s' lo cuenta como hallado (%d/%d)" % [tdata.id, room.treasures_found(), total])
+		_check(holder.state == ItemHolder.State.EMPTY, "las manos siguen libres tras coger un tesoro")
+		await _wait_until(func(): return not is_instance_valid(instance_from_id(tid)), 4.0)
+		_check(not is_instance_valid(instance_from_id(tid)), "el tesoro desaparece tras enseñarlo")
+	Events.treasure_found.disconnect(handler)
+	_check(seen.size() == spots.size(), "evento treasure_found emitido %d veces" % seen.size())
+	_check(room.total_items == total_before and room.placed_items == 0, "los tesoros no cuentan para ordenar la sala")
+	await _wait_until(func(): return room._displays.size() == total, 4.0)
+	_check(room._displays.size() == total, "los tesoros hallados se exponen en la repisa")
+	var st := room.capture_state()
+	_check((st["treasures"] as Array).size() == total, "el estado de la sala guarda los tesoros hallados")
 
 
 func _test_room(room: RoomController, room_i: int) -> void:
@@ -224,6 +268,7 @@ func _test_room(room: RoomController, room_i: int) -> void:
 		if room.find_row(it.data.sort_key).is_empty():
 			_check(false, "fila disponible para '%s'" % it.data.sort_key)
 	_check(keys.size() == room.catalog.items.size(), "%d tipos distintos, todos con su hueco" % keys.size())
+	await _test_treasures(room)
 	var local_bounds_ok := true
 	for it: PickableItem in items:
 		var q := room.to_local(it.global_position)
@@ -309,6 +354,8 @@ func _test_room(room: RoomController, room_i: int) -> void:
 	_check(_collections - collections_before == room.catalog.items.size() - 1, "%d colecciones completadas antes de la última (%d)" % [room.catalog.items.size() - 1, _collections - collections_before])
 	await _wait_until(func(): return _completed_rooms.has(room), 3.0)
 	_check(_completed_rooms.has(room) and room.is_completed, "sala completada")
+	await _wait_until(func(): return room.shell.is_decor_unlocked(&"bunting"), 4.0)
+	_check(room.shell.is_decor_unlocked(&"bunting"), "la guirnalda de banderines se desbloquea al completar la sala")
 
 	if room_i + 1 < shop.rooms.size():
 		var next := shop.rooms[room_i + 1]

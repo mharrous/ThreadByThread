@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="3_shelf"]
 [ext_resource type="PackedScene" path="res://scenes/items/item.tscn" id="5_item"]
 [ext_resource type="Resource" path="res://data/catalog_fabrics_ribbons.tres" id="6_catalog"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_fabrics.tres" id="tr_catalog"]
 
 [node name="RoomFabrics" type="Node3D"]
 script = ExtResource("1_room")
@@ -13,6 +14,7 @@ display_name = "Telas y cintas"
 objective = "Objetivo: rollos, telas dobladas y cintas, cada uno en su sitio"
 catalog = ExtResource("6_catalog")
 item_scene = ExtResource("5_item")
+treasure_catalog = ExtResource("tr_catalog")
 rng_seed = 6262
 
 [node name="Shell" type="Node3D" parent="."]

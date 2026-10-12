@@ -30,6 +30,7 @@ signal room_completed(room)
 signal room_unlocked(room)
 signal active_room_changed(room)
 signal treasure_found(item)
+signal decor_unlocked(room, id: StringName)
 signal game_saved
 
 signal hint_requested(text: String)

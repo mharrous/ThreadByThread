@@ -8,6 +8,7 @@ const SOFT := Color("e9d3b0")
 const ACCENT := Color("f2a65a")
 const GOOD := Color("b8f0c0")
 const BAD := Color("ffb0a0")
+const GOLD := Color("f6c453")
 const PANEL_BG := Color(0.13, 0.09, 0.06, 0.42)
 
 const OBJECTIVE_DONE := "Sala completada"
@@ -54,6 +55,8 @@ var _count_label: Label
 var _percent_label: Label
 var _bar: ProgressBar
 var _objective: Label
+var _treasure_label: Label
+var _room: RoomController
 var _toast: Label
 var _banner: PanelContainer
 var _controls: Label
@@ -75,6 +78,7 @@ func _ready() -> void:
 	Events.hint_requested.connect(_on_hint)
 	Events.throw_charge_changed.connect(func(v: float): _crosshair.set_charge(v))
 	Events.room_completed.connect(_on_room_completed)
+	Events.treasure_found.connect(_on_treasure_found)
 	_on_progress_changed(0, 0)
 	_fade_prompt(false)
 
@@ -162,6 +166,11 @@ func _build() -> void:
 	_objective = _label("", 15, SOFT, 0)
 	_objective.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	vb.add_child(_objective)
+
+	_treasure_label = _label("", 14, GOLD, 0)
+	_treasure_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_treasure_label.visible = false
+	vb.add_child(_treasure_label)
 
 	# Aviso temporal
 	_toast = _label("", 20, CREAM)
@@ -275,18 +284,38 @@ func _on_progress_changed(placed: int, total: int) -> void:
 
 
 func _on_active_room_changed(room: RoomController) -> void:
+	_room = room
 	_title_label.text = room.display_name
 	_objective_text = room.objective
 	_objective.text = _objective_text
+	_update_treasure_label()
 
 
-func _on_hint(text: String) -> void:
+func _update_treasure_label() -> void:
+	_treasure_label.visible = _room != null and _room.treasures_total() > 0
+	if _treasure_label.visible:
+		_treasure_label.text = "Tesoros escondidos  %d / %d" % [_room.treasures_found(), _room.treasures_total()]
+
+
+func _on_treasure_found(item) -> void:
+	_update_treasure_label()
+	_toast.add_theme_color_override(&"font_color", GOLD)
+	_on_hint("¡Tesoro encontrado!  %s" % item.data.display_name, 3.2)
+	_treasure_label.pivot_offset = Vector2(0, _treasure_label.size.y * 0.5)
+	var pop := create_tween()
+	pop.tween_property(_treasure_label, "scale", Vector2(1.12, 1.12), 0.1)
+	pop.tween_property(_treasure_label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _on_hint(text: String, seconds: float = 1.8) -> void:
 	_toast.text = text
+	if seconds <= 1.8:
+		_toast.add_theme_color_override(&"font_color", CREAM)
 	if _toast_tween:
 		_toast_tween.kill()
 	_toast_tween = create_tween()
 	_toast_tween.tween_property(_toast, "modulate:a", 1.0, 0.15)
-	_toast_tween.tween_interval(1.8)
+	_toast_tween.tween_interval(seconds)
 	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.6)
 
 
