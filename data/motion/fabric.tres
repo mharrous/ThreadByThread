@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MotionProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/motion_profile.gd" id="1_motion"]
+
+[resource]
+script = ExtResource("1_motion")
+id = &"fabric"
+bounce = 0.04
+friction = 1.2
+mass = 0.08
+linear_damp = 1.6
+angular_damp = 6.0
+squash = 0.7
+squash_stiffness = 300.0
+squash_damping = 25.0
+throw_spin = 0.4
+impact_sound = &"bounce_fabric"

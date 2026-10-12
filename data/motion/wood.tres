@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MotionProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/motion_profile.gd" id="1_motion"]
+
+[resource]
+script = ExtResource("1_motion")
+id = &"wood"
+bounce = 0.42
+friction = 0.6
+mass = 0.02
+linear_damp = 0.15
+angular_damp = 1.2
+squash = 0.2
+squash_stiffness = 800.0
+squash_damping = 28.0
+throw_spin = 1.2
+impact_sound = &"bounce_wood"

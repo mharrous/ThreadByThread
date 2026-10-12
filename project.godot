@@ -39,6 +39,7 @@ window/stretch/aspect="expand"
 3d_physics/layer_3="shelf_aim"
 3d_physics/layer_4="player"
 3d_physics/layer_5="settable"
+3d_physics/layer_6="pick"
 
 [rendering]
 

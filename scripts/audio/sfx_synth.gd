@@ -105,6 +105,138 @@ static func step(seed_value: int) -> AudioStreamWAV:
 	return _to_stream(b, 0.22)
 
 
+## Lanzamiento: soplo de aire corto.
+static func throw_whoosh(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.34)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var shape := sin(PI * minf(t / 0.3, 1.0))
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * (0.03 + 0.2 * shape)
+		b[i] = lp * shape * 1.6
+	return _to_stream(b, 0.32)
+
+
+## Rebote de lana: golpe sordo y mullido.
+static func bounce_soft(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.26)
+	var ph := 0.0
+	var lp := 0.0
+	var f0 := rng.randf_range(135.0, 165.0)
+	for i in b.size():
+		var t := float(i) / RATE
+		ph += TAU * (f0 - 70.0 * minf(t / 0.12, 1.0)) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.10
+		b[i] = sin(ph) * 0.9 * _ad(t, 0.002, 0.055) + lp * 0.9 * _ad(t, 0.001, 0.03)
+	return _to_stream(b, 0.5)
+
+
+## Rebote duro (botón de plástico): "tic" corto y brillante.
+static func bounce_hard(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.16)
+	var f := rng.randf_range(1500.0, 1900.0)
+	for i in b.size():
+		var t := float(i) / RATE
+		b[i] = (sin(TAU * f * t) * 0.5 + sin(TAU * f * 2.3 * t) * 0.25) * _ad(t, 0.0005, 0.014) \
+			+ rng.randf_range(-1.0, 1.0) * 0.25 * _ad(t, 0.0003, 0.003)
+	return _to_stream(b, 0.4)
+
+
+## Rebote de madera: "tok" redondo.
+static func bounce_wood(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.22)
+	var f := rng.randf_range(290.0, 350.0)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.3
+		b[i] = sin(TAU * f * t) * 0.8 * _ad(t, 0.001, 0.04) \
+			+ sin(TAU * f * 2.1 * t) * 0.3 * _ad(t, 0.001, 0.022) \
+			+ lp * 0.3 * _ad(t, 0.0005, 0.006)
+	return _to_stream(b, 0.45)
+
+
+## Rebote de metal: "tin" con parciales inarmónicos.
+static func bounce_metal(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.5)
+	var f := rng.randf_range(1900.0, 2300.0)
+	for i in b.size():
+		var t := float(i) / RATE
+		b[i] = (sin(TAU * f * t) * _ad(t, 0.0004, 0.12) \
+			+ sin(TAU * f * 2.32 * t) * 0.5 * _ad(t, 0.0004, 0.07) \
+			+ sin(TAU * f * 4.1 * t) * 0.25 * _ad(t, 0.0004, 0.04)) * 0.6
+	return _to_stream(b, 0.36)
+
+
+## Caída de tela: roce suave sin rebote.
+static func bounce_fabric(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.2)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.06
+		b[i] = lp * 2.0 * _ad(t, 0.012, 0.05)
+	return _to_stream(b, 0.22)
+
+
+## Brisa suave en bucle (ruido filtrado con ondulaciones lentas), sin saltos al repetir.
+static func wind_loop() -> AudioStreamWAV:
+	var rng := _rng(77)
+	var loop_len := int(8.0 * RATE)
+	var fade := int(0.6 * RATE)
+	var raw := PackedFloat32Array()
+	raw.resize(loop_len + fade)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in raw.size():
+		var t := float(i) / RATE
+		var gust := 0.55 + 0.45 * sin(t * 0.8 + 0.5 * sin(t * 0.31))
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * (0.012 + 0.012 * gust)
+		lp2 += (lp - lp2) * 0.25
+		raw[i] = lp2 * gust
+	# Mezcla el final con el principio para que el bucle sea continuo.
+	var b := PackedFloat32Array()
+	b.resize(loop_len)
+	for i in loop_len:
+		if i < fade:
+			var w := float(i) / fade
+			b[i] = raw[i] * w + raw[loop_len + i] * (1.0 - w)
+		else:
+			b[i] = raw[i]
+	var stream := _to_stream(b, 0.5)
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = loop_len
+	return stream
+
+
+## Pájaro lejano: pequeña serie de trinos con modulación de frecuencia.
+static func bird(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(1.4)
+	var cursor := 0.0
+	var ph := 0.0
+	for c in rng.randi_range(2, 5):
+		var dur := rng.randf_range(0.07, 0.14)
+		var f0 := rng.randf_range(2600.0, 4300.0)
+		var f1 := f0 * rng.randf_range(0.7, 1.5)
+		var s0 := int(cursor * RATE)
+		for i in range(s0, mini(s0 + int(dur * RATE), b.size())):
+			var tt := float(i - s0) / RATE
+			var f := lerpf(f0, f1, tt / dur)
+			ph += TAU * f / RATE
+			var env := sin(PI * tt / dur)
+			b[i] += sin(ph + 1.4 * sin(TAU * 38.0 * tt)) * env * 0.5
+		cursor += dur + rng.randf_range(0.06, 0.15)
+	return _to_stream(b, 0.35)
+
+
 ## Clic de interfaz.
 static func ui_click() -> AudioStreamWAV:
 	var b := _buf(0.07)

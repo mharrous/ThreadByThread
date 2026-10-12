@@ -1,54 +1,69 @@
 # THREAD BY THREAD — Progreso
 
-Última actualización: 2026-10-12 · Fase 1 (prototipo jugable) · **pendiente de tu aprobación para pasar a los 150 objetos**
+Última actualización: 2026-10-12 · Fase 1 cerrada · **Fase 2 en curso (primera entrega lista para revisar)**
 
-## Lo que ya funciona (verificado)
+## Fase 1 — Prototipo jugable (cerrada, aprobada por el usuario)
 
-Verificado con la prueba automática `tests/smoke_test.tscn` (sin ventana, con eventos de entrada reales)
-y con capturas de render `tests/screenshot_runner.tscn`:
+- Sala jugable con **150 ovillos** (10 colores × 15) en montones por el suelo y sobre la mesa.
+- Recoger, sostener, girar, colocar con vista previa, rechazo en fila equivocada, dejar en superficies, progreso, banner final.
+- Verificado con prueba automática de extremo a extremo con 10 y con 150 objetos (ver "Pruebas").
 
-- Proyecto Godot 4.7.2 que arranca sin errores ni avisos de script.
-- Sala de 6 × 5 m: suelo de tablas, paredes con friso, ventana, vigas, lámpara, mesa, cajas, planta, alfombra, cartel.
-- Luz de sol cálida por la ventana (sombras suaves de los travesaños), luz ambiente cálida, lámpara y focos sobre estanterías.
-- Controlador en primera persona: WASD, ratón, Shift correr, Ctrl agacharse (con comprobación de techo), cámara interpolada, balanceo suave, pasos.
-- Dos estanterías de 5 filas × 15 huecos. Cada fila tiene un color asignado (franja de color + nombre + marcadores circulares).
-- 10 ovillos de 10 colores repartidos por suelo y mesa, sin solaparse.
-- **Recoger** (E): el ovillo vuela en arco hasta la mano; se resalta al apuntarlo; se puede coger también desde la estantería.
-- **Sostener y girar** (R): sigue a la cámara con suavizado; se acerca solo si hay una pared delante.
-- **Colocar** (clic izquierdo): vista previa translúcida (verde = correcto, rojo = fila equivocada), vuelo suave, encaje con aplastamiento elástico, onda y chispas.
-- **Rechazo** en fila equivocada o llena: el ovillo "niega" con un temblor, sonido suave y aviso.
-- **Dejar** en suelo o mesa (E, Q o clic derecho), con comprobación de espacio libre.
-- Contador, porcentaje, barra y objetivo; indicador de interacción; punto de mira que reacciona.
-- Colección completa → arpegio + pulso de la fila; sala completa → melodía, ola de color y salto en cadena, banner.
-- Menú de pausa (Esc): sensibilidad, volumen general/efectos, pantalla completa, VSync, MSAA. Se guarda en `user://settings.cfg`.
-- Sonidos 100 % originales sintetizados por código (`scripts/audio/sfx_synth.gd`), con variantes y variación de tono.
-- Sistema modular: nuevos ovillos = nuevo `.tres` en `data/items/` + una línea en `data/catalog_yarn.tres`.
+## Fase 2 — Mejorar la experiencia (primera entrega)
 
-Rendimiento medido (solo orientativo): 165 FPS, 267 draw calls, 618 objetos a 1600×900
-en Ryzen 7 3700X + RX 7900 XT con VSync. **No representa un equipo de gama media**; falta medir con 150 objetos.
+Hecho y verificado:
 
-## Lo que falta
+- **Lanzar objetos (F)**: toque = lanzamiento suave, mantener = más fuerza (anillo de carga alrededor del punto de mira, la mano se recoge hacia atrás al cargar). Rebota, rueda y se detiene.
+- **Física solo cuando hace falta**: los objetos en reposo están congelados (coste de un cuerpo estático). Al lanzarlos se activa su simulación y, al quedar quietos, se vuelven a congelar. Medido: 40 ovillos rebotando a la vez a 420 FPS (1080p, sin VSync, RX 7900 XT).
+- **Perfiles de material** (`data/motion/*.tres`): lana, plástico, madera, metal y tela. Cada uno define rebote, fricción, masa, rodadura, intensidad del aplastamiento y banco de sonido. Los ovillos usan "lana". Los materiales futuros (botones, carretes, cremalleras...) solo necesitan apuntar a un perfil; no hace falta código.
+- **Animación al impactar**: aplastamiento y rebote elástico (muelle amortiguado) a lo largo de la normal del golpe, polvillo suave, sonido según material y fuerza del golpe.
+- **Modelo 3D de ovillo hecho en Blender** (`art/blender/make_yarn_ball.py` → `art/models/yarn_ball.glb`): forma orgánica, hebra suelta, ~1.8k triángulos.
+- **Shader de lana con relieve** (hebras cruzadas con normal perturbada, fibra, borde esponjoso).
+- **Paisaje en la ventana**: prado con 1600 flores, estanque, valla, 30 árboles (algunos en flor) que se mecen con el viento, colinas con bruma, montañas azuladas con nieve y nubes que se desplazan. Sin sombras ni colisiones.
+- **Ambiente sonoro**: brisa en bucle por la ventana y pájaros lejanos ocasionales (posicionales).
+- **Tutorial de 4 pasos** que avanza solo al recoger, apuntar, colocar y lanzar; no vuelve a salir. Interfaz: anillo de carga, ayuda de teclas en el menú de pausa.
+- Cristal y techo con colisión: lo lanzado no escapa de la sala.
 
-- Probar a mano con ratón y teclado reales (lo automático no cubre el *feel*; ver "Cómo probar").
-- Escalar a 150 objetos (`items_per_color = 15` en `scenes/rooms/room_yarn.tscn`) y medir FPS. **Esperando tu opinión.**
-- Fase 2: modelos de Blender, texturas, sonidos editados, tutorial, interfaz pulida.
-- Fases 3–5: progresión, guardado de partida, segunda sala, colecciones, demo, ejecutable.
+Pendiente de la Fase 2 (siguientes entregas):
+
+- Modelos de mayor calidad para mobiliario y estanterías (hoy son cajas procedurales con buen color).
+- Texturas pintadas (Krita) en madera, tela y cartón. Hoy: textura de tablas generada por código.
+- Más pulido de iluminación (ajuste fino con tus capturas).
+- Sonidos editados a mano (Audacity). Hoy: síntesis por código.
+
+## Rendimiento medido
+
+Ryzen 7 3700X + RX 7900 XT, 1920×1080, sin VSync, 150 objetos, MSAA 4x, SSAO, glow, niebla volumétrica:
+
+| Escena | FPS | Frame medio |
+|---|---|---|
+| Vista general | 617 | 1.6 ms |
+| Estanterías | 678 | 1.5 ms |
+| Ventana y paisaje | 654 | 1.5 ms |
+| Suelo lleno de ovillos | 420 | 2.4 ms |
+| 40 ovillos rebotando | 419 | 2.4 ms |
+
+Esto es hardware de gama alta: **no demuestra** los 60 FPS en gama media. Hay margen amplio (≈10×), pero falta probar en un equipo más modesto. Hubo un pico puntual de 37 ms en una escena (probablemente primera vez que se dibuja algo); a vigilar.
+
+## Pruebas automáticas
+
+- `tests\run_smoke.ps1` (10 objetos) y `-ItemsPerColor 15` (150): arranque, recoger, rechazo, dejar, lanzar (rebote, aplastamiento, reposo), ordenar todo, sacar y recolocar, pausa. **Pasan los dos.**
+- `tests\run_shots.ps1`: capturas de render. `tests\run_perf.ps1`: FPS.
 
 ## Problemas conocidos
 
-- Los ovillos usan una esfera con shader procedural: es provisional y se verá "de prototipo" de cerca.
-- El balance de volumen y el carácter de los sonidos solo se puede juzgar escuchándolos.
-- Los trozos de tela y botones del suelo son decoración (MultiMesh), no se pueden recoger.
-- Con el ratón liberado (pausa) un clic en la ventana lo recaptura; el clic no cuenta como colocar.
-- Al salir, Godot avisa de 6 instancias de audio sin liberar: es el autoload de sonido, inofensivo.
-- Sin guardado de partida todavía (Fase 3). Solo se guarda la configuración.
-- `tests/debug_probe.*` es una sonda de depuración; se puede borrar.
+- No he podido **escuchar** nada: volumen, tono y ritmo de los sonidos (rebotes, viento, pájaros) son una primera versión que debes juzgar tú.
+- El *feel* del lanzamiento (fuerza, arco, rodadura) y de la sensibilidad solo se valida a mano.
+- Un ovillo lanzado dentro de una estantería queda sobre la balda como objeto suelto (se puede recoger); no cuenta como colocado.
+- Pico puntual de frame (37 ms) visto una vez en las medidas.
+- Los trozos de tela y botones del suelo son decoración (MultiMesh), no recogibles.
+- Al salir, Godot avisa de instancias de audio sin liberar: es el autoload de sonido, inofensivo.
+- Sin guardado de partida todavía (Fase 3). Solo configuración y "tutorial visto".
 
 ## Próximas tareas
 
-1. Tu prueba manual y opinión sobre el *feel* (ritmo del vuelo, sensación del encaje, volumen, sensibilidad).
-2. Con tu OK: subir a 150 objetos, medir FPS, ajustar dispersión y colisiones.
-3. Con tu OK: Fase 2.
+1. Tu prueba manual de esta entrega y tu opinión (lanzar, paisaje, sonidos, tutorial).
+2. Resto de la Fase 2 según tus comentarios.
+3. Con tu OK explícito: Fase 3 (progresión, nuevas familias de objetos, segunda sala, guardado).
 
 ## Cómo probar
 

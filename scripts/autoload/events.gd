@@ -14,6 +14,12 @@ signal item_removed(item, shelf)
 signal item_placed(item, shelf)
 signal item_set_down(item)
 signal item_rejected(item, reason: String)
+signal item_thrown(item)
+## Impacto de un objeto lanzado: velocidad de choque, punto de contacto y banco de sonido.
+signal item_bounced(item, speed: float, position: Vector3, sound: StringName)
+signal item_landed(item)
+## Carga del lanzamiento, de 0 a 1.
+signal throw_charge_changed(value: float)
 
 signal progress_changed(placed: int, total: int)
 signal collection_completed(sort_key: StringName)

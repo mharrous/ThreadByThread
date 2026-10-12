@@ -9,6 +9,9 @@ var _rejected := 0
 var _collections := 0
 var _room_done := false
 var _placed_events := 0
+var _bounces := 0
+var _throws := 0
+var _landed := 0
 
 var main: Node
 var room: RoomController
@@ -112,6 +115,13 @@ func _run() -> void:
 	print("== Thread by Thread · prueba de humo ==")
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	main = packed.instantiate()
+	# --items-per-color=N  (por defecto 1 = 10 objetos; 15 = 150 objetos)
+	var per_color := 1
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--items-per-color="):
+			per_color = int(arg.trim_prefix("--items-per-color="))
+	(main.get_node("Room") as RoomController).items_per_color = per_color
+	var total := per_color * 10
 	add_child(main)
 	await _frames(10)
 	room = main.get_node("Room")
@@ -122,17 +132,26 @@ func _run() -> void:
 	Events.item_placed.connect(func(_i, _s): _placed_events += 1)
 	Events.collection_completed.connect(func(_k): _collections += 1)
 	Events.room_completed.connect(func(): _room_done = true)
+	Events.item_bounced.connect(func(_i, _s, _p, _snd): _bounces += 1)
+	Events.item_thrown.connect(func(_i): _throws += 1)
+	Events.item_landed.connect(func(_i): _landed += 1)
 
 	print("-- Arranque")
 	var items := room.get_items().duplicate()
-	_check(items.size() == 10, "la sala genera 10 ovillos (%d)" % items.size())
-	_check(room.total_items == 10 and room.placed_items == 0, "progreso inicial 0/10")
+	_check(items.size() == total, "la sala genera %d ovillos (%d)" % [total, items.size()])
+	_check(room.total_items == total and room.placed_items == 0, "progreso inicial 0/%d" % total)
 	_check(room.get_shelves().size() == 2, "hay 2 estanterías")
 	var keys := {}
 	for it: PickableItem in items:
 		keys[it.data.sort_key] = true
 		_check(not room.find_row(it.data.sort_key).is_empty(), "fila disponible para '%s'" % it.data.sort_key)
 	_check(keys.size() == 10, "10 colores distintos")
+	var spread_ok := true
+	for it: PickableItem in items:
+		var q := it.global_position
+		if absf(q.x) > 3.0 or absf(q.z) > 2.5 or q.y < 0.0 or q.y > 1.0:
+			spread_ok = false
+	_check(spread_ok, "todos los objetos nacen dentro de la sala")
 	await _wait_until(func(): return AudioManager.ready_to_play, 6.0)
 	_check(AudioManager.ready_to_play, "sonidos sintetizados")
 
@@ -140,7 +159,11 @@ func _run() -> void:
 	var first: PickableItem = items[0]
 	_check(await _pick(first), "recoger ovillo con E (estado HOLDING)")
 	_check(first.state == PickableItem.State.HELD, "el ovillo queda en estado HELD")
-	var wrong_key: StringName = (items[1] as PickableItem).data.sort_key
+	var wrong_key: StringName = first.data.sort_key
+	for other: PickableItem in items:
+		if other.data.sort_key != first.data.sort_key:
+			wrong_key = other.data.sort_key
+			break
 	var wrong := room.find_row(wrong_key)
 	var wshelf: ShelfUnit = wrong["shelf"]
 	await _stand_at_slot(wshelf, wrong["row"], 7, first.radius)
@@ -160,7 +183,34 @@ func _run() -> void:
 	_check(holder.state == ItemHolder.State.EMPTY, "las manos quedan libres")
 	_check(absf(first.global_position.y - first.radius) < 0.01, "el ovillo reposa sobre el suelo")
 
-	print("-- Ordenar los 10 ovillos")
+	print("-- Lanzar: rebote y reposo")
+	_check(await _pick(first), "recoger el ovillo del suelo otra vez")
+	player.teleport(Vector3(-1.0, 0.0, 1.5))
+	await _settle()
+	player.look_at_point(Vector3(-0.6, 0.6, -0.8))
+	await _frames(2)
+	await _press(&"throw")
+	await _frames(1)
+	_check(first.state == PickableItem.State.THROWN or first.state == PickableItem.State.LOOSE, "al lanzar el objeto sale de la mano")
+	_check(_throws == 1, "evento item_thrown emitido")
+	_check(holder.state == ItemHolder.State.EMPTY, "las manos quedan libres tras lanzar")
+	var squash_node: Node3D = first.get_node("Squash")
+	var max_squash := 0.0
+	var waited := 0.0
+	while first.state == PickableItem.State.THROWN and waited < 12.0:
+		var s := squash_node.transform.basis.get_scale()
+		max_squash = maxf(max_squash, maxf(absf(s.x - 1.0), maxf(absf(s.y - 1.0), absf(s.z - 1.0))))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_check(first.state == PickableItem.State.LOOSE, "el ovillo se detiene y vuelve a congelarse")
+	_check(max_squash > 0.02, "el ovillo se aplasta al rebotar (deformación máx. %.3f)" % max_squash)
+	_check(_bounces >= 1, "hubo al menos un rebote (%d)" % _bounces)
+	_check(_throws == 1 and _landed == 1, "eventos de lanzamiento y aterrizaje")
+	var p := first.global_position
+	_check(absf(p.x) < 3.0 and absf(p.z) < 2.5 and p.y > -0.05 and p.y < 2.0, "queda dentro de la sala (%s)" % str(p.snapped(Vector3.ONE * 0.01)))
+	_check(first.collision_layer == PickableItem.LAYER_ITEMS and first.freeze, "vuelve a ser recogible y está congelado")
+
+	print("-- Ordenar los %d ovillos" % total)
 	for i in items.size():
 		var it: PickableItem = items[i]
 		var picked := await _pick(it)
@@ -169,20 +219,20 @@ func _run() -> void:
 			continue
 		var placed := await _place_on_correct_row(it)
 		_check(placed and it.state == PickableItem.State.PLACED, "colocar #%d en su fila" % (i + 1))
-		_check(room.placed_items == i + 1, "progreso %d/10" % (i + 1))
-	_check(_placed_events == 10, "10 eventos item_placed")
+		_check(room.placed_items == i + 1, "progreso %d/%d" % [i + 1, total])
+	_check(_placed_events == total, "%d eventos item_placed" % total)
 	_check(_collections == 9, "9 colecciones completadas antes de la última (%d)" % _collections)
 	await _wait_until(func(): return _room_done, 3.0)
 	_check(_room_done, "evento room_completed emitido")
 	_check(room.is_completed, "sala marcada como completada")
 
 	print("-- Sacar y recolocar un objeto ya colocado")
-	var again: PickableItem = items[3]
+	var again: PickableItem = items[mini(3, items.size() - 1)]
 	_check(await _pick(again), "recoger un ovillo ya colocado")
-	_check(room.placed_items == 9, "el progreso baja a 9/10")
+	_check(room.placed_items == total - 1, "el progreso baja en uno")
 	_check(again.shelf == null and again.slot_row == -1, "el hueco de la estantería queda libre")
 	_check(await _place_on_correct_row(again), "volver a colocarlo")
-	_check(room.placed_items == 10, "progreso otra vez 10/10")
+	_check(room.placed_items == total, "progreso otra vez %d/%d" % [total, total])
 
 	print("-- Menú de pausa")
 	var menu: CanvasLayer = main.get_node("PauseMenu")

@@ -18,11 +18,18 @@ class Crosshair extends Control:
 	var active := 0.0
 	var target := 0.0
 	var deny := false
+	## Carga del lanzamiento (0..1): arco que se rellena alrededor del punto.
+	var charge := 0.0
 
 	func _process(delta: float) -> void:
 		var prev := active
 		active = lerpf(active, target, 1.0 - exp(-14.0 * delta))
 		if absf(active - prev) > 0.001:
+			queue_redraw()
+
+	func set_charge(value: float) -> void:
+		if not is_equal_approx(value, charge):
+			charge = value
 			queue_redraw()
 
 	func _draw() -> void:
@@ -32,6 +39,9 @@ class Crosshair extends Control:
 		if active > 0.01:
 			var col := Color(1.0, 0.62, 0.55, 0.9 * active) if deny else Color(1, 1, 1, 0.9 * active)
 			draw_arc(c, lerpf(5.0, 10.0, active), 0.0, TAU, 32, col, 1.6, true)
+		if charge > 0.01:
+			draw_arc(c, 16.0, -PI * 0.5, -PI * 0.5 + TAU * charge, 48, Color(0, 0, 0, 0.35), 5.0, true)
+			draw_arc(c, 16.0, -PI * 0.5, -PI * 0.5 + TAU * charge, 48, Color("f2a65a"), 3.0, true)
 
 
 var _root: Control
@@ -60,6 +70,7 @@ func _ready() -> void:
 	Events.target_changed.connect(_on_target_changed)
 	Events.progress_changed.connect(_on_progress_changed)
 	Events.hint_requested.connect(_on_hint)
+	Events.throw_charge_changed.connect(func(v: float): _crosshair.set_charge(v))
 	Events.room_completed.connect(_on_room_completed)
 	_on_progress_changed(0, 0)
 	_fade_prompt(false)
@@ -161,7 +172,7 @@ func _build() -> void:
 	_root.add_child(_toast)
 
 	# Controles (desaparecen solos)
-	_controls = _label("WASD mover  ·  Shift correr  ·  Ctrl agacharse  ·  E recoger  ·  Clic colocar  ·  R girar  ·  Esc pausa", 15, SOFT, 4)
+	_controls = _label("WASD mover  ·  Shift correr  ·  Ctrl agacharse  ·  E recoger  ·  Clic colocar  ·  R girar  ·  F lanzar  ·  Esc pausa", 15, SOFT, 4)
 	_controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_controls.anchor_top = 1.0
 	_controls.anchor_bottom = 1.0

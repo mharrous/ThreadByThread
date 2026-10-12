@@ -7,18 +7,26 @@
 [ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="5_shelf"]
 [ext_resource type="PackedScene" path="res://scenes/items/yarn_ball.tscn" id="6_ball"]
 [ext_resource type="Resource" path="res://data/catalog_yarn.tres" id="7_catalog"]
+[ext_resource type="Script" path="res://scripts/room/landscape.gd" id="8_land"]
+[ext_resource type="Script" path="res://scripts/room/ambience.gd" id="9_amb"]
 
 [node name="RoomYarn" type="Node3D"]
 script = ExtResource("1_room")
 catalog = ExtResource("7_catalog")
 item_scene = ExtResource("6_ball")
-items_per_color = 1
+items_per_color = 15
 
 [node name="Shell" type="Node3D" parent="."]
 script = ExtResource("2_shell")
 
 [node name="Lighting" type="Node3D" parent="."]
 script = ExtResource("3_light")
+
+[node name="Landscape" type="Node3D" parent="."]
+script = ExtResource("8_land")
+
+[node name="Ambience" type="Node3D" parent="."]
+script = ExtResource("9_amb")
 
 [node name="Shelves" type="Node3D" parent="."]
 

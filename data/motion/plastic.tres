@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MotionProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/motion_profile.gd" id="1_motion"]
+
+[resource]
+script = ExtResource("1_motion")
+id = &"plastic"
+bounce = 0.62
+friction = 0.45
+mass = 0.01
+linear_damp = 0.12
+angular_damp = 0.8
+squash = 0.15
+squash_stiffness = 900.0
+squash_damping = 30.0
+throw_spin = 1.6
+impact_sound = &"bounce_hard"

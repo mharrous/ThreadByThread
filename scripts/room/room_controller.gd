@@ -12,6 +12,11 @@ var total_items := 0
 var placed_items := 0
 var is_completed := false
 
+const CLUSTER_COUNT := 8
+const TABLE_CAPACITY := 30
+
+var _clusters: Array[Vector2] = []
+var _on_table := 0
 var _items: Array[PickableItem] = []
 var _shelves: Array[ShelfUnit] = []
 var _total_by_key: Dictionary = {}
@@ -84,34 +89,60 @@ func _spawn_items() -> void:
 		_items_root.add_child(item)
 		item.setup(data, rng.randf_range(0.95, 1.05))
 		item.position = _find_spot(rng, taken, item.radius)
-		item.rotation.y = rng.randf() * TAU
+		# Orientación libre: cada ovillo muestra una cara distinta de su dibujo de hebras.
+		var axis := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)).normalized()
+		item.basis = Basis(axis, rng.randf() * TAU)
 		_items.append(item)
 	total_items = _items.size()
 
 
-## Busca un hueco libre en el suelo o sobre la mesa, sin solaparse con otros objetos.
+## Busca un hueco libre sin solaparse con otros objetos. El suelo se llena por montones
+## (como si alguien hubiera volcado cajas); una parte va sobre la mesa.
 func _find_spot(rng: RandomNumberGenerator, taken: Array[Vector3], radius: float) -> Vector3:
-	for attempt in 80:
+	if _clusters.is_empty():
+		_make_clusters(rng)
+	for attempt in 120:
 		var p: Vector3
-		if rng.randf() < 0.3:
+		if _on_table < TABLE_CAPACITY and rng.randf() < 0.22:
 			var r := RoomShell.TABLE_RECT
 			p = Vector3(
 				rng.randf_range(r.position.x + 0.12, r.end.x - 0.12),
 				RoomShell.TABLE_TOP_Y + radius,
 				rng.randf_range(r.position.y + 0.12, r.end.y - 0.12))
-		else:
-			p = Vector3(rng.randf_range(-2.5, 2.4), radius, rng.randf_range(-1.1, 2.1))
-			if RoomShell.is_blocked_floor(Vector2(p.x, p.z), 0.12):
+			if not _is_free(taken, p, radius):
 				continue
-		var ok := true
-		for q in taken:
-			if q.distance_squared_to(p) < pow(radius * 2.3, 2.0):
-				ok = false
-				break
-		if ok:
+			_on_table += 1
+			taken.append(p)
+			return p
+		var c := _clusters[rng.randi() % _clusters.size()]
+		var spread := 0.35 + attempt * 0.006   # si el montón está lleno, se ensancha
+		var flat := Vector2(c.x + rng.randfn(0.0, spread), c.y + rng.randfn(0.0, spread))
+		if flat.x < -2.55 or flat.x > 2.45 or flat.y < -1.15 or flat.y > 2.15:
+			continue
+		if RoomShell.is_blocked_floor(flat, 0.12):
+			continue
+		p = Vector3(flat.x, radius, flat.y)
+		if _is_free(taken, p, radius):
 			taken.append(p)
 			return p
 	return Vector3(rng.randf_range(-1.0, 1.0), radius, rng.randf_range(0.0, 1.5))
+
+
+func _is_free(taken: Array[Vector3], p: Vector3, radius: float) -> bool:
+	var min_sq := pow(radius * 2.2, 2.0)
+	for q in taken:
+		if q.distance_squared_to(p) < min_sq:
+			return false
+	return true
+
+
+func _make_clusters(rng: RandomNumberGenerator) -> void:
+	var tries := 0
+	while _clusters.size() < CLUSTER_COUNT and tries < 200:
+		tries += 1
+		var c := Vector2(rng.randf_range(-2.0, 1.9), rng.randf_range(-0.6, 1.7))
+		if not RoomShell.is_blocked_floor(c, 0.3):
+			_clusters.append(c)
 
 
 # --- Progreso ------------------------------------------------------------

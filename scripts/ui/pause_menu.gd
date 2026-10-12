@@ -120,6 +120,13 @@ func _build() -> void:
 	vb.add_child(_check_row("Suavizado de bordes (MSAA 4x)", GameSettings.msaa,
 		func(on: bool): GameSettings.msaa = on))
 
+	vb.add_child(_section("Teclas"))
+	var keys := Label.new()
+	keys.text = "WASD mover  ·  Shift correr  ·  Ctrl agacharse\nE recoger / dejar  ·  Clic izq. colocar  ·  R girar\nF lanzar (mantén = más fuerza)  ·  Esc pausa"
+	keys.add_theme_font_size_override(&"font_size", 14)
+	keys.add_theme_color_override(&"font_color", SOFT)
+	vb.add_child(keys)
+
 	var quit := Button.new()
 	quit.text = "Salir del juego"
 	quit.pressed.connect(func(): get_tree().quit())

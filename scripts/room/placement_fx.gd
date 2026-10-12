@@ -4,10 +4,13 @@ extends Node3D
 ## Escucha Events.item_placed; el gameplay no lo llama directamente.
 
 const POOL_SIZE := 4
+const DUST_POOL := 6
 
 var _bursts: Array[CPUParticles3D] = []
 var _rings: Array[MeshInstance3D] = []
+var _dust: Array[CPUParticles3D] = []
 var _next := 0
+var _next_dust := 0
 
 
 func _ready() -> void:
@@ -76,7 +79,47 @@ func _ready() -> void:
 		add_child(ring)
 		_rings.append(ring)
 
+	# Polvillo suave en los rebotes.
+	var dust_fade := Gradient.new()
+	dust_fade.set_color(0, Color(1, 1, 1, 0.55))
+	dust_fade.set_color(1, Color(1, 1, 1, 0))
+	var dust_quad := QuadMesh.new()
+	dust_quad.size = Vector2(0.07, 0.07)
+	dust_quad.material = spark_mat
+	for i in DUST_POOL:
+		var d := CPUParticles3D.new()
+		d.emitting = false
+		d.one_shot = true
+		d.explosiveness = 1.0
+		d.amount = 7
+		d.lifetime = 0.5
+		d.mesh = dust_quad
+		d.direction = Vector3.UP
+		d.spread = 85.0
+		d.initial_velocity_min = 0.12
+		d.initial_velocity_max = 0.4
+		d.gravity = Vector3(0, -0.15, 0)
+		d.scale_amount_min = 0.7
+		d.scale_amount_max = 1.5
+		d.color_ramp = dust_fade
+		d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(d)
+		_dust.append(d)
+
 	Events.item_placed.connect(_on_item_placed)
+	Events.item_bounced.connect(_on_item_bounced)
+
+
+func _on_item_bounced(item: PickableItem, speed: float, pos: Vector3, _sound: StringName) -> void:
+	if speed < 1.4:
+		return
+	var d := _dust[_next_dust]
+	_next_dust = (_next_dust + 1) % DUST_POOL
+	d.global_position = pos
+	d.color = item.data.color.lerp(Color.WHITE, 0.75)
+	d.amount = clampi(int(speed * 1.6), 4, 10)
+	d.restart()
+	d.emitting = true
 
 
 func _on_item_placed(item: PickableItem, _shelf: ShelfUnit) -> void:

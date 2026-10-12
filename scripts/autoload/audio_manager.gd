@@ -75,6 +75,13 @@ func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_
 		p2.play()
 
 
+## Devuelve el primer stream de un banco (para sonidos en bucle que gestiona otro nodo).
+func get_stream(sound: StringName) -> AudioStream:
+	if not _banks.has(sound):
+		return null
+	return (_banks[sound] as Array)[0]
+
+
 func _setup_bus() -> void:
 	if AudioServer.get_bus_index(SFX_BUS) != -1:
 		return
@@ -96,6 +103,10 @@ func _connect_events() -> void:
 	Events.item_placed.connect(func(item, _shelf): play(&"place", item.global_position, 0.0, 0.04))
 	Events.item_set_down.connect(func(item): play(&"set_down", item.global_position))
 	Events.item_rejected.connect(func(_item, _reason): play(&"deny"))
+	Events.item_thrown.connect(func(item): play(&"throw", item.global_position))
+	Events.item_bounced.connect(func(_item, speed, pos, sound):
+		# Más fuerte cuanto más fuerte el golpe.
+		play(sound, pos, lerpf(-22.0, 0.0, clampf(speed / 6.0, 0.0, 1.0)), 0.08))
 	Events.collection_completed.connect(func(_key): play(&"collection", null, -2.0, 0.0))
 	Events.room_completed.connect(func(): play(&"room_complete", null, -1.0, 0.0))
 
@@ -114,6 +125,14 @@ func _synthesize_all() -> void:
 		&"collection": [SfxSynth.collection()],
 		&"room_complete": [SfxSynth.room_complete()],
 		&"step": [SfxSynth.step(1), SfxSynth.step(4), SfxSynth.step(7), SfxSynth.step(12)],
+		&"wind": [SfxSynth.wind_loop()],
+		&"bird": [SfxSynth.bird(4), SfxSynth.bird(15), SfxSynth.bird(26), SfxSynth.bird(41)],
+		&"throw": [SfxSynth.throw_whoosh(3), SfxSynth.throw_whoosh(9)],
+		&"bounce_soft": [SfxSynth.bounce_soft(2), SfxSynth.bounce_soft(6), SfxSynth.bounce_soft(13)],
+		&"bounce_hard": [SfxSynth.bounce_hard(2), SfxSynth.bounce_hard(6), SfxSynth.bounce_hard(13)],
+		&"bounce_wood": [SfxSynth.bounce_wood(2), SfxSynth.bounce_wood(6), SfxSynth.bounce_wood(13)],
+		&"bounce_metal": [SfxSynth.bounce_metal(2), SfxSynth.bounce_metal(6), SfxSynth.bounce_metal(13)],
+		&"bounce_fabric": [SfxSynth.bounce_fabric(2), SfxSynth.bounce_fabric(6)],
 		&"ui_click": [SfxSynth.ui_click()],
 	}
 	_publish_banks.call_deferred(banks)

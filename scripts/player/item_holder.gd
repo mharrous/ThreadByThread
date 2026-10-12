@@ -11,7 +11,11 @@ const MASK_WORLD := 1
 const MASK_ITEMS := 2
 const MASK_SHELF_AIM := 4
 const MASK_SETTABLE := 16
+const MASK_PICK := 32
 
+@export var throw_min_speed := 3.2
+@export var throw_max_speed := 9.5
+@export var charge_time := 0.9
 @export var reach := 2.7
 @export var hold_distance := 0.60
 @export var hold_offset := Vector3(0.19, -0.16, 0.0)
@@ -29,6 +33,8 @@ var aim_status: ShelfUnit.SlotStatus = ShelfUnit.SlotStatus.NONE
 var _player: Player
 var _camera: Camera3D
 var _spin := 0.0
+var _charging := false
+var _charge := 0.0
 var _hold_dist := 0.6
 var _smooth_pos := Vector3.ZERO
 var _wobble := 0.0
@@ -57,6 +63,15 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_released(&"throw") and _charging:
+		try_throw()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(&"throw") and state == State.HOLDING:
+		_charging = true
+		_charge = 0.0
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"interact"):
 		if state == State.EMPTY:
 			try_pick()
@@ -103,6 +118,8 @@ func try_pick() -> bool:
 	held.set_pickable(false)
 	_spin = 0.0
 	_wobble = 0.0
+	_charging = false
+	_charge = 0.0
 	_hold_dist = hold_distance
 	_smooth_pos = held.global_position
 	_begin_anim(held.global_transform, Transform3D.IDENTITY, pick_duration)
@@ -136,6 +153,31 @@ func try_place() -> void:
 			Events.hint_requested.emit("Apunta a una fila de la estantería para colocarlo")
 
 
+## Lanza el objeto sostenido. La fuerza depende de cuánto se mantuvo pulsado (0..1).
+func try_throw() -> void:
+	var strength := _charge
+	_charging = false
+	_charge = 0.0
+	Events.throw_charge_changed.emit(0.0)
+	if state != State.HOLDING:
+		return
+	var cam := _camera.global_transform
+	var speed := lerpf(throw_min_speed, throw_max_speed, strength)
+	var direction := (-cam.basis.z + Vector3.UP * 0.12).normalized()
+	var velocity := direction * speed + _player.velocity * 0.6
+	# Giro hacia delante, como una pelota que rueda por el aire, con algo de azar.
+	var spin := -cam.basis.x * speed * 1.2 + Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * 2.5
+	var item := held
+	held = null
+	state = State.EMPTY
+	_ghost.visible = false
+	_last_info = {&"stale": true}   # fuerza que se vuelva a publicar el estado
+	aim_status = ShelfUnit.SlotStatus.NONE
+	item.launch(velocity, spin)
+	Events.item_thrown.emit(item)
+	Events.held_item_changed.emit(null)
+
+
 func try_set_down() -> void:
 	if state != State.HOLDING:
 		return
@@ -154,10 +196,13 @@ func try_set_down() -> void:
 # --- Estados -------------------------------------------------------------
 
 func _process_empty() -> void:
-	var hit := _raycast(MASK_WORLD | MASK_ITEMS)
+	# Los objetos se apuntan con un volumen algo mayor que el físico (más cómodo).
+	var hit := _raycast(MASK_WORLD | MASK_PICK, true)
 	var item: PickableItem = null
 	if not hit.is_empty():
-		item = hit["collider"] as PickableItem
+		var proxy := hit["collider"] as Area3D
+		if proxy != null:
+			item = proxy.get_parent() as PickableItem
 	_set_hover(item)
 	if item:
 		_publish({
@@ -188,6 +233,9 @@ func _process_picking(delta: float) -> void:
 func _process_holding(delta: float) -> void:
 	if Input.is_action_pressed(&"rotate_item"):
 		_spin += spin_speed * delta
+	if _charging:
+		_charge = minf(1.0, _charge + delta / charge_time)
+		Events.throw_charge_changed.emit(_charge)
 	var target := _hold_transform(delta)
 	_smooth_pos = _smooth_pos.lerp(target.origin, 1.0 - exp(-follow_stiffness * delta))
 	var cur_q := held.global_basis.get_rotation_quaternion()
@@ -219,7 +267,7 @@ func _finish_place() -> void:
 	held = null
 	state = State.EMPTY
 	aim_status = ShelfUnit.SlotStatus.NONE
-	_last_info = {}
+	_last_info = {&"stale": true}   # fuerza que se vuelva a publicar el estado
 	if _place_kind == PlaceKind.SHELF:
 		item.state = PickableItem.State.PLACED
 		item.shelf = _place_shelf
@@ -286,7 +334,7 @@ func _publish_holding_info(status: ShelfUnit.SlotStatus) -> void:
 	var info := {
 		"title": held.data.display_name,
 		"detail": held.data.detail,
-		"hint": "R girar   ·   E / clic der. dejar",
+		"hint": "R girar   ·   F lanzar (mantén = más fuerza)   ·   E dejar",
 	}
 	match status:
 		ShelfUnit.SlotStatus.OK:
@@ -324,10 +372,11 @@ func _set_hover(item: PickableItem) -> void:
 		item.set_highlighted(true)
 
 
-func _raycast(mask: int) -> Dictionary:
+func _raycast(mask: int, areas: bool = false) -> Dictionary:
 	var from := _camera.global_position
 	var to := from - _camera.global_basis.z * reach
 	var q := PhysicsRayQueryParameters3D.create(from, to, mask)
+	q.collide_with_areas = areas
 	return _camera.get_world_3d().direct_space_state.intersect_ray(q)
 
 
@@ -344,6 +393,8 @@ func _hold_transform(delta: float) -> Transform3D:
 	_hold_dist = lerpf(_hold_dist, desired, 1.0 - exp(-14.0 * delta))
 	var s := _hold_dist / hold_distance
 	var local := Vector3(hold_offset.x * s, hold_offset.y * s, -_hold_dist)
+	# Preparación del lanzamiento: la mano se recoge hacia atrás y abajo.
+	local += Vector3(0.05, -0.05, 0.14) * _charge
 	var basis := cam.basis * Basis(Vector3.UP, _spin)
 	return Transform3D(basis, cam.origin + cam.basis * local)
 

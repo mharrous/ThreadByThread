@@ -13,7 +13,7 @@ extends CharacterBody3D
 @export var crouch_eye_height := 1.02
 @export var stand_height := 1.75
 @export var crouch_height := 1.1
-@export var base_fov := 75.0
+@export var base_fov := 68.0
 
 const BASE_SENSITIVITY := 0.0022
 const MAX_PITCH := 1.5

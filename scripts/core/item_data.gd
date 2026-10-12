@@ -23,6 +23,18 @@ static var _material_cache: Dictionary = {}
 @export var thread_density := 26.0
 ## Escena propia; si es null se usa la escena por defecto de la sala.
 @export var scene: PackedScene
+## Cómo rebota, rueda y suena al lanzarlo. Null = perfil por defecto.
+@export var motion: MotionProfile
+
+static var _default_motion: MotionProfile
+
+
+func get_motion() -> MotionProfile:
+	if motion != null:
+		return motion
+	if _default_motion == null:
+		_default_motion = MotionProfile.new()
+	return _default_motion
 
 
 func get_material() -> Material:

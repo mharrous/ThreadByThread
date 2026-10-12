@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="ItemData" format=3]
 
 [ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://data/motion/wool.tres" id="2_motion"]
 
 [resource]
 script = ExtResource("1_data")
@@ -13,3 +14,4 @@ sort_label = "Verde manzana"
 color = Color(0.545, 0.765, 0.29, 1)
 radius = 0.06
 thread_density = 28.0
+motion = ExtResource("2_motion")

@@ -11,6 +11,7 @@ const KEY_BINDINGS := {
 	&"crouch": [KEY_CTRL],
 	&"interact": [KEY_E],
 	&"set_down": [KEY_Q],
+	&"throw": [KEY_F],
 	&"rotate_item": [KEY_R],
 	&"pause": [KEY_ESCAPE],
 }

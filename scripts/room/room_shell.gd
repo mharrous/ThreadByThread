@@ -70,15 +70,6 @@ func _build_floor_and_outside() -> void:
 	# Capa 1 (mundo) + 16 (superficie donde se pueden dejar objetos).
 	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, -0.1, 0), floor_mat, true, 17)
 
-	# Exterior visible desde la ventana.
-	var ground := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(120, 120)
-	ground.mesh = plane
-	ground.material_override = _mat(Color("a5c47f"), 1.0)
-	ground.position = Vector3(0, -0.06, 0)
-	add_child(ground)
-
 
 func _build_walls() -> void:
 	var hw := ROOM_W * 0.5
@@ -134,11 +125,12 @@ func _build_window() -> void:
 	glass.albedo_color = Color(0.85, 0.93, 1.0, 0.10)
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	glass.roughness = 0.05
-	_box(self, Vector3(0.01, 1.3, 1.8), Vector3(-hw - 0.1, 1.55, 0), glass, false, 1, false)
+	# Con colisión: los objetos lanzados rebotan en el cristal en vez de salir volando.
+	_box(self, Vector3(0.04, 1.3, 1.8), Vector3(-hw - 0.1, 1.55, 0), glass, true, 1, false)
 
 
 func _build_ceiling() -> void:
-	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, ROOM_H + 0.1, 0), _mat(C_CEILING, 1.0), false)
+	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, ROOM_H + 0.1, 0), _mat(C_CEILING, 1.0), true)
 	var beam := _mat(C_BEAM, 0.7)
 	for bx in [-1.7, 1.7]:
 		_box(self, Vector3(0.2, 0.17, ROOM_D), Vector3(bx, ROOM_H - 0.085, 0), beam, false)

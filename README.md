@@ -9,7 +9,11 @@ Recoger → identificar → clasificar → colocar → recibir recompensa.
 2. *Importar* → selecciona `project.godot` de esta carpeta → *Importar y editar*.
 3. Pulsa **F5** (la escena principal es `scenes/main.tscn`).
 
-Primera vez: Godot importa el proyecto unos segundos.
+O directamente, sin abrir el editor:
+
+```
+"%LOCALAPPDATA%\Programs\Godot\Godot_v4.7.2-stable_win64.exe" --path "C:\Users\Usuario\Documents\ThreadByThread"
+```
 
 ## Controles
 
@@ -21,47 +25,55 @@ Primera vez: Godot importa el proyecto unos segundos.
 | Recoger (manos vacías) | E |
 | Colocar en una fila | Clic izquierdo |
 | Girar el objeto sostenido | R (mantener) |
+| Lanzar | F (toque = suave, mantener = más fuerza) |
 | Dejar en suelo o mesa | E, Q o clic derecho |
 | Pausa y ajustes | Esc |
 
 ## Qué probar a mano (checklist)
 
-1. Camina hasta un ovillo del suelo. Debe resaltarse y mostrar `[E] Recoger` con su nombre.
-2. Pulsa E: el ovillo debe volar suave hasta tu mano (abajo a la derecha). Mantén R: gira.
-3. Camina hacia una estantería con el ovillo. Apunta a la fila de su color: aparece una esfera translúcida **verde** y `Clic · Colocar aquí`.
-4. Clic izquierdo: encaje suave, sonido, chispas y onda; el contador sube.
-5. Apunta a una fila de otro color: esfera **roja**; al hacer clic el ovillo "niega" y no se coloca.
-6. Pulsa E o clic derecho mirando al suelo/mesa: lo deja ahí. Puedes volver a cogerlo.
-7. Coge un ovillo ya colocado en la estantería: el contador baja.
-8. Completa una fila de color (con 10 objetos no se da; con 150 sí): arpegio y pulso. Coloca los 10: melodía y banner.
-9. Esc: menú de pausa. Prueba sensibilidad, volumen y pantalla completa.
+1. El tutorial de arriba te guía: recoger (E), apuntar a la fila de su color, colocar (clic), lanzar (F).
+2. Camina hasta un ovillo. Debe resaltarse y mostrar `[E] Recoger` con su nombre.
+3. Pulsa E: el ovillo vuela hasta tu mano. Mantén R: gira.
+4. Apunta a la fila de su color: esfera translúcida **verde**. Clic: encaje suave, sonido, chispas, onda.
+5. Apunta a una fila de otro color: esfera **roja**; al hacer clic el ovillo "niega".
+6. **Lanzar**: sosteniendo un ovillo, pulsa F rápido (toque suave) o mantenla (se llena un anillo) y suelta. Debe rebotar, aplastarse un poco, soltar polvillo, rodar y pararse. Puedes volver a cogerlo.
+7. Mira por la ventana: prado, estanque, valla, árboles que se mecen, montañas y nubes que se mueven. Se oye brisa y algún pájaro.
+8. Completa una fila de color: arpegio y pulso de la fila. Completa todo: melodía, ola de color y banner.
+9. Esc: menú de pausa (sensibilidad, volumen, pantalla completa, VSync, MSAA, lista de teclas).
 
-Dime qué sientes raro: velocidad del vuelo, aplastamiento al encajar, volumen/tono de los sonidos, sensibilidad del ratón, distancia de la mano.
+Dime qué sientes raro: fuerza y arco del lanzamiento, rebote, sonidos, sensibilidad, distancia de la mano, paisaje.
 
 ## Pruebas automáticas
 
 ```powershell
 # Prueba de humo sin ventana (código de salida 0 = todo correcto)
-powershell -File tests\run_smoke.ps1
+powershell -File tests\run_smoke.ps1                    # 10 objetos, rápido
+powershell -File tests\run_smoke.ps1 -ItemsPerColor 15  # 150 objetos, unos minutos
 
 # Capturas de render en captures\ (abre una ventana unos segundos)
 powershell -File tests\run_shots.ps1
+
+# FPS con 150 objetos a 1080p sin VSync
+powershell -File tests\run_perf.ps1
 ```
+
+Las pruebas usan `settings_test.cfg` (`--test-mode`): no tocan tu configuración ni tu "tutorial visto".
 
 ## Estructura
 
 ```
-data/            ItemData (.tres) y catálogo por sala
+art/             modelos (glb) y scripts de Blender que los generan
+data/            ItemData (.tres), catálogo por sala y perfiles de material (motion/)
 scenes/          main, sala, jugador, estantería, ovillo, interfaz
 scripts/
   autoload/      Events (bus de señales), GameSettings, InputSetup, AudioManager
-  core/          ItemData, ItemCatalog, PickableItem, ShelfUnit
-  player/        Player (movimiento), ItemHolder (recoger/sostener/colocar)
-  room/          RoomController (progreso), RoomShell (geometría), RoomLighting, PlacementFx
+  core/          ItemData, ItemCatalog, MotionProfile, PickableItem, ShelfUnit
+  player/        Player (movimiento), ItemHolder (recoger/sostener/lanzar/colocar)
+  room/          RoomController, RoomShell, RoomLighting, Landscape, Ambience, PlacementFx
   audio/         SfxSynth (síntesis procedural)
-  ui/            HUD, menú de pausa
-shaders/         yarn.gdshader
-tests/           prueba de humo y capturas
+  ui/            HUD, tutorial, menú de pausa
+shaders/         yarn.gdshader, foliage_sway.gdshader
+tests/           prueba de humo, capturas, rendimiento
 ```
 
 ## Añadir un tipo de ovillo
@@ -70,10 +82,24 @@ tests/           prueba de humo y capturas
 2. Añádelo a `data/catalog_yarn.tres`.
 3. Cada fila de estantería muestra un tipo, en el orden del catálogo (de arriba abajo, izquierda y luego derecha).
 
+## Añadir un material nuevo (cómo rebota y suena)
+
+Los materiales viven en `data/motion/`: `wool`, `plastic`, `wood`, `metal`, `fabric`.
+
+1. Duplica el `.tres` más parecido y ajusta `bounce`, `friction`, `mass`, `angular_damp` (cuánto rueda), `squash` (aplastamiento) y `impact_sound`.
+2. En el `ItemData` del objeto, asigna ese perfil a `motion`.
+3. Para un sonido de impacto nuevo: añade la función en `scripts/audio/sfx_synth.gd` y su banco en `audio_manager.gd`.
+
+## Regenerar el modelo del ovillo
+
+```
+"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --factory-startup --python art/blender/make_yarn_ball.py -- art/models/yarn_ball.glb
+```
+
 ## Capas de física
 
-`world` 1 · `items` 2 · `shelf_aim` 3 · `player` 4 · `settable` 5 (superficies donde se puede dejar un objeto).
+`world` 1 · `items` 2 · `shelf_aim` 3 · `player` 4 · `settable` 5 · `pick` 6 (volumen de puntería de los objetos).
 
 ## Licencias
 
-Todo el contenido es original (código, shader, modelos procedurales, sonidos sintetizados). Sin recursos de terceros.
+Todo el contenido es original (código, shaders, modelo de Blender, paisaje procedural, sonidos sintetizados). Sin recursos de terceros.

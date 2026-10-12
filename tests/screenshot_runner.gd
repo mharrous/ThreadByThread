@@ -7,6 +7,8 @@ const POSES := [
 	{"name": "02_estanterias", "pos": Vector3(-0.3, 0, -0.7), "look": Vector3(-1.2, 1.0, -2.3)},
 	{"name": "03_mesa", "pos": Vector3(0.6, 0, 0.9), "look": Vector3(2.2, 0.8, 0.8)},
 	{"name": "04_ventana", "pos": Vector3(1.2, 0, 0.2), "look": Vector3(-3.0, 1.4, 0.0)},
+	{"name": "04b_paisaje", "pos": Vector3(-2.0, 0, 0.1), "look": Vector3(-12.0, 1.7, 0.0)},
+	{"name": "04c_paisaje_ancho", "pos": Vector3(-1.5, 0, -0.5), "look": Vector3(-20.0, 2.6, 6.0)},
 	{"name": "05_rincon", "pos": Vector3(0.5, 0, 0.5), "look": Vector3(-2.6, 0.5, 1.9)},
 ]
 
@@ -73,6 +75,35 @@ func _run() -> void:
 	for i in 30:
 		await get_tree().process_frame
 	await _shot("09_colocado")
+
+	# Lanzamiento: en el aire, primer rebote y reposo.
+	var toss: PickableItem = room.get_items()[1]
+	var tp := toss.global_position
+	player.teleport(Vector3(tp.x, 0, tp.z) + Vector3(0, 0, 0.9))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	player.look_at_point(tp)
+	for i in 4:
+		await get_tree().process_frame
+	holder.try_pick()
+	while holder.state != ItemHolder.State.HOLDING:
+		await get_tree().process_frame
+	player.teleport(Vector3(0.6, 0, 1.7))
+	await get_tree().physics_frame
+	player.look_at_point(Vector3(0.0, 0.5, -0.4))
+	for i in 20:
+		await get_tree().process_frame
+	await _shot("09b_antes_de_lanzar")
+	holder.try_throw()
+	for i in 14:
+		await get_tree().process_frame
+	await _shot("09c_en_el_aire")
+	for i in 14:
+		await get_tree().process_frame
+	await _shot("09d_rebote")
+	for i in 120:
+		await get_tree().process_frame
+	await _shot("09e_reposo")
 
 	# Ordena el resto para ver la recompensa final.
 	var rest := room.get_items().duplicate()
