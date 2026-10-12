@@ -73,8 +73,13 @@ func _ready() -> void:
 	_set_texture(_terrain_mat, "detail_tex", "res://art/textures/grass_albedo.png")
 	_set_texture(_terrain_mat, "detail_nrm", "res://art/textures/grass_normal.png")
 
-	_build_terrain(Rect2(-64.0, -STREET_HALF_LEN, 61.0, STREET_HALF_LEN * 2.0), 1.5)       # cerca: detalle fino
+	_build_terrain(Rect2(-64.0, -100.0, 61.0, 200.0), 1.5)                                 # cerca de la ventana oeste: detalle fino
 	_build_terrain(Rect2(-330.0, -210.0, 266.0, 420.0), 8.0)                               # lejos: colinas y montañas
+	_build_terrain(Rect2(-64.0, 100.0, 394.0, 230.0), 8.0)                                 # fin de la calle por el sur
+	_build_terrain(Rect2(-64.0, -330.0, 394.0, 230.0), 8.0)                                # y por el norte
+	# Jardín trasero: lo que ven las ventanas sur de las demás salas.
+	_build_terrain(Rect2(-3.0, 2.6, 63.0, 97.4), 1.5)
+	_build_terrain(Rect2(60.0, 2.6, 270.0, 97.4), 8.0)
 	_build_pond()
 	_build_street()
 	_build_houses()
@@ -83,6 +88,7 @@ func _ready() -> void:
 	_build_trees()
 	_build_flowers()
 	_build_fence()
+	_build_south_fence()
 	_build_fill_light()
 
 	_street_life = StreetLife.new()
@@ -101,7 +107,8 @@ func height_at(x: float, z: float) -> float:
 	h += _hills.get_noise_2d(x, z) * 5.0 * rough
 	h += _detail.get_noise_2d(x, z) * 0.28 * rough
 	h -= 2.4 * exp(-pd / 110.0)
-	var m := smoothstep(95.0, 215.0, -x)
+	# Montañas al oeste (más allá de las casas) y al sur (más allá del jardín trasero).
+	var m := maxf(smoothstep(95.0, 215.0, -x), smoothstep(115.0, 250.0, z))
 	var ridge := 1.0 - absf(_peaks.get_noise_2d(x, z))
 	h += m * (ridge * ridge * 52.0 + 10.0)
 	return h
@@ -173,7 +180,7 @@ func _terrain_color(x: float, z: float, h: float) -> Color:
 	c = c.lerp(ROCK, smoothstep(22.0, 40.0, h))
 	c = c.lerp(SNOW, smoothstep(46.0, 58.0, h))
 	# Bruma de distancia: las colinas lejanas se funden con el cielo.
-	var dist := Vector2(x + 3.0, z).length()
+	var dist := Vector2(x - clampf(x, -3.0, 22.8), z - clampf(z, -2.5, 2.5)).length() + 3.0
 	return c.lerp(HAZE, smoothstep(35.0, 280.0, dist) * 0.82)
 
 
@@ -341,6 +348,7 @@ func _build_flowers() -> void:
 		{"rect": Rect2(-18.8, -62.0, 2.8, 124.0), "n": 450},
 		{"rect": Rect2(-48.0, -9.5, 26.0, 19.0), "n": 420},
 		{"rect": Rect2(-80.0, -70.0, 30.0, 140.0), "n": 380},
+		{"rect": Rect2(-3.0, 6.0, 40.0, 40.0), "n": 520},
 	]
 	var total := 0
 	for zone in zones:
@@ -484,6 +492,26 @@ func _tree_spots() -> Array[Vector3]:
 				break
 		if ok:
 			spots.append(Vector3(x, z, _rng.randf_range(1.0, 1.7)))
+	# Jardín trasero: árboles repartidos, sin tapar el cristal de las ventanas sur (x = 6.4, 12.8, 19.2).
+	var south_count := spots.size() + 34
+	guard = 0
+	while spots.size() < south_count and guard < 1200:
+		guard += 1
+		var x := _rng.randf_range(-2.0, 52.0)
+		var z := _rng.randf_range(8.0, 70.0)
+		var blocks_window := false
+		for wx in [6.4, 12.8, 19.2]:
+			if absf(x - wx) < 4.5 and z < 22.0:
+				blocks_window = true
+		if blocks_window:
+			continue
+		var ok := true
+		for s in spots:
+			if Vector2(s.x - x, s.y - z).length() < 6.5:
+				ok = false
+				break
+		if ok:
+			spots.append(Vector3(x, z, _rng.randf_range(0.9, 1.6)))
 	return spots
 
 
@@ -513,6 +541,37 @@ func _build_fence() -> void:
 		rail.mesh = rb
 		rail.material_override = wood
 		rail.position = Vector3(FENCE_X, height_at(FENCE_X, 0.0) + rail_y, 0.0)
+		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(rail)
+
+
+## Valla baja del jardín trasero, a lo largo de la fachada sur de las salas.
+func _build_south_fence() -> void:
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color("f1e6d0")
+	wood.roughness = 0.8
+	var fence_z := 5.2
+	var posts := MultiMesh.new()
+	posts.transform_format = MultiMesh.TRANSFORM_3D
+	var post_mesh := BoxMesh.new()
+	post_mesh.size = Vector3(0.1, 0.9, 0.1)
+	posts.mesh = post_mesh
+	var xs: Array[float] = []
+	var x := -2.5
+	while x <= 30.0:
+		xs.append(x)
+		x += 1.3
+	posts.instance_count = xs.size()
+	for i in xs.size():
+		posts.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(xs[i], height_at(xs[i], fence_z) + 0.45, fence_z)))
+	_add_multimesh(posts, "SouthFencePosts", wood)
+	for rail_y in [0.35, 0.7]:
+		var rail := MeshInstance3D.new()
+		var rb := BoxMesh.new()
+		rb.size = Vector3(32.8, 0.06, 0.05)
+		rail.mesh = rb
+		rail.material_override = wood
+		rail.position = Vector3(13.75, height_at(13.75, fence_z) + rail_y, fence_z)
 		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(rail)
 

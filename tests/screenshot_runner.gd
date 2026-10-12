@@ -129,6 +129,19 @@ func _run_street(main: Node, player: Player) -> void:
 		await _shot("ventana_%s" % kind)
 		actor.queue_free()
 		life._actors.erase(actor)
+	# Ventanas sur de las demás salas: el jardín trasero.
+	var shop := main.get_node("Shop") as Shop
+	for room in shop.rooms:
+		if room.index == 0:
+			continue
+		room.visible = true
+		player.teleport(room.to_global(Vector3(0.0, 0.0, 1.3)))
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		player.look_at_point(room.to_global(Vector3(0.0, 1.55, 6.0)))
+		for i in 8:
+			await get_tree().process_frame
+		await _shot("ventana_sur_sala%d" % (room.index + 1))
 	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
 
 
