@@ -1,0 +1,456 @@
+[gd_resource type="Resource" script_class="ItemCatalog" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_wqyqd"]
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="2_5m4e8"]
+[ext_resource type="PackedScene" path="res://art/models/items/spool.glb" id="3_50ljw"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="4_gdv63"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="5_tn5i2"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="6_s21ud"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="7_6m5r3"]
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="8_i8054"]
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="9_wd032"]
+[ext_resource type="Script" path="res://scripts/core/item_catalog.gd" id="10_4hb6v"]
+
+[sub_resource type="Resource" id="Resource_b285s"]
+script = ExtResource("1_wqyqd")
+id = &"spool_red"
+display_name = "Carrete de hilo rojo"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_red"
+sort_label = "Hilo rojo"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.85, 0.18, 0.2, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_frexb"]
+script = ExtResource("1_wqyqd")
+id = &"spool_yellow"
+display_name = "Carrete de hilo amarillo"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_yellow"
+sort_label = "Hilo amarillo"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.95, 0.78, 0.2, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_5tl8x"]
+script = ExtResource("1_wqyqd")
+id = &"spool_green"
+display_name = "Carrete de hilo verde"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_green"
+sort_label = "Hilo verde"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.25, 0.6, 0.3, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_olhb8"]
+script = ExtResource("1_wqyqd")
+id = &"spool_blue"
+display_name = "Carrete de hilo azul"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_blue"
+sort_label = "Hilo azul"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.25, 0.45, 0.8, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_pt35p"]
+script = ExtResource("1_wqyqd")
+id = &"spool_violet"
+display_name = "Carrete de hilo violeta"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_violet"
+sort_label = "Hilo violeta"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.55, 0.35, 0.75, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_psjqb"]
+script = ExtResource("1_wqyqd")
+id = &"spool_pink"
+display_name = "Carrete de hilo rosa"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_pink"
+sort_label = "Hilo rosa"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.93, 0.55, 0.7, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_4wg7d"]
+script = ExtResource("1_wqyqd")
+id = &"spool_white"
+display_name = "Carrete de hilo blanco"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_white"
+sort_label = "Hilo blanco"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.95, 0.94, 0.9, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_6akni"]
+script = ExtResource("1_wqyqd")
+id = &"spool_black"
+display_name = "Carrete de hilo negro"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_black"
+sort_label = "Hilo negro"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.12, 0.12, 0.14, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_gkkp2"]
+script = ExtResource("1_wqyqd")
+id = &"spool_gold"
+display_name = "Carrete de hilo dorado"
+detail = "Hilo metálico · brillante"
+family = 1
+sort_key = &"spool_gold"
+sort_label = "Hilo dorado"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.9, 0.72, 0.25, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+metallic = 0.9
+roughness = 0.45
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_8fs3p"]
+script = ExtResource("1_wqyqd")
+id = &"spool_silver"
+display_name = "Carrete de hilo plateado"
+detail = "Hilo metálico · brillante"
+family = 1
+sort_key = &"spool_silver"
+sort_label = "Hilo plateado"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_50ljw")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.8, 0.82, 0.86, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+metallic = 0.9
+roughness = 0.45
+motion = ExtResource("2_5m4e8")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_4taoq"]
+script = ExtResource("1_wqyqd")
+id = &"btn_wood_light"
+display_name = "Botón de madera clara"
+detail = "Madera de haya"
+family = 2
+sort_key = &"btn_wood_light"
+sort_label = "Madera clara"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"wood"
+color = Color(0.92, 0.76, 0.52, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+motion = ExtResource("2_5m4e8")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_bxil8"]
+script = ExtResource("1_wqyqd")
+id = &"btn_wood_dark"
+display_name = "Botón de madera oscura"
+detail = "Madera de nogal"
+family = 2
+sort_key = &"btn_wood_dark"
+sort_label = "Madera oscura"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"wood"
+color = Color(0.5, 0.3, 0.17, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+motion = ExtResource("2_5m4e8")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_mfcir"]
+script = ExtResource("1_wqyqd")
+id = &"btn_plastic_white"
+display_name = "Botón de plástico blanco"
+detail = "Camisería"
+family = 2
+sort_key = &"btn_plastic_white"
+sort_label = "Plástico blanco"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"plastic"
+color = Color(0.96, 0.96, 0.94, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.28
+motion = ExtResource("8_i8054")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_w656o"]
+script = ExtResource("1_wqyqd")
+id = &"btn_plastic_red"
+display_name = "Botón de plástico rojo"
+detail = "Abrigo"
+family = 2
+sort_key = &"btn_plastic_red"
+sort_label = "Plástico rojo"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"plastic"
+color = Color(0.85, 0.18, 0.2, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.28
+motion = ExtResource("8_i8054")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_um7ay"]
+script = ExtResource("1_wqyqd")
+id = &"btn_brass"
+display_name = "Botón de latón"
+detail = "Chaqueta · dorado"
+family = 2
+sort_key = &"btn_brass"
+sort_label = "Latón"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"metal"
+color = Color(0.86, 0.66, 0.3, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("9_wd032")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_q48fv"]
+script = ExtResource("1_wqyqd")
+id = &"btn_silver"
+display_name = "Botón plateado"
+detail = "Chaqueta · plata"
+family = 2
+sort_key = &"btn_silver"
+sort_label = "Plata"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"metal"
+color = Color(0.82, 0.84, 0.88, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("9_wd032")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_nv8e4"]
+script = ExtResource("1_wqyqd")
+id = &"btn_glass_blue"
+display_name = "Botón de cristal azul"
+detail = "Cristal tallado"
+family = 2
+sort_key = &"btn_glass_blue"
+sort_label = "Cristal azul"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"glass"
+color = Color(0.4, 0.6, 0.95, 0.6)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.1
+motion = ExtResource("8_i8054")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_gkqot"]
+script = ExtResource("1_wqyqd")
+id = &"btn_glass_green"
+display_name = "Botón de cristal verde"
+detail = "Cristal tallado"
+family = 2
+sort_key = &"btn_glass_green"
+sort_label = "Cristal verde"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"glass"
+color = Color(0.35, 0.8, 0.55, 0.6)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.1
+motion = ExtResource("8_i8054")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_ualhn"]
+script = ExtResource("1_wqyqd")
+id = &"btn_pearl"
+display_name = "Botón de nácar"
+detail = "Nácar natural"
+family = 2
+sort_key = &"btn_pearl"
+sort_label = "Nácar"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"pearl"
+color = Color(0.95, 0.92, 0.88, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.22
+motion = ExtResource("8_i8054")
+spawn_count = 9
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_vwc74"]
+script = ExtResource("1_wqyqd")
+id = &"btn_vintage"
+display_name = "Botón vintage de baquelita"
+detail = "Colección vintage"
+family = 2
+sort_key = &"btn_vintage"
+sort_label = "Vintage"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("4_gdv63"), ExtResource("5_tn5i2"), ExtResource("6_s21ud"), ExtResource("7_6m5r3")])
+material_kind = &"plastic"
+color = Color(0.22, 0.11, 0.07, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.12
+motion = ExtResource("8_i8054")
+spawn_count = 9
+spawn_zone = 2
+
+[resource]
+script = ExtResource("10_4hb6v")
+items = Array[ExtResource("1_wqyqd")]([SubResource("Resource_b285s"), SubResource("Resource_frexb"), SubResource("Resource_5tl8x"), SubResource("Resource_olhb8"), SubResource("Resource_pt35p"), SubResource("Resource_psjqb"), SubResource("Resource_4wg7d"), SubResource("Resource_6akni"), SubResource("Resource_gkkp2"), SubResource("Resource_8fs3p"), SubResource("Resource_4taoq"), SubResource("Resource_bxil8"), SubResource("Resource_mfcir"), SubResource("Resource_w656o"), SubResource("Resource_um7ay"), SubResource("Resource_q48fv"), SubResource("Resource_nv8e4"), SubResource("Resource_gkqot"), SubResource("Resource_ualhn"), SubResource("Resource_vwc74")])

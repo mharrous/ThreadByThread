@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_kgied"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_clnsw"]
+[ext_resource type="PackedScene" path="res://art/models/items/pincushion.glb" id="3_rvvqo"]
+
+[resource]
+script = ExtResource("2_clnsw")
+id = &"pincushion"
+display_name = "Acerico de tomate"
+detail = "Con alfileres"
+family = 5
+sort_key = &"pincushion"
+sort_label = "Acericos"
+shape = 1
+radius = 0.025199999999999997
+size = Vector3(0.0252, 0.0343, 0.0252)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("3_rvvqo")])
+model_scale = 0.7
+material_kind = &"cloth"
+color = Color(0.8, 0.15, 0.18, 1)
+accent_color = Color(0.25, 0.55, 0.25, 1)
+accent_kind = &"cloth"
+roughness = 0.8
+motion = ExtResource("1_kgied")
+spawn_count = 5
+spawn_zone = 2

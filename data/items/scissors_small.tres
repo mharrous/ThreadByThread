@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_1girm"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_f6aim"]
+[ext_resource type="PackedScene" path="res://art/models/items/scissors.glb" id="3_sur6w"]
+
+[resource]
+script = ExtResource("2_f6aim")
+id = &"scissors_small"
+display_name = "Tijeritas de bordar"
+detail = "Acero · 11 cm"
+family = 5
+sort_key = &"scissors_small"
+sort_label = "Tijeras de bordar"
+shape = 2
+size = Vector3(0.1428, 0.00595, 0.057800006)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("3_sur6w")])
+model_scale = 0.85
+hang_offset = Vector3(-0.053125, 0, -0.0153)
+material_kind = &"plastic"
+color = Color(0.2, 0.5, 0.7, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("1_1girm")
+spawn_count = 4

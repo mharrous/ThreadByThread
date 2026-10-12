@@ -129,8 +129,8 @@ func _build_hooks() -> void:
 	_hook_mm.transform_format = MultiMesh.TRANSFORM_3D
 	_hook_mm.use_colors = true
 	var peg := CylinderMesh.new()
-	peg.top_radius = 0.004
-	peg.bottom_radius = 0.004
+	peg.top_radius = 0.0055
+	peg.bottom_radius = 0.0055
 	peg.height = hook_length
 	peg.radial_segments = 8
 	peg.rings = 1
@@ -164,19 +164,19 @@ func _build_tags() -> void:
 		_tag_mats.append(mat)
 		var tag := MeshInstance3D.new()
 		var tm := BoxMesh.new()
-		tm.size = Vector3(0.20, 0.07, 0.006)
+		tm.size = Vector3(0.27, 0.11, 0.006)
 		tag.mesh = tm
 		tag.material_override = mat
-		tag.position = Vector3(-board_width * 0.5 + 0.13, _row_y(r), BOARD_T + 0.003)
+		tag.position = Vector3(-board_width * 0.5 + 0.16, _row_y(r) - 0.02, BOARD_T + 0.003)
 		add_child(tag)
 		var label := Label3D.new()
-		label.font_size = 22
-		label.pixel_size = 0.0009
+		label.font_size = 30
+		label.pixel_size = 0.0012
 		label.outline_size = 0
-		label.width = 200.0
+		label.width = 210.0
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.modulate = Color("2e2118")
-		label.position = Vector3(-board_width * 0.5 + 0.13, _row_y(r), BOARD_T + 0.0068)
+		label.position = Vector3(-board_width * 0.5 + 0.16, _row_y(r) - 0.02, BOARD_T + 0.0068)
 		add_child(label)
 		_tag_labels.append(label)
 
@@ -185,7 +185,7 @@ func _refresh_row_visuals(row: int) -> void:
 	var data := _row_data[row]
 	if data == null:
 		return
-	var c := data.accent_color if data.family == ItemData.Family.ACCESSORY else data.color
+	var c := data.color
 	_tag_mats[row].albedo_color = c
 	_tag_mats[row].emission = c
 	_tag_labels[row].text = data.sort_label

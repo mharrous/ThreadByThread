@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="1_wn1nu"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_kp1pv"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_kcqo4"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_6xq02"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_y8w8w"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_xah3k"]
+
+[resource]
+script = ExtResource("2_kp1pv")
+id = &"btn_plastic_red"
+display_name = "Botón de plástico rojo"
+detail = "Abrigo"
+family = 2
+sort_key = &"btn_plastic_red"
+sort_label = "Plástico rojo"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_kcqo4"), ExtResource("4_6xq02"), ExtResource("5_y8w8w"), ExtResource("6_xah3k")])
+material_kind = &"plastic"
+color = Color(0.85, 0.18, 0.2, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.28
+motion = ExtResource("1_wn1nu")
+spawn_count = 9
+spawn_zone = 2

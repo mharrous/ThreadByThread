@@ -428,7 +428,7 @@ func _add_picture(wall_x: float, z: float, y: float, w: float, h: float, top: Co
 	m.roughness = 0.9
 	art.material_override = m
 	art.position = Vector3(wall_x + inward * 0.0465, y, z)
-	art.rotation.y = -PI * 0.5 * inward
+	art.rotation.y = PI * 0.5 * inward
 	art.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(art)
 

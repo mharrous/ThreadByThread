@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_ur45x"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_4dyc7"]
+[ext_resource type="PackedScene" path="res://art/models/items/folded.glb" id="3_fii08"]
+
+[resource]
+script = ExtResource("2_4dyc7")
+id = &"fold_floral"
+display_name = "Tela doblada de flores azules"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_floral"
+sort_label = "Flores azules"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_fii08")])
+align_on_shelf = true
+color = Color(0.96, 0.96, 0.98, 1)
+color_b = Color(0.35, 0.55, 0.85, 1)
+color_c = Color(0.95, 0.85, 0.35, 1)
+pattern = 4
+roughness = 0.95
+motion = ExtResource("1_ur45x")
+spawn_count = 3

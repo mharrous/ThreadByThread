@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_5m3mr"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_d15kt"]
+[ext_resource type="PackedScene" path="res://art/models/items/folded.glb" id="3_l2oeh"]
+
+[resource]
+script = ExtResource("2_d15kt")
+id = &"fold_tartan"
+display_name = "Tela doblada de tartán rojo"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_tartan"
+sort_label = "Tartán rojo"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_l2oeh")])
+align_on_shelf = true
+color = Color(0.65, 0.12, 0.15, 1)
+color_b = Color(0.12, 0.18, 0.35, 1)
+color_c = Color(0.92, 0.85, 0.5, 1)
+pattern = 5
+roughness = 0.95
+motion = ExtResource("1_5m3mr")
+spawn_count = 3

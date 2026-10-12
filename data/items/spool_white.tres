@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_7rstd"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_1qieq"]
+[ext_resource type="PackedScene" path="res://art/models/items/spool.glb" id="3_0bugc"]
+
+[resource]
+script = ExtResource("2_1qieq")
+id = &"spool_white"
+display_name = "Carrete de hilo blanco"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_white"
+sort_label = "Hilo blanco"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_0bugc")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.95, 0.94, 0.9, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("1_7rstd")
+spawn_count = 6

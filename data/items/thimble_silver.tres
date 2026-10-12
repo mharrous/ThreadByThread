@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_tor0n"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_tkcma"]
+[ext_resource type="PackedScene" path="res://art/models/items/thimble.glb" id="3_1nu1x"]
+
+[resource]
+script = ExtResource("2_tkcma")
+id = &"thimble_silver"
+display_name = "Dedal de plata"
+detail = "Plata · talla M"
+family = 5
+sort_key = &"thimble_silver"
+sort_label = "Dedales de plata"
+shape = 1
+radius = 0.0155
+size = Vector3(0.0155, 0.028, 0.0155)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("3_1nu1x")])
+material_kind = &"metal"
+color = Color(0.85, 0.86, 0.9, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("1_tor0n")
+spawn_count = 5
+spawn_zone = 2

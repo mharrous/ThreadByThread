@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_sn57x"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_1kvso"]
+[ext_resource type="PackedScene" path="res://art/models/items/scissors.glb" id="3_6w57t"]
+
+[resource]
+script = ExtResource("2_1kvso")
+id = &"scissors_large"
+display_name = "Tijeras de sastre"
+detail = "Acero · 24 cm"
+family = 5
+sort_key = &"scissors_large"
+sort_label = "Tijeras de sastre"
+shape = 2
+size = Vector3(0.2268, 0.009450001, 0.091800004)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("3_6w57t")])
+model_scale = 1.35
+hang_offset = Vector3(-0.084375, 0, -0.0243)
+material_kind = &"plastic"
+color = Color(0.75, 0.15, 0.15, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("1_sn57x")
+spawn_count = 4

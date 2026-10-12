@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_jywdn"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_wh2wr"]
+[ext_resource type="PackedScene" path="res://art/models/items/spool.glb" id="3_ien5t"]
+
+[resource]
+script = ExtResource("2_wh2wr")
+id = &"spool_red"
+display_name = "Carrete de hilo rojo"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_red"
+sort_label = "Hilo rojo"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_ien5t")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.85, 0.18, 0.2, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("1_jywdn")
+spawn_count = 6

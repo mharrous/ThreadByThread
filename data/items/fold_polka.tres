@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_oqma4"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_x0nni"]
+[ext_resource type="PackedScene" path="res://art/models/items/folded.glb" id="3_ccfhk"]
+
+[resource]
+script = ExtResource("2_x0nni")
+id = &"fold_polka"
+display_name = "Tela doblada de lunares rosa"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_polka"
+sort_label = "Lunares rosa"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_ccfhk")])
+align_on_shelf = true
+color = Color(0.96, 0.72, 0.8, 1)
+color_b = Color(0.99, 0.96, 0.94, 1)
+pattern = 3
+roughness = 0.95
+motion = ExtResource("1_oqma4")
+spawn_count = 3

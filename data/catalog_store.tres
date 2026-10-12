@@ -1,0 +1,352 @@
+[gd_resource type="Resource" script_class="ItemCatalog" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_evcai"]
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="2_15aew"]
+[ext_resource type="PackedScene" path="res://art/models/items/scissors.glb" id="3_5k28g"]
+[ext_resource type="PackedScene" path="res://art/models/items/tape_measure.glb" id="4_c2j51"]
+[ext_resource type="PackedScene" path="res://art/models/items/ruler.glb" id="5_u4jwx"]
+[ext_resource type="PackedScene" path="res://art/models/items/zipper.glb" id="6_cvwld"]
+[ext_resource type="PackedScene" path="res://art/models/items/thimble.glb" id="7_ydj73"]
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="8_g87op"]
+[ext_resource type="PackedScene" path="res://art/models/items/needle_case.glb" id="9_b2w6d"]
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="10_sapy6"]
+[ext_resource type="PackedScene" path="res://art/models/items/pincushion.glb" id="11_15ss1"]
+[ext_resource type="PackedScene" path="res://art/models/items/chalk.glb" id="12_xehiy"]
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="13_ooood"]
+[ext_resource type="PackedScene" path="res://art/models/items/sewing_box.glb" id="14_ajo7b"]
+[ext_resource type="PackedScene" path="res://art/models/items/sewing_tin.glb" id="15_vukql"]
+[ext_resource type="PackedScene" path="res://art/models/items/pattern_envelope.glb" id="16_irc5f"]
+[ext_resource type="PackedScene" path="res://art/models/items/embroidery_hoop.glb" id="17_mnvm8"]
+[ext_resource type="PackedScene" path="res://art/models/items/iron.glb" id="18_nummc"]
+[ext_resource type="Script" path="res://scripts/core/item_catalog.gd" id="19_vop7s"]
+
+[sub_resource type="Resource" id="Resource_pugwi"]
+script = ExtResource("1_evcai")
+id = &"scissors_large"
+display_name = "Tijeras de sastre"
+detail = "Acero · 24 cm"
+family = 5
+sort_key = &"scissors_large"
+sort_label = "Tijeras de sastre"
+shape = 2
+size = Vector3(0.2268, 0.009450001, 0.091800004)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("3_5k28g")])
+model_scale = 1.35
+hang_offset = Vector3(-0.084375, 0, -0.0243)
+material_kind = &"plastic"
+color = Color(0.75, 0.15, 0.15, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("2_15aew")
+spawn_count = 4
+
+[sub_resource type="Resource" id="Resource_icdq3"]
+script = ExtResource("1_evcai")
+id = &"scissors_small"
+display_name = "Tijeritas de bordar"
+detail = "Acero · 11 cm"
+family = 5
+sort_key = &"scissors_small"
+sort_label = "Tijeras de bordar"
+shape = 2
+size = Vector3(0.1428, 0.00595, 0.057800006)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("3_5k28g")])
+model_scale = 0.85
+hang_offset = Vector3(-0.053125, 0, -0.0153)
+material_kind = &"plastic"
+color = Color(0.2, 0.5, 0.7, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("2_15aew")
+spawn_count = 4
+
+[sub_resource type="Resource" id="Resource_exkjd"]
+script = ExtResource("1_evcai")
+id = &"tape"
+display_name = "Cinta métrica enrollable"
+detail = "150 cm"
+family = 5
+sort_key = &"tape"
+sort_label = "Cintas métricas"
+shape = 2
+size = Vector3(0.103, 0.018, 0.069)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("4_c2j51")])
+hang_offset = Vector3(-0.0505, 0, 0)
+material_kind = &"plastic"
+color = Color(0.85, 0.7, 0.2, 1)
+accent_color = Color(0.95, 0.92, 0.78, 1)
+accent_kind = &"paper"
+roughness = 0.35
+motion = ExtResource("2_15aew")
+spawn_count = 4
+
+[sub_resource type="Resource" id="Resource_1fdh0"]
+script = ExtResource("1_evcai")
+id = &"ruler"
+display_name = "Regla de madera"
+detail = "30 cm"
+family = 5
+sort_key = &"ruler"
+sort_label = "Reglas de madera"
+shape = 2
+size = Vector3(0.3, 0.005, 0.036)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("5_u4jwx")])
+hang_offset = Vector3(-0.138, 0, 0)
+material_kind = &"wood"
+color = Color(0.9, 0.78, 0.45, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("2_15aew")
+spawn_count = 4
+
+[sub_resource type="Resource" id="Resource_f7b21"]
+script = ExtResource("1_evcai")
+id = &"zipper"
+display_name = "Cremallera"
+detail = "Cremallera de metal · 20 cm"
+family = 5
+sort_key = &"zipper"
+sort_label = "Cremalleras"
+shape = 2
+size = Vector3(0.21, 0.007, 0.032)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("6_cvwld")])
+hang_offset = Vector3(-0.077, 0, 0)
+material_kind = &"cloth"
+color = Color(0.15, 0.2, 0.45, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("2_15aew")
+spawn_count = 4
+
+[sub_resource type="Resource" id="Resource_n6kh6"]
+script = ExtResource("1_evcai")
+id = &"thimble_silver"
+display_name = "Dedal de plata"
+detail = "Plata · talla M"
+family = 5
+sort_key = &"thimble_silver"
+sort_label = "Dedales de plata"
+shape = 1
+radius = 0.0155
+size = Vector3(0.0155, 0.028, 0.0155)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("7_ydj73")])
+material_kind = &"metal"
+color = Color(0.85, 0.86, 0.9, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("2_15aew")
+spawn_count = 5
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_30s4d"]
+script = ExtResource("1_evcai")
+id = &"thimble_brass"
+display_name = "Dedal de latón"
+detail = "Latón · talla S"
+family = 5
+sort_key = &"thimble_brass"
+sort_label = "Dedales de latón"
+shape = 1
+radius = 0.0155
+size = Vector3(0.0155, 0.028, 0.0155)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("7_ydj73")])
+material_kind = &"metal"
+color = Color(0.86, 0.66, 0.3, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("2_15aew")
+spawn_count = 5
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_br470"]
+script = ExtResource("1_evcai")
+id = &"needle_case"
+display_name = "Estuche de agujas"
+detail = "Agujas surtidas"
+family = 5
+sort_key = &"needle_case"
+sort_label = "Estuches de agujas"
+shape = 1
+radius = 0.0105
+size = Vector3(0.0105, 0.098, 0.0105)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("9_b2w6d")])
+material_kind = &"plastic"
+color = Color(0.25, 0.5, 0.7, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.8
+motion = ExtResource("8_g87op")
+spawn_count = 5
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_vqvho"]
+script = ExtResource("1_evcai")
+id = &"pincushion"
+display_name = "Acerico de tomate"
+detail = "Con alfileres"
+family = 5
+sort_key = &"pincushion"
+sort_label = "Acericos"
+shape = 1
+radius = 0.025199999999999997
+size = Vector3(0.0252, 0.0343, 0.0252)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("11_15ss1")])
+model_scale = 0.7
+material_kind = &"cloth"
+color = Color(0.8, 0.15, 0.18, 1)
+accent_color = Color(0.25, 0.55, 0.25, 1)
+accent_kind = &"cloth"
+roughness = 0.8
+motion = ExtResource("10_sapy6")
+spawn_count = 5
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_13qom"]
+script = ExtResource("1_evcai")
+id = &"chalk"
+display_name = "Tiza de sastre"
+detail = "Para marcar patrones"
+family = 5
+sort_key = &"chalk"
+sort_label = "Tizas de sastre"
+shape = 2
+size = Vector3(0.051, 0.00595, 0.036550004)
+pick_radius = 0.04
+variants = Array[PackedScene]([ExtResource("12_xehiy")])
+model_scale = 0.85
+material_kind = &"paper"
+color = Color(0.9, 0.55, 0.65, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.8
+motion = ExtResource("8_g87op")
+spawn_count = 5
+spawn_zone = 2
+
+[sub_resource type="Resource" id="Resource_emdjo"]
+script = ExtResource("1_evcai")
+id = &"sewing_box"
+display_name = "Caja de costura de madera"
+detail = "Con asa y cierres"
+family = 5
+sort_key = &"sewing_box"
+sort_label = "Cajas de costura"
+shape = 2
+size = Vector3(0.31, 0.212, 0.21)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("14_ajo7b")])
+align_on_shelf = true
+material_kind = &"wood"
+color = Color(0.78, 0.55, 0.36, 1)
+accent_color = Color(0.55, 0.38, 0.25, 1)
+roughness = 0.5
+motion = ExtResource("13_ooood")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_gb232"]
+script = ExtResource("1_evcai")
+id = &"sewing_tin"
+display_name = "Lata de costura"
+detail = "Hojalata decorada"
+family = 5
+sort_key = &"sewing_tin"
+sort_label = "Latas de costura"
+shape = 1
+radius = 0.088
+size = Vector3(0.088, 0.063, 0.088)
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("15_vukql")])
+align_on_shelf = true
+material_kind = &"metal"
+color = Color(0.75, 0.2, 0.25, 1)
+accent_color = Color(0.97, 0.95, 0.9, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("2_15aew")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_fven6"]
+script = ExtResource("1_evcai")
+id = &"pattern"
+display_name = "Sobre de patrón de costura"
+detail = "Patrón de vestido"
+family = 5
+sort_key = &"pattern"
+sort_label = "Patrones"
+shape = 2
+size = Vector3(0.22, 0.005, 0.32)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("16_irc5f")])
+align_on_shelf = true
+material_kind = &"paper"
+color = Color(0.9, 0.75, 0.55, 1)
+accent_color = Color(0.97, 0.95, 0.9, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("10_sapy6")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_b0guu"]
+script = ExtResource("1_evcai")
+id = &"hoop"
+display_name = "Bastidor de bordado"
+detail = "Con tela tensada"
+family = 5
+sort_key = &"hoop"
+sort_label = "Bastidores"
+shape = 1
+radius = 0.095
+size = Vector3(0.095, 0.024, 0.095)
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("17_mnvm8")])
+align_on_shelf = true
+material_kind = &"cloth"
+color = Color(0.95, 0.9, 0.8, 1)
+accent_color = Color(0.82, 0.62, 0.38, 1)
+roughness = 0.5
+motion = ExtResource("13_ooood")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_fuo4k"]
+script = ExtResource("1_evcai")
+id = &"iron"
+display_name = "Plancha de hierro vintage"
+detail = "Hierro fundido"
+family = 5
+sort_key = &"iron"
+sort_label = "Planchas de hierro"
+shape = 2
+size = Vector3(0.15, 0.119, 0.075)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("18_nummc")])
+align_on_shelf = true
+material_kind = &"metal"
+color = Color(0.22, 0.22, 0.25, 1)
+accent_color = Color(0.45, 0.3, 0.2, 1)
+roughness = 0.5
+motion = ExtResource("2_15aew")
+spawn_count = 4
+spawn_zone = 1
+
+[resource]
+script = ExtResource("19_vop7s")
+items = Array[ExtResource("1_evcai")]([SubResource("Resource_pugwi"), SubResource("Resource_icdq3"), SubResource("Resource_exkjd"), SubResource("Resource_1fdh0"), SubResource("Resource_f7b21"), SubResource("Resource_n6kh6"), SubResource("Resource_30s4d"), SubResource("Resource_br470"), SubResource("Resource_vqvho"), SubResource("Resource_13qom"), SubResource("Resource_emdjo"), SubResource("Resource_gb232"), SubResource("Resource_fven6"), SubResource("Resource_b0guu"), SubResource("Resource_fuo4k")])

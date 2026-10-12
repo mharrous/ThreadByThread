@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_a3y8v"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_v3hao"]
+[ext_resource type="PackedScene" path="res://art/models/items/ribbon_reel.glb" id="3_av2fq"]
+
+[resource]
+script = ExtResource("2_v3hao")
+id = &"ribbon_gold"
+display_name = "Carrete de cinta dorada"
+detail = "Cinta metalizada"
+family = 4
+sort_key = &"ribbon_gold"
+sort_label = "Cinta dorada"
+shape = 1
+radius = 0.034
+size = Vector3(0.034, 0.028, 0.034)
+rest_half_height = 0.014
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_av2fq")])
+material_kind = &"ribbon"
+color = Color(0.85, 0.68, 0.25, 1)
+color_b = Color(0.98, 0.9, 0.55, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+pattern = 1
+metallic = 0.7
+roughness = 0.32
+motion = ExtResource("1_a3y8v")
+spawn_count = 6

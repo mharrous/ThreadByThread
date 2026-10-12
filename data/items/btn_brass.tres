@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_pbswo"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_htbdo"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_qnex3"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_a7mfk"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_76n21"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_tg6l1"]
+
+[resource]
+script = ExtResource("2_htbdo")
+id = &"btn_brass"
+display_name = "Botón de latón"
+detail = "Chaqueta · dorado"
+family = 2
+sort_key = &"btn_brass"
+sort_label = "Latón"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_qnex3"), ExtResource("4_a7mfk"), ExtResource("5_76n21"), ExtResource("6_tg6l1")])
+material_kind = &"metal"
+color = Color(0.86, 0.66, 0.3, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("1_pbswo")
+spawn_count = 9
+spawn_zone = 2

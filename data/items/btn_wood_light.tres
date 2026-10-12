@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_5876w"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_aaslo"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_fob0p"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_q1t54"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_nqgow"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_qhuq6"]
+
+[resource]
+script = ExtResource("2_aaslo")
+id = &"btn_wood_light"
+display_name = "Botón de madera clara"
+detail = "Madera de haya"
+family = 2
+sort_key = &"btn_wood_light"
+sort_label = "Madera clara"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_fob0p"), ExtResource("4_q1t54"), ExtResource("5_nqgow"), ExtResource("6_qhuq6")])
+material_kind = &"wood"
+color = Color(0.92, 0.76, 0.52, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+motion = ExtResource("1_5876w")
+spawn_count = 9
+spawn_zone = 2

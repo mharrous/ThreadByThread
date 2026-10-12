@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_bw0sa"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_6uqis"]
+[ext_resource type="PackedScene" path="res://art/models/items/sewing_tin.glb" id="3_gq65v"]
+
+[resource]
+script = ExtResource("2_6uqis")
+id = &"sewing_tin"
+display_name = "Lata de costura"
+detail = "Hojalata decorada"
+family = 5
+sort_key = &"sewing_tin"
+sort_label = "Latas de costura"
+shape = 1
+radius = 0.088
+size = Vector3(0.088, 0.063, 0.088)
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_gq65v")])
+align_on_shelf = true
+material_kind = &"metal"
+color = Color(0.75, 0.2, 0.25, 1)
+accent_color = Color(0.97, 0.95, 0.9, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("1_bw0sa")
+spawn_count = 4
+spawn_zone = 1

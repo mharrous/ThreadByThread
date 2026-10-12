@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_mx4ya"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_gdtwi"]
+[ext_resource type="PackedScene" path="res://art/models/items/ribbon_reel.glb" id="3_2b2e4"]
+
+[resource]
+script = ExtResource("2_gdtwi")
+id = &"ribbon_lace"
+display_name = "Carrete de encaje blanco"
+detail = "Encaje de algodón"
+family = 4
+sort_key = &"ribbon_lace"
+sort_label = "Encaje blanco"
+shape = 1
+radius = 0.034
+size = Vector3(0.034, 0.028, 0.034)
+rest_half_height = 0.014
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_2b2e4")])
+material_kind = &"ribbon"
+color = Color(0.97, 0.95, 0.9, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+pattern = 9
+roughness = 0.32
+motion = ExtResource("1_mx4ya")
+spawn_count = 6

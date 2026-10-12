@@ -1,0 +1,491 @@
+[gd_resource type="Resource" script_class="ItemCatalog" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_h2ytk"]
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="2_kyhdd"]
+[ext_resource type="PackedScene" path="res://art/models/items/bolt.glb" id="3_e8lkr"]
+[ext_resource type="PackedScene" path="res://art/models/items/folded.glb" id="4_xt8fs"]
+[ext_resource type="PackedScene" path="res://art/models/items/ribbon_reel.glb" id="5_1vqqb"]
+[ext_resource type="PackedScene" path="res://art/models/items/bow.glb" id="6_uj85k"]
+[ext_resource type="Script" path="res://scripts/core/item_catalog.gd" id="7_wd4bc"]
+
+[sub_resource type="Resource" id="Resource_0i3g8"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_linen"
+display_name = "Rollo de lino natural"
+detail = "Tela lisa"
+family = 3
+sort_key = &"bolt_linen"
+sort_label = "Lino natural"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.86, 0.8, 0.66, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_pcse7"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_gingham"
+display_name = "Rollo de vichy rojo"
+detail = "Tela estampada · cuadros"
+family = 3
+sort_key = &"bolt_gingham"
+sort_label = "Vichy rojo"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.97, 0.95, 0.92, 1)
+color_b = Color(0.92, 0.58, 0.58, 1)
+color_c = Color(0.8, 0.2, 0.2, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 2
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_uqkx5"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_stripes"
+display_name = "Rollo de rayas azules"
+detail = "Tela estampada · rayas"
+family = 3
+sort_key = &"bolt_stripes"
+sort_label = "Rayas azules"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.95, 0.95, 0.93, 1)
+color_b = Color(0.25, 0.4, 0.7, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 1
+pattern_scale = 1.2
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_0vnu4"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_floral"
+display_name = "Rollo de flores rosas"
+detail = "Tela estampada · floral"
+family = 3
+sort_key = &"bolt_floral"
+sort_label = "Flores rosas"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.98, 0.92, 0.9, 1)
+color_b = Color(0.9, 0.45, 0.6, 1)
+color_c = Color(0.95, 0.8, 0.3, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 4
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_fqo2w"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_polka"
+display_name = "Rollo de lunares marino"
+detail = "Tela estampada · lunares"
+family = 3
+sort_key = &"bolt_polka"
+sort_label = "Lunares marino"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.15, 0.2, 0.4, 1)
+color_b = Color(0.95, 0.93, 0.88, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 3
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_x1f7h"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_tartan"
+display_name = "Rollo de tartán verde"
+detail = "Lana escocesa"
+family = 3
+sort_key = &"bolt_tartan"
+sort_label = "Tartán verde"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.15, 0.4, 0.25, 1)
+color_b = Color(0.1, 0.2, 0.45, 1)
+color_c = Color(0.9, 0.85, 0.4, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 5
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_u74k8"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_denim"
+display_name = "Rollo de tela vaquera"
+detail = "Algodón grueso"
+family = 3
+sort_key = &"bolt_denim"
+sort_label = "Vaquero"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.2, 0.32, 0.55, 1)
+color_b = Color(0.45, 0.58, 0.8, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 6
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_2uw0t"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_velvet"
+display_name = "Rollo de terciopelo violeta"
+detail = "Tela suave"
+family = 3
+sort_key = &"bolt_velvet"
+sort_label = "Terciopelo violeta"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.4, 0.2, 0.55, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 7
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_mxumf"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_cord"
+display_name = "Rollo de pana mostaza"
+detail = "Pana de cordón ancho"
+family = 3
+sort_key = &"bolt_cord"
+sort_label = "Pana mostaza"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.82, 0.62, 0.2, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 8
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_f1oqd"]
+script = ExtResource("1_h2ytk")
+id = &"bolt_lace"
+display_name = "Rollo de encaje crema"
+detail = "Encaje de algodón"
+family = 3
+sort_key = &"bolt_lace"
+sort_label = "Encaje crema"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_e8lkr")])
+align_on_shelf = true
+color = Color(0.97, 0.94, 0.86, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 9
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("2_kyhdd")
+spawn_count = 4
+spawn_zone = 1
+
+[sub_resource type="Resource" id="Resource_6vd07"]
+script = ExtResource("1_h2ytk")
+id = &"fold_gingham"
+display_name = "Tela doblada de vichy amarillo"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_gingham"
+sort_label = "Vichy amarillo"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("4_xt8fs")])
+align_on_shelf = true
+color = Color(0.99, 0.97, 0.88, 1)
+color_b = Color(0.97, 0.82, 0.35, 1)
+color_c = Color(0.92, 0.65, 0.15, 1)
+pattern = 2
+roughness = 0.95
+motion = ExtResource("2_kyhdd")
+spawn_count = 3
+
+[sub_resource type="Resource" id="Resource_qfm8u"]
+script = ExtResource("1_h2ytk")
+id = &"fold_floral"
+display_name = "Tela doblada de flores azules"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_floral"
+sort_label = "Flores azules"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("4_xt8fs")])
+align_on_shelf = true
+color = Color(0.96, 0.96, 0.98, 1)
+color_b = Color(0.35, 0.55, 0.85, 1)
+color_c = Color(0.95, 0.85, 0.35, 1)
+pattern = 4
+roughness = 0.95
+motion = ExtResource("2_kyhdd")
+spawn_count = 3
+
+[sub_resource type="Resource" id="Resource_7bprv"]
+script = ExtResource("1_h2ytk")
+id = &"fold_stripes"
+display_name = "Tela doblada de rayas rojas"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_stripes"
+sort_label = "Rayas rojas"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("4_xt8fs")])
+align_on_shelf = true
+color = Color(0.97, 0.95, 0.92, 1)
+color_b = Color(0.82, 0.22, 0.25, 1)
+pattern = 1
+roughness = 0.95
+motion = ExtResource("2_kyhdd")
+spawn_count = 3
+
+[sub_resource type="Resource" id="Resource_voy4j"]
+script = ExtResource("1_h2ytk")
+id = &"fold_tartan"
+display_name = "Tela doblada de tartán rojo"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_tartan"
+sort_label = "Tartán rojo"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("4_xt8fs")])
+align_on_shelf = true
+color = Color(0.65, 0.12, 0.15, 1)
+color_b = Color(0.12, 0.18, 0.35, 1)
+color_c = Color(0.92, 0.85, 0.5, 1)
+pattern = 5
+roughness = 0.95
+motion = ExtResource("2_kyhdd")
+spawn_count = 3
+
+[sub_resource type="Resource" id="Resource_cxqid"]
+script = ExtResource("1_h2ytk")
+id = &"fold_polka"
+display_name = "Tela doblada de lunares rosa"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_polka"
+sort_label = "Lunares rosa"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("4_xt8fs")])
+align_on_shelf = true
+color = Color(0.96, 0.72, 0.8, 1)
+color_b = Color(0.99, 0.96, 0.94, 1)
+pattern = 3
+roughness = 0.95
+motion = ExtResource("2_kyhdd")
+spawn_count = 3
+
+[sub_resource type="Resource" id="Resource_yxw2o"]
+script = ExtResource("1_h2ytk")
+id = &"ribbon_red"
+display_name = "Carrete de cinta de satén rojo"
+detail = "Cinta de satén · 10 m"
+family = 4
+sort_key = &"ribbon_red"
+sort_label = "Satén rojo"
+shape = 1
+radius = 0.034
+size = Vector3(0.034, 0.028, 0.034)
+rest_half_height = 0.014
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("5_1vqqb")])
+material_kind = &"ribbon"
+color = Color(0.8, 0.12, 0.18, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+roughness = 0.32
+motion = ExtResource("2_kyhdd")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_qmbov"]
+script = ExtResource("1_h2ytk")
+id = &"ribbon_gingham"
+display_name = "Carrete de cinta vichy rosa"
+detail = "Cinta decorativa"
+family = 4
+sort_key = &"ribbon_gingham"
+sort_label = "Vichy rosa"
+shape = 1
+radius = 0.034
+size = Vector3(0.034, 0.028, 0.034)
+rest_half_height = 0.014
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("5_1vqqb")])
+material_kind = &"ribbon"
+color = Color(0.98, 0.95, 0.95, 1)
+color_b = Color(0.95, 0.7, 0.78, 1)
+color_c = Color(0.88, 0.45, 0.6, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+pattern = 2
+roughness = 0.32
+motion = ExtResource("2_kyhdd")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_83l2k"]
+script = ExtResource("1_h2ytk")
+id = &"ribbon_lace"
+display_name = "Carrete de encaje blanco"
+detail = "Encaje de algodón"
+family = 4
+sort_key = &"ribbon_lace"
+sort_label = "Encaje blanco"
+shape = 1
+radius = 0.034
+size = Vector3(0.034, 0.028, 0.034)
+rest_half_height = 0.014
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("5_1vqqb")])
+material_kind = &"ribbon"
+color = Color(0.97, 0.95, 0.9, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+pattern = 9
+roughness = 0.32
+motion = ExtResource("2_kyhdd")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_dj4s1"]
+script = ExtResource("1_h2ytk")
+id = &"ribbon_gold"
+display_name = "Carrete de cinta dorada"
+detail = "Cinta metalizada"
+family = 4
+sort_key = &"ribbon_gold"
+sort_label = "Cinta dorada"
+shape = 1
+radius = 0.034
+size = Vector3(0.034, 0.028, 0.034)
+rest_half_height = 0.014
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("5_1vqqb")])
+material_kind = &"ribbon"
+color = Color(0.85, 0.68, 0.25, 1)
+color_b = Color(0.98, 0.9, 0.55, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+pattern = 1
+metallic = 0.7
+roughness = 0.32
+motion = ExtResource("2_kyhdd")
+spawn_count = 6
+
+[sub_resource type="Resource" id="Resource_s5cmu"]
+script = ExtResource("1_h2ytk")
+id = &"ribbon_bow"
+display_name = "Lazo decorativo"
+detail = "Lazo de cinta · regalo"
+family = 4
+sort_key = &"ribbon_bow"
+sort_label = "Lazos"
+shape = 2
+size = Vector3(0.0791, 0.0105, 0.0497)
+pick_radius = 0.06
+variants = Array[PackedScene]([ExtResource("6_uj85k")])
+model_scale = 0.7
+material_kind = &"ribbon"
+color = Color(0.85, 0.2, 0.3, 1)
+accent_color = Color(0.95, 0.95, 0.92, 1)
+accent_kind = &"plastic"
+roughness = 0.32
+motion = ExtResource("2_kyhdd")
+spawn_count = 6
+
+[resource]
+script = ExtResource("7_wd4bc")
+items = Array[ExtResource("1_h2ytk")]([SubResource("Resource_0i3g8"), SubResource("Resource_pcse7"), SubResource("Resource_uqkx5"), SubResource("Resource_0vnu4"), SubResource("Resource_fqo2w"), SubResource("Resource_x1f7h"), SubResource("Resource_u74k8"), SubResource("Resource_2uw0t"), SubResource("Resource_mxumf"), SubResource("Resource_f1oqd"), SubResource("Resource_6vd07"), SubResource("Resource_qfm8u"), SubResource("Resource_7bprv"), SubResource("Resource_voy4j"), SubResource("Resource_cxqid"), SubResource("Resource_yxw2o"), SubResource("Resource_qmbov"), SubResource("Resource_83l2k"), SubResource("Resource_dj4s1"), SubResource("Resource_s5cmu")])

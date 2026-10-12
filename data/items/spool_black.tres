@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_f8bi6"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_ot1yx"]
+[ext_resource type="PackedScene" path="res://art/models/items/spool.glb" id="3_4t6o7"]
+
+[resource]
+script = ExtResource("2_ot1yx")
+id = &"spool_black"
+display_name = "Carrete de hilo negro"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_black"
+sort_label = "Hilo negro"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_4t6o7")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.12, 0.12, 0.14, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("1_f8bi6")
+spawn_count = 6

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="1_icos5"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_1i631"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_sg8jx"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_yyqda"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_hl4v4"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_quinj"]
+
+[resource]
+script = ExtResource("2_1i631")
+id = &"btn_pearl"
+display_name = "Botón de nácar"
+detail = "Nácar natural"
+family = 2
+sort_key = &"btn_pearl"
+sort_label = "Nácar"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_sg8jx"), ExtResource("4_yyqda"), ExtResource("5_hl4v4"), ExtResource("6_quinj")])
+material_kind = &"pearl"
+color = Color(0.95, 0.92, 0.88, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.22
+motion = ExtResource("1_icos5")
+spawn_count = 9
+spawn_zone = 2

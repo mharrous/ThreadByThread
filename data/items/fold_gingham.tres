@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_ottrb"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_muody"]
+[ext_resource type="PackedScene" path="res://art/models/items/folded.glb" id="3_700a0"]
+
+[resource]
+script = ExtResource("2_muody")
+id = &"fold_gingham"
+display_name = "Tela doblada de vichy amarillo"
+detail = "Tela doblada · corte de 1 m"
+family = 3
+sort_key = &"fold_gingham"
+sort_label = "Vichy amarillo"
+shape = 2
+size = Vector3(0.34, 0.045, 0.27)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_700a0")])
+align_on_shelf = true
+color = Color(0.99, 0.97, 0.88, 1)
+color_b = Color(0.97, 0.82, 0.35, 1)
+color_c = Color(0.92, 0.65, 0.15, 1)
+pattern = 2
+roughness = 0.95
+motion = ExtResource("1_ottrb")
+spawn_count = 3

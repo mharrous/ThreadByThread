@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_oa24f"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_l3khn"]
+[ext_resource type="PackedScene" path="res://art/models/items/spool.glb" id="3_3a11d"]
+
+[resource]
+script = ExtResource("2_l3khn")
+id = &"spool_pink"
+display_name = "Carrete de hilo rosa"
+detail = "Hilo de algodón · 200 m"
+family = 1
+sort_key = &"spool_pink"
+sort_label = "Hilo rosa"
+shape = 1
+radius = 0.0351
+size = Vector3(0.0351, 0.0756, 0.0351)
+pick_radius = 0.05
+variants = Array[PackedScene]([ExtResource("3_3a11d")])
+model_scale = 1.35
+material_kind = &"thread"
+color = Color(0.93, 0.55, 0.7, 1)
+accent_color = Color(0.88, 0.76, 0.55, 1)
+roughness = 0.75
+motion = ExtResource("1_oa24f")
+spawn_count = 6

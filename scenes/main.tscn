@@ -11,6 +11,9 @@
 [ext_resource type="Script" path="res://scripts/room/ambience.gd" id="9_amb"]
 [ext_resource type="Script" path="res://scripts/room/placement_fx.gd" id="10_fx"]
 [ext_resource type="Script" path="res://scripts/room/shop.gd" id="11_shop"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/room_buttons.tscn" id="12_buttons"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/room_fabrics.tscn" id="13_fabrics"]
+[ext_resource type="PackedScene" path="res://scenes/rooms/room_store.tscn" id="14_store"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -33,6 +36,15 @@ script = ExtResource("10_fx")
 script = ExtResource("11_shop")
 
 [node name="RoomYarn" parent="Shop" instance=ExtResource("2_room")]
+
+[node name="RoomButtons" parent="Shop" instance=ExtResource("12_buttons")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.4, 0, 0)
+
+[node name="RoomFabrics" parent="Shop" instance=ExtResource("13_fabrics")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.8, 0, 0)
+
+[node name="RoomStore" parent="Shop" instance=ExtResource("14_store")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.2, 0, 0)
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)

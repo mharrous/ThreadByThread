@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_mpaxu"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_cvg87"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_6gml6"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_h121d"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_tsclb"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_eq22h"]
+
+[resource]
+script = ExtResource("2_cvg87")
+id = &"btn_wood_dark"
+display_name = "Botón de madera oscura"
+detail = "Madera de nogal"
+family = 2
+sort_key = &"btn_wood_dark"
+sort_label = "Madera oscura"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_6gml6"), ExtResource("4_h121d"), ExtResource("5_tsclb"), ExtResource("6_eq22h")])
+material_kind = &"wood"
+color = Color(0.5, 0.3, 0.17, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+motion = ExtResource("1_mpaxu")
+spawn_count = 9
+spawn_zone = 2

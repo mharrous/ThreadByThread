@@ -122,7 +122,7 @@ func _on_item_bounced(item: PickableItem, speed: float, pos: Vector3, _sound: St
 	d.emitting = true
 
 
-func _on_item_placed(item: PickableItem, _shelf: ShelfUnit) -> void:
+func _on_item_placed(item: PickableItem, _unit: StorageUnit) -> void:
 	var color := item.data.color.lightened(0.35)
 	var pos := item.global_position
 	var idx := _next

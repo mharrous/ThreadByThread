@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_7juif"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_e360s"]
+[ext_resource type="PackedScene" path="res://art/models/items/iron.glb" id="3_07o4o"]
+
+[resource]
+script = ExtResource("2_e360s")
+id = &"iron"
+display_name = "Plancha de hierro vintage"
+detail = "Hierro fundido"
+family = 5
+sort_key = &"iron"
+sort_label = "Planchas de hierro"
+shape = 2
+size = Vector3(0.15, 0.119, 0.075)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_07o4o")])
+align_on_shelf = true
+material_kind = &"metal"
+color = Color(0.22, 0.22, 0.25, 1)
+accent_color = Color(0.45, 0.3, 0.2, 1)
+roughness = 0.5
+motion = ExtResource("1_7juif")
+spawn_count = 4
+spawn_zone = 1

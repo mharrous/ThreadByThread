@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="1_fpq3u"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_qajvb"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_ia6jg"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_cs2ip"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_sdus5"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_4ikwp"]
+
+[resource]
+script = ExtResource("2_qajvb")
+id = &"btn_vintage"
+display_name = "Botón vintage de baquelita"
+detail = "Colección vintage"
+family = 2
+sort_key = &"btn_vintage"
+sort_label = "Vintage"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_ia6jg"), ExtResource("4_cs2ip"), ExtResource("5_sdus5"), ExtResource("6_4ikwp")])
+material_kind = &"plastic"
+color = Color(0.22, 0.11, 0.07, 1)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.12
+motion = ExtResource("1_fpq3u")
+spawn_count = 9
+spawn_zone = 2

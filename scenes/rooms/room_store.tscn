@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/room/room_controller.gd" id="1_room"]
+[ext_resource type="Script" path="res://scripts/room/room_shell_store.gd" id="2_shell"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="3_shelf"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/tray_unit.tscn" id="4_tray"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/peg_board.tscn" id="5_peg"]
+[ext_resource type="PackedScene" path="res://scenes/items/item.tscn" id="6_item"]
+[ext_resource type="Resource" path="res://data/catalog_store.tres" id="7_catalog"]
+
+[node name="RoomStore" type="Node3D"]
+script = ExtResource("1_room")
+room_id = &"store"
+display_name = "Almacén de sastrería"
+objective = "Objetivo: ordena las herramientas y accesorios de sastrería"
+catalog = ExtResource("7_catalog")
+item_scene = ExtResource("6_item")
+rng_seed = 7373
+
+[node name="Shell" type="Node3D" parent="."]
+script = ExtResource("2_shell")
+wall_color = Color(0.93, 0.88, 0.8, 1)
+wainscot_color = Color(0.55, 0.4, 0.3, 1)
+door_west = true
+window_south = true
+sign_title = "ALMACÉN DE SASTRERÍA"
+sign_subtitle = "tijeras · metros · dedales · patrones"
+
+[node name="Units" type="Node3D" parent="."]
+
+[node name="PegBoard" parent="Units" instance=ExtResource("5_peg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, -2.5)
+
+[node name="TrayStore" parent="Units" instance=ExtResource("4_tray")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.76, 1)
+
+[node name="StoreShelf" parent="Units" instance=ExtResource("3_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, -2.5)
+depth = 0.4
+slots_per_row = 5
+slot_spacing = 0.38
+marker_radius = 0.06
+
+[node name="Items" type="Node3D" parent="."]

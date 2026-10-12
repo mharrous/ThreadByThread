@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bgraop4itbfoy"
-path="res://.godot/imported/shelf_unit.glb-25f93c4f6a01701e49fd3950c6fc3378.scn"
+uid="uid://cl0y7pdbvksvg"
+path="res://.godot/imported/tape_measure.glb-2df9f36f9bb9f355cff860c1fba5394d.scn"
 
 [deps]
 
-source_file="res://art/models/shelf_unit.glb"
-dest_files=["res://.godot/imported/shelf_unit.glb-25f93c4f6a01701e49fd3950c6fc3378.scn"]
+source_file="res://art/models/items/tape_measure.glb"
+dest_files=["res://.godot/imported/tape_measure.glb-2df9f36f9bb9f355cff860c1fba5394d.scn"]
 
 [params]
 

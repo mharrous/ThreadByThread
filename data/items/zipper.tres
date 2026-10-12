@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_gugpd"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_ulumg"]
+[ext_resource type="PackedScene" path="res://art/models/items/zipper.glb" id="3_3ia5v"]
+
+[resource]
+script = ExtResource("2_ulumg")
+id = &"zipper"
+display_name = "Cremallera"
+detail = "Cremallera de metal · 20 cm"
+family = 5
+sort_key = &"zipper"
+sort_label = "Cremalleras"
+shape = 2
+size = Vector3(0.21, 0.007, 0.032)
+pick_radius = 0.09
+variants = Array[PackedScene]([ExtResource("3_3ia5v")])
+hang_offset = Vector3(-0.077, 0, 0)
+material_kind = &"cloth"
+color = Color(0.15, 0.2, 0.45, 1)
+accent_color = Color(0.12, 0.09, 0.06, 1)
+accent_kind = &"plastic"
+roughness = 0.35
+motion = ExtResource("1_gugpd")
+spawn_count = 4

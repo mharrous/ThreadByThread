@@ -147,11 +147,12 @@ def reset_scene():
 # ------------------------------------------------------------------------
 # Estantería: coincide con ShelfUnit (2.1 de ancho, 5 filas, paso 0.34, base 0.16, fondo 0.30)
 # ------------------------------------------------------------------------
-def make_shelf():
+def make_shelf(depth=0.30):
     reset_scene()
-    m = Model("shelf_unit", seed=3)
+    # Nombre = shelf_<filas>x<ancho cm>x<fondo cm>; ShelfUnit lo busca por sus medidas.
+    m = Model("shelf_5x210x%d" % round(depth * 100), seed=3)
     m.add_material("wood", (0.9, 0.78, 0.58), 0.7)
-    W, rows, pitch, base, depth = 2.1, 5, 0.34, 0.16, 0.30
+    W, rows, pitch, base = 2.1, 5, 0.34, 0.16
     SIDE_T, BOARD_T = 0.04, 0.06
     inner = W - 2 * SIDE_T
     H = base + rows * pitch + BOARD_T
@@ -302,5 +303,29 @@ def make_plant():
     m.export()
 
 
-for fn in (make_shelf, make_table, make_crate, make_cardboard, make_plant):
-    fn()
+# ------------------------------------------------------------------------
+# Bandeja de celdas para botones y piezas pequeñas: 5 celdas de 0.19 x 0.34, alto 0.06
+# (coincide con TrayUnit). Origen: centro de la base.
+# ------------------------------------------------------------------------
+def make_tray():
+    reset_scene()
+    m = Model("button_tray", seed=13)
+    m.add_material("wood", (0.9, 0.78, 0.58), 0.7)
+    cells, cw, D, FLOOR, H, WT = 5, 0.19, 0.34, 0.012, 0.06, 0.012
+    W = cells * cw
+    m.box((0, FLOOR / 2, 0), (W, FLOOR, D), grain="x", bevel=0.002, segments=1)
+    for sz in (-1, 1):
+        m.box((0, H / 2, sz * (D / 2 - WT / 2)), (W, H, WT), grain="x", bevel=0.003, segments=2)
+    for sx in (-1, 1):
+        m.box((sx * (W / 2 - WT / 2), H / 2, 0), (WT, H, D - 2 * WT), grain="z", bevel=0.003, segments=2)
+    for i in range(1, cells):
+        m.box((-W / 2 + i * cw, (H - 0.012) / 2 + FLOOR * 0.5, 0), (0.01, H - 0.014, D - 2 * WT), grain="z", bevel=0.0025, segments=1)
+    m.export()
+
+
+if __name__ == "__main__":
+    make_shelf(0.30)
+    make_shelf(0.40)
+    make_shelf(0.50)
+    for fn in (make_table, make_crate, make_cardboard, make_plant, make_tray):
+        fn()

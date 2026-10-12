@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/metal.tres" id="1_8ggad"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_5kl0f"]
+[ext_resource type="PackedScene" path="res://art/models/items/thimble.glb" id="3_ahkwl"]
+
+[resource]
+script = ExtResource("2_5kl0f")
+id = &"thimble_brass"
+display_name = "Dedal de latón"
+detail = "Latón · talla S"
+family = 5
+sort_key = &"thimble_brass"
+sort_label = "Dedales de latón"
+shape = 1
+radius = 0.0155
+size = Vector3(0.0155, 0.028, 0.0155)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("3_ahkwl")])
+material_kind = &"metal"
+color = Color(0.86, 0.66, 0.3, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.3
+motion = ExtResource("1_8ggad")
+spawn_count = 5
+spawn_zone = 2

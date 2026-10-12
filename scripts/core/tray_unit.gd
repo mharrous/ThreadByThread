@@ -205,7 +205,7 @@ func _refresh_row_visuals(row: int) -> void:
 	var data := _row_data[row]
 	if data == null:
 		return
-	_plaque_mats[row].albedo_color = data.accent_color if data.family == ItemData.Family.ACCESSORY else data.color
+	_plaque_mats[row].albedo_color = data.color
 	_plaque_mats[row].emission = _plaque_mats[row].albedo_color
 	_plaque_labels[row].text = data.sort_label
 	var lum := _plaque_mats[row].albedo_color.get_luminance()

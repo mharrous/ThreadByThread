@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_1t6pt"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_03oqi"]
+[ext_resource type="PackedScene" path="res://art/models/items/bolt.glb" id="3_eo3e3"]
+
+[resource]
+script = ExtResource("2_03oqi")
+id = &"bolt_lace"
+display_name = "Rollo de encaje crema"
+detail = "Encaje de algodón"
+family = 3
+sort_key = &"bolt_lace"
+sort_label = "Encaje crema"
+shape = 1
+size = Vector3(0.055, 0.42, 0.055)
+shape_rotation_deg = Vector3(90, 0, 0)
+rest_half_height = 0.055
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_eo3e3")])
+align_on_shelf = true
+color = Color(0.97, 0.94, 0.86, 1)
+accent_color = Color(0.78, 0.62, 0.42, 1)
+accent_kind = &"cardboard"
+pattern = 9
+pattern_mapping = 1
+roughness = 0.93
+motion = ExtResource("1_1t6pt")
+spawn_count = 4
+spawn_zone = 1

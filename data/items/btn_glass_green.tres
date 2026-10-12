@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="1_ukpl3"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_fxh3o"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat2.glb" id="3_6btam"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_flat4.glb" id="4_2rtjm"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_rim4.glb" id="5_20q5o"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_shank.glb" id="6_fdtpy"]
+
+[resource]
+script = ExtResource("2_fxh3o")
+id = &"btn_glass_green"
+display_name = "Botón de cristal verde"
+detail = "Cristal tallado"
+family = 2
+sort_key = &"btn_glass_green"
+sort_label = "Cristal verde"
+shape = 1
+radius = 0.02
+size = Vector3(0.02, 0.006, 0.02)
+rest_half_height = 0.003
+pick_radius = 0.038
+variants = Array[PackedScene]([ExtResource("3_6btam"), ExtResource("4_2rtjm"), ExtResource("5_20q5o"), ExtResource("6_fdtpy")])
+material_kind = &"glass"
+color = Color(0.35, 0.8, 0.55, 0.6)
+accent_color = Color(0.1, 0.07, 0.05, 1)
+accent_kind = &"plastic"
+roughness = 0.1
+motion = ExtResource("1_ukpl3")
+spawn_count = 9
+spawn_zone = 2

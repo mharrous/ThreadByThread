@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/plastic.tres" id="1_hfsr3"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_ehebb"]
+[ext_resource type="PackedScene" path="res://art/models/items/needle_case.glb" id="3_fyleb"]
+
+[resource]
+script = ExtResource("2_ehebb")
+id = &"needle_case"
+display_name = "Estuche de agujas"
+detail = "Agujas surtidas"
+family = 5
+sort_key = &"needle_case"
+sort_label = "Estuches de agujas"
+shape = 1
+radius = 0.0105
+size = Vector3(0.0105, 0.098, 0.0105)
+pick_radius = 0.035
+variants = Array[PackedScene]([ExtResource("3_fyleb")])
+material_kind = &"plastic"
+color = Color(0.25, 0.5, 0.7, 1)
+accent_color = Color(0.92, 0.85, 0.7, 1)
+accent_kind = &"plastic"
+roughness = 0.8
+motion = ExtResource("1_hfsr3")
+spawn_count = 5
+spawn_zone = 2
