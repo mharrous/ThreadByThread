@@ -70,7 +70,9 @@ powershell -File tests\run_street_shots.ps1              # capturas de la ventan
 
 La prueba de humo recoge, rechaza, deja, lanza, ordena todos los objetos de cada sala, comprueba puertas, tesoros (apuntar, coger, exponer, contar), guirnalda, cada tipo de suceso de la calle (avanza, ruedas/piernas giran, lleva sonido), pausa y guardado.
 
-Resultados de hoy: `-Count 1 -Rooms 4` **pasa** (todas las comprobaciones); `run_persist.ps1` **pasa**. `-Count 0` (450 objetos) se ha lanzado tras los últimos cambios; el resultado está en el apartado siguiente.
+Resultados de hoy: `-Count 1 -Rooms 4` **pasa**; `-Count 0` (450 objetos, 4 salas, 166 comprobaciones) **pasa**; `run_persist.ps1` **pasa**.
+
+La prueba con las cantidades completas encontró un fallo real que la de 1 objeto por tipo no veía: en la sala de telas, si el reparto aleatorio no encontraba hueco, el punto de reserva caía debajo de la mesa central y el objeto quedaba inalcanzable (sala imposible de completar). Corregido en `RoomController._find_spot` (tres pasadas con separación decreciente y un último recurso fuera de los muebles).
 
 ## Cosas que no puedo comprobar yo (necesitan tus ojos y oídos)
 

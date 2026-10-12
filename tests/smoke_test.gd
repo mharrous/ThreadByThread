@@ -68,15 +68,22 @@ func _press(action: StringName) -> void:
 	Input.parse_input_event(rel)
 
 
-func _stand_and_look_at_item(room: RoomController, item: PickableItem) -> bool:
+func _stand_and_look_at_item(room: RoomController, item: PickableItem, attempt: int = 0) -> bool:
 	var p := item.global_position
 	var base := Vector3(p.x, room.global_position.y, p.z)
 	var toward := (room.global_position + Vector3(0, 0, 1.0) - base)
 	toward.y = 0.0
 	toward = toward.normalized() if toward.length() > 0.1 else Vector3(0, 0, 1)
 	var dirs: Array[Vector3] = [toward, Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(0, 0, -1), Vector3(1, 0, 0), (toward + Vector3(0, 0, 1)).normalized()]
-	for dist: float in [0.9, 1.3, 0.6]:
+	var dists: Array[float] = [0.9, 1.3, 0.6]
+	if attempt % 2 == 1:
+		dists.reverse()
+	for dist: float in dists:
 		for d in dirs:
+			# No se intenta de pie dentro de un mueble: la colisión empujaría al jugador y perdería el objeto de vista.
+			var spot := room.to_local(base + d * dist)
+			if room.shell.is_blocked(Vector2(spot.x, spot.z), 0.0):
+				continue
 			player.teleport(base + d * dist)
 			await _settle()
 			player.look_at_point(p)
@@ -96,14 +103,18 @@ func _stand_at_slot(unit: StorageUnit, row: int, slot: int, item: PickableItem) 
 
 
 func _pick(room: RoomController, item: PickableItem) -> bool:
-	if not await _stand_and_look_at_item(room, item):
-		return false
-	await _press(&"interact")
-	var ok := await _wait_until(func(): return holder.state == ItemHolder.State.HOLDING)
-	if not (ok and holder.held == item):
-		print("    (diagnóstico) tras E: objeto=%s en %s jugador=%s estado=%d sostenido=%s item.state=%d hover=%s" % [item.data.id, item.global_position.snapped(Vector3.ONE * 0.01), player.global_position.snapped(Vector3.ONE * 0.01), holder.state, holder.held, item.state, holder.hover_item])
-	return ok and holder.held == item
-
+	# Hasta tres intentos desde sitios distintos (el harness, no el juego, puede perder el objeto de vista).
+	for attempt in 3:
+		if not await _stand_and_look_at_item(room, item, attempt):
+			continue
+		await _press(&"interact")
+		var ok := await _wait_until(func(): return holder.state == ItemHolder.State.HOLDING, 2.5)
+		if ok and holder.held == item:
+			return true
+		print("    (diagnóstico) intento %d tras E: objeto=%s en %s jugador=%s estado=%d sostenido=%s item.state=%d hover=%s" % [attempt + 1, item.data.id, item.global_position.snapped(Vector3.ONE * 0.01), player.global_position.snapped(Vector3.ONE * 0.01), holder.state, holder.held, item.state, holder.hover_item])
+		if holder.state != ItemHolder.State.EMPTY:
+			return false
+	return false
 
 func _place_on_correct_row(room: RoomController, item: PickableItem) -> bool:
 	var found := room.find_row(item.data.sort_key)
