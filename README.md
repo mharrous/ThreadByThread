@@ -62,7 +62,8 @@ Las pruebas usan `settings_test.cfg` (`--test-mode`): no tocan tu configuración
 ## Estructura
 
 ```
-art/             modelos (glb) y scripts de Blender que los generan
+art/             modelos (glb), texturas (png) y scripts de Blender que los generan
+tools/           make_textures.gd (genera las texturas)
 data/            ItemData (.tres), catálogo por sala y perfiles de material (motion/)
 scenes/          main, sala, jugador, estantería, ovillo, interfaz
 scripts/
@@ -90,11 +91,20 @@ Los materiales viven en `data/motion/`: `wool`, `plastic`, `wood`, `metal`, `fab
 2. En el `ItemData` del objeto, asigna ese perfil a `motion`.
 3. Para un sonido de impacto nuevo: añade la función en `scripts/audio/sfx_synth.gd` y su banco en `audio_manager.gd`.
 
-## Regenerar el modelo del ovillo
+## Regenerar modelos y texturas
 
 ```
+# Ovillo
 "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --factory-startup --python art/blender/make_yarn_ball.py -- art/models/yarn_ball.glb
+
+# Mobiliario (estantería, mesa, cajón, caja de cartón, planta)
+"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --factory-startup --python art/blender/make_furniture.py -- art/models
+
+# Texturas (PNG en art/textures; tras regenerarlas, vuelve a importar el proyecto)
+"%LOCALAPPDATA%\Programs\Godot\Godot_v4.7.2-stable_win64.exe" --headless --path . --script res://tools/make_textures.gd
 ```
+
+Las texturas son PNG normales: puedes retocarlas en Krita o GIMP y Godot las reimporta solo.
 
 ## Capas de física
 

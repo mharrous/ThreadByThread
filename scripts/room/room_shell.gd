@@ -59,23 +59,15 @@ func _ready() -> void:
 # --- Estructura ----------------------------------------------------------
 
 func _build_floor_and_outside() -> void:
-	var tex := _make_plank_texture(Color("d9a86c"))
-	var floor_mat := StandardMaterial3D.new()
-	floor_mat.albedo_texture = tex
-	floor_mat.uv1_triplanar = true
-	floor_mat.uv1_world_triplanar = true
-	floor_mat.uv1_scale = Vector3(0.5, 0.5, 0.5)
-	floor_mat.roughness = 0.62
-	floor_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	# Capa 1 (mundo) + 16 (superficie donde se pueden dejar objetos).
-	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, -0.1, 0), floor_mat, true, 17)
+	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, -0.1, 0), MaterialLibrary.get_material(&"floor"), true, 17)
 
 
 func _build_walls() -> void:
 	var hw := ROOM_W * 0.5
 	var hd := ROOM_D * 0.5
-	var wall := _mat(C_WALL, 1.0)
-	var wains := _mat(C_WAINSCOT, 0.85)
+	var wall := MaterialLibrary.get_material(&"wall")
+	var wains := MaterialLibrary.get_material(&"wainscot")
 	var trim := _mat(C_TRIM, 0.6)
 
 	_box(self, Vector3(ROOM_W + 2 * WALL_T, ROOM_H, WALL_T), Vector3(0, ROOM_H * 0.5, -hd - WALL_T * 0.5), wall)
@@ -170,6 +162,8 @@ func _build_ceiling() -> void:
 
 
 # --- Mobiliario ----------------------------------------------------------
+# Los modelos son de Blender (art/blender/make_furniture.py). Si falta alguno, se omite
+# su parte visual pero se mantiene la colisión, así el juego nunca se rompe.
 
 func _build_furniture() -> void:
 	_add_rug(Vector3(-0.2, 0.0, 0.75))
@@ -178,94 +172,143 @@ func _build_furniture() -> void:
 	_add_crate(Vector3(-2.62, 0, -1.92), -0.15)
 	_add_cardboard_boxes()
 	_add_plant(Vector3(2.65, 0, 2.1))
+	_build_decor()
 
 
-func _add_rug(center: Vector3) -> void:
-	_box(self, Vector3(2.8, 0.012, 1.9), center + Vector3(0, 0.006, 0), _mat(C_RUG_BORDER, 1.0), false, 1, false)
-	_box(self, Vector3(2.55, 0.014, 1.65), center + Vector3(0, 0.007, 0), _mat(C_RUG, 1.0), false, 1, false)
-	_box(self, Vector3(2.2, 0.016, 1.3), center + Vector3(0, 0.008, 0), _mat(Color("7f9fc0"), 1.0), false, 1, false)
+func _instance_model(path: String, pos: Vector3, yaw: float = 0.0, scale_factor: float = 1.0, material: Material = null) -> Node3D:
+	if not ResourceLoader.exists(path):
+		push_warning("Falta el modelo %s (ejecuta art/blender/make_furniture.py)" % path)
+		return null
+	var model := (load(path) as PackedScene).instantiate() as Node3D
+	model.position = pos
+	model.rotation.y = yaw
+	model.scale = Vector3.ONE * scale_factor
+	add_child(model)
+	if material != null:
+		MaterialLibrary.apply(model, material)
+	return model
 
 
-func _add_table() -> void:
-	var top := _mat(C_TABLE, 0.6)
-	var leg := _mat(C_TABLE.darkened(0.15), 0.7)
-	var c := Vector2(TABLE_RECT.get_center().x, TABLE_RECT.get_center().y)
-	# Tablero (capa 17: mundo + superficie donde dejar objetos)
-	_box(self, Vector3(TABLE_RECT.size.x, 0.06, TABLE_RECT.size.y), Vector3(c.x, TABLE_TOP_Y - 0.03, c.y), top, true, 17)
-	for sx in [-1.0, 1.0]:
-		for sz in [-1.0, 1.0]:
-			_box(self, Vector3(0.07, TABLE_TOP_Y - 0.06, 0.07),
-				Vector3(c.x + sx * (TABLE_RECT.size.x * 0.5 - 0.08), (TABLE_TOP_Y - 0.06) * 0.5, c.y + sz * (TABLE_RECT.size.y * 0.5 - 0.08)), leg)
-
-
-func _add_crate(pos: Vector3, yaw: float) -> void:
-	var wood := _mat(C_CRATE, 0.8)
-	var size := Vector3(0.62, 0.32, 0.5)
-	var root := Node3D.new()
-	root.position = pos
-	root.rotation.y = yaw
-	add_child(root)
-	_box(root, Vector3(size.x, 0.03, size.z), Vector3(0, 0.015, 0), wood, false)
-	_box(root, Vector3(size.x, size.y, 0.025), Vector3(0, size.y * 0.5, size.z * 0.5 - 0.0125), wood, false)
-	_box(root, Vector3(size.x, size.y, 0.025), Vector3(0, size.y * 0.5, -size.z * 0.5 + 0.0125), wood, false)
-	_box(root, Vector3(0.025, size.y, size.z - 0.05), Vector3(size.x * 0.5 - 0.0125, size.y * 0.5, 0), wood, false)
-	_box(root, Vector3(0.025, size.y, size.z - 0.05), Vector3(-size.x * 0.5 + 0.0125, size.y * 0.5, 0), wood, false)
-	# Colisión única y simple
+func _static_box(size: Vector3, pos: Vector3, yaw: float = 0.0, layers: int = 1) -> void:
 	var body := StaticBody3D.new()
-	body.collision_layer = 1
+	body.collision_layer = layers
+	body.collision_mask = 0
+	body.position = pos
+	body.rotation.y = yaw
 	var cs := CollisionShape3D.new()
 	var bs := BoxShape3D.new()
 	bs.size = size
 	cs.shape = bs
-	cs.position = Vector3(0, size.y * 0.5, 0)
 	body.add_child(cs)
-	root.add_child(body)
+	add_child(body)
+
+
+func _add_rug(center: Vector3) -> void:
+	# Una sola pieza con la textura tejida (orla y rombos). Sin colisión ni sombra.
+	_box(self, Vector3(2.8, 0.016, 1.9), center + Vector3(0, 0.008, 0), MaterialLibrary.get_material(&"rug"), false, 1, false)
+
+
+func _add_table() -> void:
+	var c := TABLE_RECT.get_center()
+	_instance_model("res://art/models/table.glb", Vector3(c.x, 0.0, c.y), 0.0, 1.0, MaterialLibrary.get_material(&"table"))
+	# Colisión: tablero (capa 17: mundo + superficie donde dejar objetos) y patas.
+	_static_box(Vector3(TABLE_RECT.size.x, 0.06, TABLE_RECT.size.y), Vector3(c.x, TABLE_TOP_Y - 0.03, c.y), 0.0, 17)
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			_static_box(Vector3(0.07, TABLE_TOP_Y - 0.06, 0.07),
+				Vector3(c.x + sx * (TABLE_RECT.size.x * 0.5 - 0.08), (TABLE_TOP_Y - 0.06) * 0.5, c.y + sz * (TABLE_RECT.size.y * 0.5 - 0.08)))
+
+
+func _add_crate(pos: Vector3, yaw: float) -> void:
+	_instance_model("res://art/models/crate.glb", pos, yaw, 1.0, MaterialLibrary.get_material(&"crate"))
+	_static_box(Vector3(0.62, 0.32, 0.5), pos + Vector3(0, 0.16, 0), yaw)
 
 
 func _add_cardboard_boxes() -> void:
-	var card := _mat(C_CARDBOARD, 0.95)
-	var dark := _mat(C_CARDBOARD.darkened(0.12), 0.95)
-	_box(self, Vector3(0.62, 0.42, 0.5), Vector3(-2.6, 0.21, 2.0), card)
-	_box(self, Vector3(0.5, 0.34, 0.42), Vector3(-2.58, 0.59, 2.02), dark)
-	_box(self, Vector3(0.55, 0.3, 0.45), Vector3(-2.55, 0.15, 1.35), dark)
-	var flap := _box(self, Vector3(0.55, 0.01, 0.2), Vector3(-2.55, 0.31, 1.12), card, false)
-	flap.rotation_degrees.x = -35.0
+	var card := MaterialLibrary.get_material(&"cardboard")
+	var path := "res://art/models/cardboard_box.glb"
+	_instance_model(path, Vector3(-2.6, 0.0, 2.0), 0.12, 1.0, card)
+	_static_box(Vector3(0.62, 0.42, 0.5), Vector3(-2.6, 0.21, 2.0), 0.12)
+	_instance_model(path, Vector3(-2.58, 0.42, 2.02), -0.3, 0.8, card)
+	_static_box(Vector3(0.5, 0.34, 0.4), Vector3(-2.58, 0.59, 2.02), -0.3)
+	_instance_model(path, Vector3(-2.5, 0.0, 1.35), 0.5, 0.72, card)
+	_static_box(Vector3(0.45, 0.3, 0.36), Vector3(-2.5, 0.15, 1.35), 0.5)
 
 
 func _add_plant(pos: Vector3) -> void:
-	var pot := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.2
-	cyl.bottom_radius = 0.15
-	cyl.height = 0.36
-	pot.mesh = cyl
-	pot.material_override = _mat(Color("c1704a"), 0.85)
-	pot.position = pos + Vector3(0, 0.18, 0)
-	add_child(pot)
-	var body := StaticBody3D.new()
-	body.collision_layer = 1
-	var cs := CollisionShape3D.new()
+	_instance_model("res://art/models/plant.glb", pos, 0.6)
 	var cap := CylinderShape3D.new()
 	cap.radius = 0.2
 	cap.height = 0.9
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	var cs := CollisionShape3D.new()
 	cs.shape = cap
 	cs.position = pos + Vector3(0, 0.45, 0)
 	body.add_child(cs)
 	add_child(body)
-	var leaf_mat := _mat(Color("5b9a5a"), 0.8)
-	var leaf_mat2 := _mat(Color("77b36a"), 0.8)
-	for i in 9:
-		var leaf := MeshInstance3D.new()
-		var s := SphereMesh.new()
-		s.radius = 0.16
-		s.height = 0.32
-		leaf.mesh = s
-		leaf.material_override = leaf_mat if i % 2 == 0 else leaf_mat2
-		var a := _rng.randf() * TAU
-		var r := _rng.randf_range(0.03, 0.2)
-		leaf.position = pos + Vector3(cos(a) * r, 0.5 + _rng.randf_range(0.0, 0.45), sin(a) * r)
-		leaf.scale = Vector3(1.0, _rng.randf_range(0.8, 1.3), 1.0)
-		add_child(leaf)
+
+
+## Detalles que dan personalidad: cuadros enmarcados y reloj en la pared este.
+func _build_decor() -> void:
+	var frame_mat := _mat(Color("b88a55"), 0.55)
+	var x := ROOM_W * 0.5 - 0.03
+	var pictures: Array[Dictionary] = [
+		{"z": -1.35, "y": 1.75, "w": 0.5, "h": 0.4, "top": Color("8ec5e8"), "bottom": Color("e9d38a"), "mid": Color("7fb069")},
+		{"z": -0.55, "y": 1.9, "w": 0.34, "h": 0.46, "top": Color("f3b6c8"), "bottom": Color("f7e6c4"), "mid": Color("e58f9f")},
+		{"z": 0.15, "y": 1.7, "w": 0.42, "h": 0.32, "top": Color("2f4f7a"), "bottom": Color("e0824a"), "mid": Color("a0522d")},
+	]
+	for p: Dictionary in pictures:
+		var w: float = p["w"]
+		var h: float = p["h"]
+		_box(self, Vector3(0.03, h + 0.06, w + 0.06), Vector3(x, p["y"], p["z"]), frame_mat, false)
+		var art := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(w, h)
+		art.mesh = quad
+		var grad := Gradient.new()
+		grad.set_color(0, p["top"])
+		grad.add_point(0.55, p["mid"])
+		grad.set_color(grad.get_point_count() - 1, p["bottom"])
+		var tex := GradientTexture2D.new()
+		tex.gradient = grad
+		tex.fill_from = Vector2(0.5, 0.0)
+		tex.fill_to = Vector2(0.5, 1.0)
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = tex
+		m.roughness = 0.9
+		art.material_override = m
+		art.position = Vector3(x - 0.0165, p["y"], p["z"])
+		art.rotation.y = -PI * 0.5
+		art.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(art)
+	# Reloj de pared
+	var clock := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 0.16
+	disc.bottom_radius = 0.16
+	disc.height = 0.04
+	disc.radial_segments = 32
+	disc.rings = 1
+	clock.mesh = disc
+	clock.material_override = _mat(Color("f6ecd8"), 0.5)
+	clock.position = Vector3(x - 0.01, 2.15, 1.25)
+	clock.rotation.z = PI * 0.5
+	add_child(clock)
+	var rim := MeshInstance3D.new()
+	var ring := TorusMesh.new()
+	ring.inner_radius = 0.15
+	ring.outer_radius = 0.175
+	ring.rings = 32
+	ring.ring_segments = 8
+	rim.mesh = ring
+	rim.material_override = frame_mat
+	rim.position = Vector3(x - 0.015, 2.15, 1.25)
+	rim.rotation.z = PI * 0.5
+	add_child(rim)
+	for hand: Array in [[0.11, 0.012, 0.0], [0.075, 0.016, 2.4]]:
+		var hm := _box(self, Vector3(0.008, hand[0], hand[1]), Vector3(x - 0.04, 2.15 + hand[0] * 0.5 * cos(hand[2]), 1.25 + hand[0] * 0.5 * sin(hand[2])), _mat(Color("3a2a1c"), 0.5), false, 1, false)
+		hm.rotation.x = hand[2]
 
 
 func _build_sign() -> void:
@@ -389,27 +432,3 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material, collide: b
 		body.add_child(cs)
 		parent.add_child(body)
 	return mi
-
-
-## Textura de tablas de madera generada por código (sin ficheros externos).
-func _make_plank_texture(base: Color) -> ImageTexture:
-	var size := 512
-	var planks := 6
-	var img := Image.create(size, size, false, Image.FORMAT_RGB8)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 99
-	var pw := size / planks
-	for i in planks:
-		var tone := rng.randf_range(-0.05, 0.05)
-		var c := Color(base.r + tone, base.g + tone * 0.9, base.b + tone * 0.8)
-		img.fill_rect(Rect2i(i * pw, 0, pw, size), c)
-		for g in 16:
-			var gx := i * pw + rng.randi_range(4, pw - 5)
-			var gl := rng.randi_range(60, 260)
-			var gy := rng.randi_range(0, size - gl)
-			img.fill_rect(Rect2i(gx, gy, 1, gl), c.darkened(rng.randf_range(0.04, 0.10)))
-		img.fill_rect(Rect2i(i * pw, 0, 2, size), c.darkened(0.30))
-		var seam := rng.randi_range(80, size - 80)
-		img.fill_rect(Rect2i(i * pw, seam, pw, 2), c.darkened(0.26))
-	img.generate_mipmaps()
-	return ImageTexture.create_from_image(img)

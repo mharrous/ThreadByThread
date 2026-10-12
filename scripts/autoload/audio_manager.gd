@@ -4,6 +4,8 @@ extends Node
 ## Los sonidos se sintetizan en un hilo al arrancar (ver SfxSynth).
 
 const SFX_BUS := &"SFX"
+## Semitonos de la escala pentatónica que suena al ir llenando una fila.
+const PENTATONIC: Array[int] = [0, 2, 4, 7, 9, 12]
 const POOL_3D := 10
 const POOL_2D := 6
 
@@ -48,7 +50,7 @@ func _exit_tree() -> void:
 
 
 ## Reproduce un efecto. `pos` = Vector3 para sonido posicional, null para sonido plano.
-func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_variation: float = 0.06) -> void:
+func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_variation: float = 0.06, pitch_base: float = 1.0) -> void:
 	if not ready_to_play or not _banks.has(sound):
 		return
 	var variants: Array = _banks[sound]
@@ -56,7 +58,7 @@ func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_
 	if variants.size() > 1 and idx == int(_last_variant.get(sound, -1)):
 		idx = (idx + 1) % variants.size()
 	_last_variant[sound] = idx
-	var pitch := 1.0 + _rng.randf_range(-pitch_variation, pitch_variation)
+	var pitch := pitch_base * (1.0 + _rng.randf_range(-pitch_variation, pitch_variation))
 	var vol := volume_db + _rng.randf_range(-1.0, 0.5)
 	if pos is Vector3:
 		var p := _pool_3d[_next_3d]
@@ -100,7 +102,11 @@ func _apply_volumes() -> void:
 
 func _connect_events() -> void:
 	Events.item_picked.connect(func(item): play(&"pick", item.global_position))
-	Events.item_placed.connect(func(item, _shelf): play(&"place", item.global_position, 0.0, 0.04))
+	Events.item_placed.connect(func(item, shelf):
+		# Cada hueco tiene su nota: rellenar una fila de izquierda a derecha toca una escala.
+		var steps := PENTATONIC.size()
+		var degree := clampi(int(float(item.slot_index) / float(shelf.slots_per_row) * steps), 0, steps - 1)
+		play(&"place", item.global_position, 0.0, 0.01, pow(2.0, PENTATONIC[degree] / 12.0)))
 	Events.item_set_down.connect(func(item): play(&"set_down", item.global_position))
 	Events.item_rejected.connect(func(_item, _reason): play(&"deny"))
 	Events.item_thrown.connect(func(item): play(&"throw", item.global_position))

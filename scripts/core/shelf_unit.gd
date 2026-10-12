@@ -19,6 +19,7 @@ enum SlotStatus { NONE, OK, WRONG_ROW, ROW_FULL }
 const BOARD_T := 0.06
 const SIDE_T := 0.04
 const AIM_LAYER := 4
+const MODEL_PATH := "res://art/models/shelf_unit.glb"
 
 var _row_data: Array[ItemData] = []     # índice 0 = fila inferior
 var _slots: Array = []                  # [fila][hueco] -> PickableItem o null
@@ -159,32 +160,53 @@ func _build() -> void:
 	var inner_w := unit_width - 2.0 * SIDE_T
 	var total_h := base_height + rows * row_pitch + BOARD_T
 
+	# Con las medidas por defecto se usa el modelo de Blender (bordes biselados + textura);
+	# con otras medidas se construye con cajas. La colisión siempre es de cajas simples.
+	var model := _load_model()
+	var visual := model == null
+	if model != null:
+		add_child(model)
+		MaterialLibrary.apply(model, MaterialLibrary.get_material(&"shelf"))
+
 	# Costados, fondo, zócalo y remate.
 	for sign_x in [-1.0, 1.0]:
-		_add_box(Vector3(SIDE_T, total_h, depth), Vector3(sign_x * (unit_width * 0.5 - SIDE_T * 0.5), total_h * 0.5, depth * 0.5), wood)
-	_add_box(Vector3(inner_w, total_h, 0.02), Vector3(0, total_h * 0.5, 0.01), back)
-	_add_box(Vector3(inner_w, base_height - BOARD_T, depth - 0.04), Vector3(0, (base_height - BOARD_T) * 0.5, (depth - 0.04) * 0.5), wood)
-	_add_box(Vector3(unit_width + 0.04, BOARD_T, depth + 0.03), Vector3(0, base_height + rows * row_pitch + BOARD_T * 0.5, (depth + 0.03) * 0.5), wood)
+		_add_box(Vector3(SIDE_T, total_h, depth), Vector3(sign_x * (unit_width * 0.5 - SIDE_T * 0.5), total_h * 0.5, depth * 0.5), wood, true, visual)
+	_add_box(Vector3(inner_w, total_h, 0.02), Vector3(0, total_h * 0.5, 0.01), back, true, visual)
+	_add_box(Vector3(inner_w, base_height - BOARD_T, depth - 0.04), Vector3(0, (base_height - BOARD_T) * 0.5, (depth - 0.04) * 0.5), wood, true, visual)
+	_add_box(Vector3(unit_width + 0.04, BOARD_T, depth + 0.03), Vector3(0, base_height + rows * row_pitch + BOARD_T * 0.5, (depth + 0.03) * 0.5), wood, true, visual)
 
 	# Baldas y labios frontales.
 	for r in rows:
 		var top_y := _row_top_y(r)
-		_add_box(Vector3(inner_w, BOARD_T, depth), Vector3(0, top_y - BOARD_T * 0.5, depth * 0.5), wood)
-		_add_box(Vector3(inner_w, 0.018, 0.014), Vector3(0, top_y + 0.009, depth - 0.007), wood, false)
+		_add_box(Vector3(inner_w, BOARD_T, depth), Vector3(0, top_y - BOARD_T * 0.5, depth * 0.5), wood, true, visual)
+		if visual:
+			_add_box(Vector3(inner_w, 0.018, 0.014), Vector3(0, top_y + 0.009, depth - 0.007), wood, false)
 
 	_build_aim_volume(inner_w)
 	_build_plaques()
 	_build_slot_markers()
 
 
-func _add_box(size: Vector3, pos: Vector3, mat: Material, collide: bool = true) -> void:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mi.mesh = bm
-	mi.material_override = mat
-	mi.position = pos
-	add_child(mi)
+## Instancia el modelo de Blender si las medidas coinciden con las del modelo.
+func _load_model() -> Node3D:
+	var default_size := rows == 5 and is_equal_approx(unit_width, 2.1) \
+		and is_equal_approx(row_pitch, 0.34) and is_equal_approx(base_height, 0.16) \
+		and is_equal_approx(depth, 0.30)
+	if not default_size or not ResourceLoader.exists(MODEL_PATH):
+		return null
+	var scene := load(MODEL_PATH) as PackedScene
+	return scene.instantiate() as Node3D if scene != null else null
+
+
+func _add_box(size: Vector3, pos: Vector3, mat: Material, collide: bool = true, visual: bool = true) -> void:
+	if visual:
+		var mi := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		mi.mesh = bm
+		mi.material_override = mat
+		mi.position = pos
+		add_child(mi)
 	if collide:
 		var cs := CollisionShape3D.new()
 		var bs := BoxShape3D.new()

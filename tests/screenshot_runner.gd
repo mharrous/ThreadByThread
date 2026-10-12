@@ -122,14 +122,19 @@ func _run() -> void:
 
 func _order(player: Player, holder: ItemHolder, room: RoomController, item: PickableItem) -> void:
 	var p := item.global_position
+	var base := Vector3(p.x, 0.0, p.z)
 	var toward := Vector3(-p.x, 0.0, 1.0 - p.z).normalized()
-	player.teleport(Vector3(p.x, 0, p.z) + toward * 0.9)
-	await get_tree().physics_frame
-	await get_tree().physics_frame
-	player.look_at_point(p)
-	for i in 3:
-		await get_tree().process_frame
-	holder.try_pick()
+	for d: Vector3 in [toward, Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(0, 0, -1), Vector3(1, 0, 0)]:
+		player.teleport(base + d * 0.9)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		player.look_at_point(p)
+		for i in 3:
+			await get_tree().process_frame
+		if holder.hover_item == item:
+			break
+	if not holder.try_pick():
+		return
 	while holder.state != ItemHolder.State.HOLDING:
 		await get_tree().process_frame
 	var found := room.find_row(item.data.sort_key)

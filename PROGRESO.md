@@ -23,12 +23,20 @@ Hecho y verificado:
 - **Tutorial de 4 pasos** que avanza solo al recoger, apuntar, colocar y lanzar; no vuelve a salir. Interfaz: anillo de carga, ayuda de teclas en el menú de pausa.
 - Cristal y techo con colisión: lo lanzado no escapa de la sala.
 
+Entrega 2 (hecho y verificado con capturas + pruebas):
+
+- **Mobiliario modelado en Blender** (`art/blender/make_furniture.py`): estantería con molduras y bordes biselados (2.4k triángulos), mesa con patas cónicas y faldón, cajón de listones, caja de cartón con solapas, planta con maceta y hojas arqueadas. UVs en metros y veta en la dirección correcta de cada pieza. La colisión sigue siendo de cajas simples.
+- **Texturas propias** (`art/textures/`, generadas por `tools/make_textures.gd`, PNG editables en Krita/GIMP): suelo de tablas con veta y nudos, madera clara, cartón ondulado, yeso, friso machihembrado con mapa de normales, alfombra tejida con orla y rombos. Mapas de normales para el relieve.
+- **Materiales compartidos** (`MaterialLibrary`): una instancia por material y mapeo triplanar en paredes y suelo.
+- **Detalles de personalidad**: tres cuadros enmarcados y un reloj en la pared este.
+- **Sonido de colocación melódico**: cada hueco de la fila tiene su nota (escala pentatónica); rellenar una fila de izquierda a derecha toca una escala.
+
 Pendiente de la Fase 2 (siguientes entregas):
 
-- Modelos de mayor calidad para mobiliario y estanterías (hoy son cajas procedurales con buen color).
-- Texturas pintadas (Krita) en madera, tela y cartón. Hoy: textura de tablas generada por código.
-- Más pulido de iluminación (ajuste fino con tus capturas).
-- Sonidos editados a mano (Audacity). Hoy: síntesis por código.
+- Iluminación: ajuste fino con tus comentarios (hoy sol por la ventana, lámpara y focos; sin iluminación global).
+- Sonidos editados a mano (Audacity, no instalado). Hoy: síntesis por código, sin escuchar.
+- Cuadros, reloj y lámpara siguen siendo geometría sencilla; se pueden modelar más adelante.
+- Estantería con otras medidas (filas/anchura distintas) vuelve a usar cajas; el modelo de Blender solo vale para las medidas por defecto.
 
 ## Rendimiento medido
 
