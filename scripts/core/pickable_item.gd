@@ -2,9 +2,9 @@ class_name PickableItem
 extends RigidBody3D
 ## Objeto recogible. En reposo es un cuerpo CONGELADO (coste de un cuerpo estático)
 ## que el ItemHolder mueve con animaciones controladas. Solo al lanzarlo se activa
-## la simulación, y al quedar quieto se vuelve a congelar. Así miles de objetos
-## siguen siendo baratos. El comportamiento (rebote, aplastamiento, sonido) viene
-## del MotionProfile de su ItemData.
+## la simulación, y al quedar quieto se vuelve a congelar. Así cientos de objetos
+## siguen siendo baratos. Forma, modelo, material y comportamiento (rebote, aplastamiento,
+## sonido) salen de su ItemData: la misma escena sirve para ovillos, botones, telas...
 
 enum State { LOOSE, HELD, MOVING, PLACED, THROWN }
 
@@ -16,18 +16,28 @@ const MAX_FLIGHT_TIME := 12.0
 
 var data: ItemData
 var state: State = State.LOOSE
+## Radio de la esfera que lo contiene (separaciones, efectos).
 var radius := BASE_RADIUS
+## Distancia del centro a la superficie sobre la que reposa.
+var half_height := BASE_RADIUS
 var rest_yaw := 0.0
+var jitter := 1.0
 
-## Hueco de estantería que ocupa (si está colocado).
-var shelf: ShelfUnit = null
+## Sala a la que pertenece y posición en su lista (clave del guardado).
+var room: RoomController = null
+var index := -1
+
+## Hueco que ocupa si está colocado.
+var container: StorageUnit = null
 var slot_row := -1
 var slot_index := -1
 
 var _profile: MotionProfile
 var _mesh: MeshInstance3D
 var _base_scale := Vector3.ONE
+var _overlay: StandardMaterial3D
 var _hl_tween: Tween
+var _has_shader_params := false
 
 # Aplastamiento elástico (muelle amortiguado): + aplasta, - estira.
 var _sq_x := 0.0
@@ -43,27 +53,57 @@ var _impact_cooldown := 0.0
 @onready var _squash: Node3D = $Squash
 @onready var _shape: CollisionShape3D = $Shape
 @onready var _proxy: Area3D = $PickProxy
+@onready var _proxy_shape: CollisionShape3D = $PickProxy/Shape
 
 
-func setup(item_data: ItemData, size_jitter: float = 1.0) -> void:
+func setup(item_data: ItemData, size_jitter: float = 1.0, variant: int = 0) -> void:
 	data = item_data
 	_profile = item_data.get_motion()
-	radius = item_data.radius * size_jitter
+	jitter = size_jitter
+	half_height = item_data.get_rest_half_height() * size_jitter
+	radius = item_data.get_bounding_radius() * size_jitter
 	rest_yaw = randf() * TAU
-	_base_scale = Vector3.ONE * (radius / BASE_RADIUS)
-	_mesh = _find_mesh(_squash)
-	_mesh.scale = _base_scale
-	_mesh.material_override = item_data.get_material()
-	_mesh.set_instance_shader_parameter(&"variation", randf() * 100.0)
 
-	var sphere := SphereShape3D.new()
-	sphere.radius = radius
-	_shape.shape = sphere
+	_mesh = _find_mesh(_squash)
+	if _mesh == null and not item_data.variants.is_empty():
+		var model := item_data.variants[variant % item_data.variants.size()].instantiate()
+		_squash.add_child(model)
+		_mesh = _find_mesh(model)
+		_base_scale = Vector3.ONE * size_jitter * item_data.model_scale
+	else:
+		_base_scale = Vector3.ONE * (item_data.radius * size_jitter / BASE_RADIUS)
+	_mesh.scale = _base_scale
+	_apply_materials()
+
+	_shape.shape = _make_shape(item_data, size_jitter)
+	_shape.rotation_degrees = item_data.shape_rotation_deg
+	var pick := SphereShape3D.new()
+	pick.radius = maxf(item_data.pick_radius * size_jitter, 0.02)
+	_proxy_shape.shape = pick
+
 	physics_material_override = _profile.get_physics_material()
 	mass = _profile.mass
 	linear_damp = _profile.linear_damp
 	angular_damp = _profile.angular_damp
 	set_process(false)
+
+
+## Malla y escala del modelo (para dibujar la "sombra" translúcida de colocación).
+func get_ghost_mesh() -> Mesh:
+	return _mesh.mesh
+
+
+func get_mesh_scale() -> Vector3:
+	return _base_scale
+
+
+## Forma física y su pose para una pose del objeto (consultas de espacio libre).
+func get_collision_shape() -> Shape3D:
+	return _shape.shape
+
+
+func shape_transform_at(object_transform: Transform3D) -> Transform3D:
+	return object_transform * Transform3D(Basis.from_euler(data.shape_rotation_deg * (PI / 180.0)), Vector3.ZERO)
 
 
 ## Activa o desactiva que el objeto pueda ser apuntado y que colisione.
@@ -73,10 +113,21 @@ func set_pickable(on: bool) -> void:
 
 
 func set_highlighted(on: bool) -> void:
+	if _overlay == null:
+		_overlay = StandardMaterial3D.new()
+		_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_overlay.albedo_color = Color(1.0, 0.96, 0.86, 0.0)
+		_overlay.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if _hl_tween:
 		_hl_tween.kill()
+	if on:
+		_mesh.material_overlay = _overlay
 	_hl_tween = create_tween()
-	_hl_tween.tween_method(_apply_highlight, 1.0 - float(on), float(on), 0.12)
+	_hl_tween.tween_method(_apply_highlight, _overlay.albedo_color.a, 0.2 if on else 0.0, 0.12)
+	if not on:
+		_hl_tween.tween_callback(func(): _mesh.material_overlay = null)
 
 
 ## Aplastamiento elástico (strength 1 = el de colocar en una balda).
@@ -90,6 +141,7 @@ func squash(strength: float = 1.0, normal: Vector3 = Vector3.UP) -> void:
 ## Lanza el objeto: activa la simulación hasta que se quede quieto.
 func launch(velocity: Vector3, spin: Vector3) -> void:
 	state = State.THROWN
+	container = null
 	_proxy.collision_layer = 0
 	collision_layer = LAYER_ITEMS
 	collision_mask = MASK_FLIGHT
@@ -161,7 +213,8 @@ func _recover() -> void:
 	if state != State.THROWN:
 		return
 	freeze = true
-	global_position = Vector3(randf_range(-0.8, 0.8), radius, randf_range(0.5, 1.5))
+	var home := room.global_position if room != null else Vector3.ZERO
+	global_position = home + Vector3(randf_range(-0.8, 0.8), half_height, randf_range(0.5, 1.5))
 	_settle()
 
 
@@ -185,11 +238,44 @@ func _process(delta: float) -> void:
 		Vector3(k * n.y * n.x, s_p + k * n.y * n.y, k * n.y * n.z),
 		Vector3(k * n.z * n.x, k * n.z * n.y, s_p + k * n.z * n.z))
 	# Mantiene el punto de contacto fijo mientras se deforma.
-	_squash.transform = Transform3D(b, -n * radius * _sq_x)
+	_squash.transform = Transform3D(b, -n * half_height * _sq_x)
 
+
+# --- Interno -------------------------------------------------------------
 
 func _apply_highlight(value: float) -> void:
-	_mesh.set_instance_shader_parameter(&"highlight", value)
+	_overlay.albedo_color.a = value
+
+
+## Cada superficie del modelo lleva el material que corresponde a su nombre
+## ("main", "accent", "metal", "glass"). Los modelos sin nombres reconocidos usan "main".
+func _apply_materials() -> void:
+	var mesh := _mesh.mesh
+	for i in mesh.get_surface_count():
+		var src := mesh.surface_get_material(i)
+		var surface_name := src.resource_name if src != null else "main"
+		_mesh.set_surface_override_material(i, data.get_surface_material(surface_name))
+	var main_mat := data.get_surface_material("main")
+	_has_shader_params = main_mat is ShaderMaterial
+	if _has_shader_params:
+		_mesh.set_instance_shader_parameter(&"variation", randf() * 100.0)
+
+
+func _make_shape(item_data: ItemData, j: float) -> Shape3D:
+	match item_data.shape:
+		ItemData.Shape.CYLINDER:
+			var c := CylinderShape3D.new()
+			c.radius = item_data.radius * j
+			c.height = item_data.size.y * j
+			return c
+		ItemData.Shape.BOX:
+			var b := BoxShape3D.new()
+			b.size = item_data.size * j
+			return b
+		_:
+			var s := SphereShape3D.new()
+			s.radius = item_data.radius * j
+			return s
 
 
 func _find_mesh(node: Node) -> MeshInstance3D:

@@ -1,15 +1,15 @@
 class_name ItemHolder
 extends Node
-## Interacción en primera persona: apuntar, recoger, sostener, girar y colocar.
+## Interacción en primera persona: apuntar, recoger, sostener, girar, lanzar y colocar.
 ## Todo el movimiento del objeto es animado (curvas y suavizado exponencial);
-## nunca se teletransporta ni se usa física dinámica.
+## nunca se teletransporta ni se usa física dinámica salvo al lanzar.
 
 enum State { EMPTY, PICKING, HOLDING, PLACING }
-enum PlaceKind { SHELF, SURFACE }
+enum PlaceKind { STORAGE, SURFACE }
 
 const MASK_WORLD := 1
 const MASK_ITEMS := 2
-const MASK_SHELF_AIM := 4
+const MASK_STORAGE_AIM := 4
 const MASK_SETTABLE := 16
 const MASK_PICK := 32
 
@@ -27,8 +27,8 @@ const MASK_PICK := 32
 var state: State = State.EMPTY
 var held: PickableItem = null
 var hover_item: PickableItem = null
-## Estado de la puntería sobre estanterías mientras se sostiene un objeto.
-var aim_status: ShelfUnit.SlotStatus = ShelfUnit.SlotStatus.NONE
+## Estado de la puntería sobre contenedores mientras se sostiene un objeto.
+var aim_status: StorageUnit.SlotStatus = StorageUnit.SlotStatus.NONE
 
 var _player: Player
 var _camera: Camera3D
@@ -43,8 +43,8 @@ var _anim_t := 0.0
 var _anim_duration := 0.3
 var _anim_from := Transform3D.IDENTITY
 var _anim_to := Transform3D.IDENTITY
-var _place_kind: PlaceKind = PlaceKind.SHELF
-var _place_shelf: ShelfUnit
+var _place_kind: PlaceKind = PlaceKind.STORAGE
+var _place_unit: StorageUnit
 var _place_row := -1
 var _place_slot := -1
 
@@ -52,7 +52,6 @@ var _aim: Dictionary = {}
 var _ghost: MeshInstance3D
 var _ghost_mat: StandardMaterial3D
 var _last_info: Dictionary = {}
-var _overlap_shape := SphereShape3D.new()
 
 
 func _ready() -> void:
@@ -105,14 +104,14 @@ func try_pick() -> bool:
 		return false
 	var item := hover_item
 	_set_hover(null)
-	if item.state == PickableItem.State.PLACED and item.shelf != null:
-		var old_shelf := item.shelf
-		old_shelf.release(item.slot_row, item.slot_index)
-		item.shelf = null
+	if item.state == PickableItem.State.PLACED and item.container != null:
+		var old_unit := item.container
+		old_unit.release(item.slot_row, item.slot_index, item)
+		item.container = null
 		item.slot_row = -1
 		item.slot_index = -1
 		item.state = PickableItem.State.LOOSE
-		Events.item_removed.emit(item, old_shelf)
+		Events.item_removed.emit(item, old_unit)
 	held = item
 	held.state = PickableItem.State.MOVING
 	held.set_pickable(false)
@@ -122,6 +121,8 @@ func try_pick() -> bool:
 	_charge = 0.0
 	_hold_dist = hold_distance
 	_smooth_pos = held.global_position
+	_ghost.mesh = held.get_ghost_mesh()
+	_ghost.visible = false
 	_begin_anim(held.global_transform, Transform3D.IDENTITY, pick_duration)
 	state = State.PICKING
 	Events.item_picked.emit(held)
@@ -133,24 +134,23 @@ func try_place() -> void:
 	if state != State.HOLDING:
 		return
 	match aim_status:
-		ShelfUnit.SlotStatus.OK:
-			var shelf: ShelfUnit = _aim["shelf"]
+		StorageUnit.SlotStatus.OK:
+			var unit: StorageUnit = _aim["unit"]
 			var row: int = _aim["row"]
 			var slot: int = _aim["slot"]
-			var target_pos: Vector3 = _aim["position"]
-			shelf.reserve(row, slot, held)
-			_place_kind = PlaceKind.SHELF
-			_place_shelf = shelf
+			unit.reserve(row, slot, held)
+			_place_kind = PlaceKind.STORAGE
+			_place_unit = unit
 			_place_row = row
 			_place_slot = slot
-			var basis := shelf.global_basis * Basis(Vector3.UP, held.rest_yaw)
-			_start_place(Transform3D(basis, target_pos))
-		ShelfUnit.SlotStatus.WRONG_ROW:
-			_reject("Esta fila es de otro color")
-		ShelfUnit.SlotStatus.ROW_FULL:
-			_reject("Esta fila ya está completa")
+			_start_place(_aim["transform"])
+		StorageUnit.SlotStatus.WRONG_ROW:
+			var unit: StorageUnit = _aim["unit"]
+			_reject(unit.wrong_row_hint)
+		StorageUnit.SlotStatus.ROW_FULL:
+			_reject("Este hueco ya está completo")
 		_:
-			Events.hint_requested.emit("Apunta a una fila de la estantería para colocarlo")
+			Events.hint_requested.emit("Apunta a su estantería o bandeja para colocarlo")
 
 
 ## Lanza el objeto sostenido. La fuerza depende de cuánto se mantuvo pulsado (0..1).
@@ -172,7 +172,7 @@ func try_throw() -> void:
 	state = State.EMPTY
 	_ghost.visible = false
 	_last_info = {&"stale": true}   # fuerza que se vuelva a publicar el estado
-	aim_status = ShelfUnit.SlotStatus.NONE
+	aim_status = StorageUnit.SlotStatus.NONE
 	item.launch(velocity, spin)
 	Events.item_thrown.emit(item)
 	Events.held_item_changed.emit(null)
@@ -185,12 +185,13 @@ func try_set_down() -> void:
 	if hit.is_empty() or (hit["normal"] as Vector3).y < 0.7:
 		Events.hint_requested.emit("Apúntalo al suelo o a una mesa para dejarlo")
 		return
-	var pos: Vector3 = (hit["position"] as Vector3) + Vector3.UP * held.radius
-	if _is_blocked(pos, held.radius):
+	var pos: Vector3 = (hit["position"] as Vector3) + Vector3.UP * held.half_height
+	var target := Transform3D(Basis(Vector3.UP, held.rest_yaw), pos)
+	if _is_blocked(target):
 		Events.hint_requested.emit("Ahí no cabe")
 		return
 	_place_kind = PlaceKind.SURFACE
-	_start_place(Transform3D(Basis(Vector3.UP, held.rest_yaw), pos))
+	_start_place(target)
 
 
 # --- Estados -------------------------------------------------------------
@@ -224,7 +225,7 @@ func _process_picking(delta: float) -> void:
 	var q := _anim_from.basis.get_rotation_quaternion().slerp(target.basis.get_rotation_quaternion(), e)
 	held.global_transform = Transform3D(Basis(q), pos)
 	_smooth_pos = pos
-	_publish_holding_info(ShelfUnit.SlotStatus.NONE)
+	_publish_holding_info(StorageUnit.SlotStatus.NONE)
 	if t >= 1.0:
 		state = State.HOLDING
 		held.state = PickableItem.State.HELD
@@ -266,15 +267,15 @@ func _finish_place() -> void:
 	item.set_pickable(true)
 	held = null
 	state = State.EMPTY
-	aim_status = ShelfUnit.SlotStatus.NONE
+	aim_status = StorageUnit.SlotStatus.NONE
 	_last_info = {&"stale": true}   # fuerza que se vuelva a publicar el estado
-	if _place_kind == PlaceKind.SHELF:
+	if _place_kind == PlaceKind.STORAGE:
 		item.state = PickableItem.State.PLACED
-		item.shelf = _place_shelf
+		item.container = _place_unit
 		item.slot_row = _place_row
 		item.slot_index = _place_slot
 		item.squash(1.0)
-		Events.item_placed.emit(item, _place_shelf)
+		Events.item_placed.emit(item, _place_unit)
 	else:
 		item.state = PickableItem.State.LOOSE
 		item.squash(0.5)
@@ -299,55 +300,57 @@ func _reject(reason: String) -> void:
 
 func _update_aim(delta: float) -> void:
 	_aim = {}
-	aim_status = ShelfUnit.SlotStatus.NONE
-	var hit := _raycast(MASK_WORLD | MASK_SHELF_AIM)
+	aim_status = StorageUnit.SlotStatus.NONE
+	var hit := _raycast(MASK_WORLD | MASK_STORAGE_AIM)
 	if not hit.is_empty():
 		var collider := hit["collider"] as Object
-		if collider != null and collider.has_meta(&"shelf"):
-			var shelf := collider.get_meta(&"shelf") as ShelfUnit
-			_aim = shelf.query_slot(_camera.global_position, -_camera.global_basis.z, held)
-			_aim["shelf"] = shelf
+		if collider != null and collider.has_meta(StorageUnit.AIM_META):
+			var unit := collider.get_meta(StorageUnit.AIM_META) as StorageUnit
+			_aim = unit.query_slot(_camera.global_position, -_camera.global_basis.z, held)
+			_aim["unit"] = unit
 			aim_status = _aim["status"]
 	_update_ghost(delta)
 	_publish_holding_info(aim_status)
 
 
 func _update_ghost(delta: float) -> void:
-	if aim_status == ShelfUnit.SlotStatus.NONE:
+	if aim_status == StorageUnit.SlotStatus.NONE:
 		_ghost.visible = false
 		return
-	var target: Vector3 = _aim["position"]
+	var target: Transform3D = _aim["transform"]
 	if not _ghost.visible:
-		_ghost.global_position = target
+		_ghost.global_transform = target
 		_ghost.visible = true
 	else:
-		_ghost.global_position = _ghost.global_position.lerp(target, 1.0 - exp(-32.0 * delta))
+		var pos := _ghost.global_position.lerp(target.origin, 1.0 - exp(-32.0 * delta))
+		var q := _ghost.global_basis.get_rotation_quaternion().slerp(target.basis.get_rotation_quaternion(), 1.0 - exp(-24.0 * delta))
+		_ghost.global_transform = Transform3D(Basis(q), pos)
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.007)
-	_ghost.scale = Vector3.ONE * (held.radius / PickableItem.BASE_RADIUS) * (1.0 + 0.03 * pulse)
-	if aim_status == ShelfUnit.SlotStatus.OK:
+	_ghost.scale = held.get_mesh_scale() * (1.0 + 0.03 * pulse)
+	if aim_status == StorageUnit.SlotStatus.OK:
 		_ghost_mat.albedo_color = Color(0.72, 1.0, 0.78, 0.30 + 0.12 * pulse)
 	else:
 		_ghost_mat.albedo_color = Color(1.0, 0.50, 0.45, 0.28)
 
 
-func _publish_holding_info(status: ShelfUnit.SlotStatus) -> void:
+func _publish_holding_info(status: StorageUnit.SlotStatus) -> void:
 	var info := {
 		"title": held.data.display_name,
 		"detail": held.data.detail,
 		"hint": "R girar   ·   F lanzar (mantén = más fuerza)   ·   E dejar",
 	}
 	match status:
-		ShelfUnit.SlotStatus.OK:
+		StorageUnit.SlotStatus.OK:
 			info["key"] = "Clic"
 			info["action"] = "Colocar aquí"
 			info["kind"] = "place"
-		ShelfUnit.SlotStatus.WRONG_ROW:
+		StorageUnit.SlotStatus.WRONG_ROW:
 			info["key"] = ""
-			info["action"] = "Esta fila es de otro color"
+			info["action"] = (_aim["unit"] as StorageUnit).wrong_row_hint
 			info["kind"] = "deny"
-		ShelfUnit.SlotStatus.ROW_FULL:
+		StorageUnit.SlotStatus.ROW_FULL:
 			info["key"] = ""
-			info["action"] = "Fila completa"
+			info["action"] = "Este hueco ya está completo"
 			info["kind"] = "deny"
 		_:
 			info["key"] = ""
@@ -399,11 +402,13 @@ func _hold_transform(delta: float) -> Transform3D:
 	return Transform3D(basis, cam.origin + cam.basis * local)
 
 
-func _is_blocked(pos: Vector3, radius: float) -> bool:
-	_overlap_shape.radius = radius * 0.9
+## ¿Hay algo (mundo u otros objetos) ocupando la pose indicada? Usa la forma real del objeto.
+func _is_blocked(object_transform: Transform3D) -> bool:
 	var params := PhysicsShapeQueryParameters3D.new()
-	params.shape = _overlap_shape
-	params.transform = Transform3D(Basis.IDENTITY, pos)
+	params.shape = held.get_collision_shape()
+	var xf := held.shape_transform_at(object_transform)
+	xf.origin += Vector3.UP * 0.004   # evita contar el contacto con la superficie de apoyo
+	params.transform = xf
 	params.collision_mask = MASK_WORLD | MASK_ITEMS
 	return not _camera.get_world_3d().direct_space_state.intersect_shape(params, 1).is_empty()
 
@@ -417,16 +422,11 @@ func _begin_anim(from: Transform3D, to: Transform3D, duration: float) -> void:
 
 func _build_ghost() -> void:
 	_ghost = MeshInstance3D.new()
-	var sm := SphereMesh.new()
-	sm.radius = PickableItem.BASE_RADIUS
-	sm.height = PickableItem.BASE_RADIUS * 2.0
-	sm.radial_segments = 20
-	sm.rings = 10
-	_ghost.mesh = sm
 	_ghost_mat = StandardMaterial3D.new()
 	_ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_ghost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_ghost_mat.albedo_color = Color(0.7, 1.0, 0.8, 0.35)
+	_ghost_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_ghost.material_override = _ghost_mat
 	_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ghost.visible = false

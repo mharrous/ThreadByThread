@@ -117,7 +117,7 @@ func _connect_events() -> void:
 		# Más fuerte cuanto más fuerte el golpe.
 		play(sound, pos, lerpf(-22.0, 0.0, clampf(speed / 6.0, 0.0, 1.0)), 0.08))
 	Events.collection_completed.connect(func(_key): play(&"collection", null, -2.0, 0.0))
-	Events.room_completed.connect(func(): play(&"room_complete", null, -1.0, 0.0))
+	Events.room_completed.connect(func(_room): play(&"room_complete", null, -1.0, 0.0))
 
 
 # Corre en un hilo de trabajo.

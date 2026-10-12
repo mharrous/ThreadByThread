@@ -37,6 +37,7 @@ var _capsule: CapsuleShape3D
 
 
 func _ready() -> void:
+	add_to_group(&"player")
 	_capsule = _shape_node.shape as CapsuleShape3D
 	_eye = stand_eye_height
 	_fov = base_fov

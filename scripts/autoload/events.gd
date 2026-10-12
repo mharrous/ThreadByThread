@@ -21,9 +21,16 @@ signal item_landed(item)
 ## Carga del lanzamiento, de 0 a 1.
 signal throw_charge_changed(value: float)
 
+## Progreso de la sala activa (la que muestra la interfaz).
 signal progress_changed(placed: int, total: int)
+## Progreso de cualquier sala (guardado, desbloqueos).
+signal room_progress_changed(room, placed: int, total: int)
 signal collection_completed(sort_key: StringName)
-signal room_completed
+signal room_completed(room)
+signal room_unlocked(room)
+signal active_room_changed(room)
+signal treasure_found(item)
+signal game_saved
 
 signal hint_requested(text: String)
 signal pause_toggled(paused: bool)

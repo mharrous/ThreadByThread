@@ -1,42 +1,30 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/room/room_controller.gd" id="1_room"]
-[ext_resource type="Script" path="res://scripts/room/room_shell.gd" id="2_shell"]
-[ext_resource type="Script" path="res://scripts/room/room_lighting.gd" id="3_light"]
-[ext_resource type="Script" path="res://scripts/room/placement_fx.gd" id="4_fx"]
+[ext_resource type="Script" path="res://scripts/room/room_shell_yarn.gd" id="2_shell"]
 [ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="5_shelf"]
 [ext_resource type="PackedScene" path="res://scenes/items/yarn_ball.tscn" id="6_ball"]
 [ext_resource type="Resource" path="res://data/catalog_yarn.tres" id="7_catalog"]
-[ext_resource type="Script" path="res://scripts/room/landscape.gd" id="8_land"]
-[ext_resource type="Script" path="res://scripts/room/ambience.gd" id="9_amb"]
 
 [node name="RoomYarn" type="Node3D"]
 script = ExtResource("1_room")
+room_id = &"yarn"
+display_name = "Sala de ovillos"
+objective = "Objetivo: ordena los ovillos por color"
 catalog = ExtResource("7_catalog")
 item_scene = ExtResource("6_ball")
-items_per_color = 15
 
 [node name="Shell" type="Node3D" parent="."]
 script = ExtResource("2_shell")
+door_east = true
+window_west = true
 
-[node name="Lighting" type="Node3D" parent="."]
-script = ExtResource("3_light")
+[node name="Units" type="Node3D" parent="."]
 
-[node name="Landscape" type="Node3D" parent="."]
-script = ExtResource("8_land")
-
-[node name="Ambience" type="Node3D" parent="."]
-script = ExtResource("9_amb")
-
-[node name="Shelves" type="Node3D" parent="."]
-
-[node name="ShelfLeft" parent="Shelves" instance=ExtResource("5_shelf")]
+[node name="ShelfLeft" parent="Units" instance=ExtResource("5_shelf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, -2.5)
 
-[node name="ShelfRight" parent="Shelves" instance=ExtResource("5_shelf")]
+[node name="ShelfRight" parent="Units" instance=ExtResource("5_shelf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, -2.5)
 
 [node name="Items" type="Node3D" parent="."]
-
-[node name="PlacementFx" type="Node3D" parent="."]
-script = ExtResource("4_fx")

@@ -1,7 +1,7 @@
 class_name RoomLighting
 extends Node3D
-## Iluminación acogedora: sol cálido entrando por la ventana oeste, luz ambiente
-## cálida, lámpara colgante y focos suaves sobre las estanterías.
+## Iluminación global del mundo: sol cálido entrando por la ventana oeste y luz ambiente cálida.
+## (La lámpara y los focos de cada sala los crea su RoomShell.)
 
 @export var sun_direction := Vector3(0.80, -0.53, 0.29)
 @export var volumetric_fog := true
@@ -10,7 +10,6 @@ extends Node3D
 func _ready() -> void:
 	_build_environment()
 	_build_sun()
-	_build_lamps()
 
 
 func _build_environment() -> void:
@@ -65,30 +64,3 @@ func _build_sun() -> void:
 	sun.light_volumetric_fog_energy = 1.0
 	sun.transform = Transform3D(Basis.looking_at(sun_direction.normalized(), Vector3.UP), Vector3.ZERO)
 	add_child(sun)
-
-
-func _build_lamps() -> void:
-	var lamp := OmniLight3D.new()
-	lamp.name = "PendantLamp"
-	lamp.position = RoomShell.LAMP_POS
-	lamp.light_color = Color("ffd9a6")
-	lamp.light_energy = 0.8
-	lamp.omni_range = 9.0
-	lamp.omni_attenuation = 1.2
-	lamp.shadow_enabled = true
-	lamp.light_volumetric_fog_energy = 0.4
-	add_child(lamp)
-
-	# Focos suaves sobre cada estantería para resaltar los colores.
-	for x in [-1.2, 1.2]:
-		var spot := SpotLight3D.new()
-		spot.light_color = Color("ffe2b8")
-		spot.light_energy = 1.0
-		spot.spot_range = 4.2
-		spot.spot_angle = 52.0
-		spot.spot_attenuation = 0.9
-		spot.light_volumetric_fog_energy = 0.0
-		spot.transform = Transform3D(
-			Basis.looking_at(Vector3(0, -0.55, -1.0).normalized(), Vector3.UP),
-			Vector3(x, 2.35, -0.9))
-		add_child(spot)

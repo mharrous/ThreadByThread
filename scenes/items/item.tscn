@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/core/pickable_item.gd" id="1_item"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_body"]
+radius = 0.03
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_pick"]
+radius = 0.05
+
+[node name="Item" type="RigidBody3D"]
+collision_layer = 2
+collision_mask = 0
+freeze = true
+freeze_mode = 0
+script = ExtResource("1_item")
+
+[node name="Squash" type="Node3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_body")
+
+[node name="PickProxy" type="Area3D" parent="."]
+collision_layer = 32
+collision_mask = 0
+monitoring = false
+
+[node name="Shape" type="CollisionShape3D" parent="PickProxy"]
+shape = SubResource("SphereShape3D_pick")

@@ -15,3 +15,4 @@ color = Color(0.937, 0.541, 0.231, 1)
 radius = 0.06
 thread_density = 22.0
 motion = ExtResource("2_motion")
+spawn_count = 15

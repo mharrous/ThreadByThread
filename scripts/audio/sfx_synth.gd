@@ -33,6 +33,7 @@ static func build_banks() -> Dictionary:
 		&"bounce_wood": [bounce_wood(2), bounce_wood(6), bounce_wood(13)],
 		&"bounce_metal": [bounce_metal(2), bounce_metal(6), bounce_metal(13)],
 		&"bounce_fabric": [bounce_fabric(2), bounce_fabric(6)],
+		&"door_open": [door_open(5)],
 		&"ui_click": [ui_click()],
 	}
 
@@ -258,6 +259,30 @@ static func bird(seed_value: int) -> AudioStreamWAV:
 			b[i] += sin(ph + 1.4 * sin(TAU * 38.0 * tt)) * env * 0.5
 		cursor += dur + rng.randf_range(0.06, 0.15)
 	return _to_stream(b, 0.35)
+
+
+## Puerta corredera de madera: clic del cierre, rodadura grave y golpe suave al llegar al tope.
+static func door_open(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(2.0)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var swell := sin(PI * clampf((t - 0.3) / 1.2, 0.0, 1.0))
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.02
+		lp2 += (lp - lp2) * 0.3
+		b[i] = lp2 * swell * 3.0
+		# Cerrojo: dos clics al principio.
+		for click_t: float in [0.05, 0.2]:
+			var tt := t - click_t
+			if tt >= 0.0 and tt < 0.05:
+				b[i] += sin(TAU * 1500.0 * tt) * exp(-tt / 0.006) * 0.5
+		# Tope final.
+		var ts := t - 1.62
+		if ts >= 0.0:
+			b[i] += sin(TAU * 92.0 * ts) * exp(-ts / 0.07) * 0.9
+	return _to_stream(b, 0.5)
 
 
 ## Clic de interfaz.

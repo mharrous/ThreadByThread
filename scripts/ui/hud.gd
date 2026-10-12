@@ -10,7 +10,6 @@ const GOOD := Color("b8f0c0")
 const BAD := Color("ffb0a0")
 const PANEL_BG := Color(0.13, 0.09, 0.06, 0.42)
 
-const OBJECTIVE_DEFAULT := "Objetivo: ordena los ovillos por color"
 const OBJECTIVE_DONE := "Sala completada"
 
 
@@ -62,6 +61,8 @@ var _toast_tween: Tween
 var _prompt_tween: Tween
 var _bar_tween: Tween
 var _prompt_visible := false
+var _title_label: Label
+var _objective_text := ""
 
 
 func _ready() -> void:
@@ -69,6 +70,8 @@ func _ready() -> void:
 	_build()
 	Events.target_changed.connect(_on_target_changed)
 	Events.progress_changed.connect(_on_progress_changed)
+	Events.active_room_changed.connect(_on_active_room_changed)
+	Events.game_saved.connect(func(): _on_hint("Partida guardada"))
 	Events.hint_requested.connect(_on_hint)
 	Events.throw_charge_changed.connect(func(v: float): _crosshair.set_charge(v))
 	Events.room_completed.connect(_on_room_completed)
@@ -127,9 +130,9 @@ func _build() -> void:
 	vb.custom_minimum_size = Vector2(300, 0)
 	panel.add_child(vb)
 
-	var title := _label("Sala de ovillos", 15, SOFT, 0)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	vb.add_child(title)
+	_title_label = _label("", 15, SOFT, 0)
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	vb.add_child(_title_label)
 
 	var row := HBoxContainer.new()
 	vb.add_child(row)
@@ -156,7 +159,7 @@ func _build() -> void:
 	_bar.add_theme_stylebox_override(&"fill", fill)
 	vb.add_child(_bar)
 
-	_objective = _label(OBJECTIVE_DEFAULT, 15, SOFT, 0)
+	_objective = _label("", 15, SOFT, 0)
 	_objective.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	vb.add_child(_objective)
 
@@ -268,7 +271,13 @@ func _on_progress_changed(placed: int, total: int) -> void:
 	var pop := create_tween()
 	pop.tween_property(_count_label, "scale", Vector2(1.08, 1.08), 0.09)
 	pop.tween_property(_count_label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_objective.text = OBJECTIVE_DONE if (total > 0 and placed == total) else OBJECTIVE_DEFAULT
+	_objective.text = OBJECTIVE_DONE if (total > 0 and placed == total) else _objective_text
+
+
+func _on_active_room_changed(room: RoomController) -> void:
+	_title_label.text = room.display_name
+	_objective_text = room.objective
+	_objective.text = _objective_text
 
 
 func _on_hint(text: String) -> void:
@@ -281,7 +290,7 @@ func _on_hint(text: String) -> void:
 	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.6)
 
 
-func _on_room_completed() -> void:
+func _on_room_completed(_room) -> void:
 	_banner.visible = true
 	_banner.scale = Vector2(0.92, 0.92)
 	var tw := create_tween().set_parallel(true)

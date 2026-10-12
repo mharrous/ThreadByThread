@@ -15,6 +15,16 @@ static func get_material(key: StringName) -> StandardMaterial3D:
 	return _cache[key]
 
 
+## Copia de un material con otro color base (paredes de distinto color por sala, etc.).
+static func get_tinted(key: StringName, color: Color) -> StandardMaterial3D:
+	var tkey := StringName("%s@%s" % [key, color.to_html()])
+	if not _cache.has(tkey):
+		var m := get_material(key).duplicate() as StandardMaterial3D
+		m.albedo_color = color
+		_cache[tkey] = m
+	return _cache[tkey]
+
+
 ## Aplica un material a todas las mallas de un modelo importado.
 static func apply(node: Node, material: Material) -> void:
 	if node is MeshInstance3D:
@@ -34,12 +44,12 @@ static func _build(key: StringName) -> StandardMaterial3D:
 		&"wall":
 			_texture(m, "plaster", 0.45)
 			_triplanar(m, 0.6)
-			m.albedo_color = RoomShell.C_WALL
+			m.albedo_color = Color("f5e9d3")
 			m.roughness = 1.0
 		&"wainscot":
 			_texture(m, "beadboard", 0.9)
 			_triplanar(m, 2.0)
-			m.albedo_color = RoomShell.C_WAINSCOT
+			m.albedo_color = Color("9cbfae")
 			m.roughness = 0.7
 		&"shelf":
 			_texture(m, "wood_light", 0.6)
@@ -53,6 +63,14 @@ static func _build(key: StringName) -> StandardMaterial3D:
 			_texture(m, "wood_light", 0.7)
 			m.albedo_color = Color(0.94, 0.78, 0.56)
 			m.roughness = 0.82
+		&"tray":
+			_texture(m, "wood_light", 0.6)
+			m.albedo_color = Color(0.95, 0.80, 0.62)
+			m.roughness = 0.7
+		&"peg":
+			_texture(m, "wood_light", 0.5)
+			m.albedo_color = Color(0.86, 0.68, 0.46)
+			m.roughness = 0.8
 		&"cardboard":
 			_texture(m, "cardboard", 0.8)
 			m.roughness = 0.95

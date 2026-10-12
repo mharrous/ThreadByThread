@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 
 Events="*res://scripts/autoload/events.gd"
 GameSettings="*res://scripts/autoload/game_settings.gd"
+SaveGame="*res://scripts/autoload/save_game.gd"
 InputSetup="*res://scripts/autoload/input_setup.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 
