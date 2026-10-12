@@ -1,0 +1,24 @@
+EDITAR SONIDOS CON AUDACITY
+===========================
+
+raw\   Sonidos originales del juego (sintetizados). NO los usa el juego; son tu material de partida.
+sfx\   Aqui pones TUS versiones editadas. Si existe sfx\pick_1.wav, el juego lo usa en lugar del sintetizado.
+
+Pasos
+1. Abre un WAV de raw\ en Audacity (por ejemplo place_1.wav).
+2. Edita: reverb suave, ecualizador, recortar, subir/bajar tono, fundidos...
+3. Archivo > Exportar audio > WAV 16 bit PCM, mono, 44100 Hz.
+4. Guardalo en sfx\ con EL MISMO NOMBRE (place_1.wav).
+5. Abre el proyecto en Godot (o ejecuta godot --headless --path . --import) para que lo importe.
+6. Prueba el juego. Para volver al sonido original, borra el fichero de sfx\.
+
+Nombres
+<sonido>_<n>.wav : n es la variante (1, 2, 3...). Puedes reemplazar solo algunas o añadir mas
+(pick_4.wav se añade como cuarta variante). El juego elige una al azar cada vez.
+Sonidos: pick, place, deny, set_down, collection, room_complete, step, wind (bucle), bird, throw,
+bounce_soft/hard/wood/metal/fabric, ui_click.
+
+Notas
+- place: el juego cambia su tono segun el hueco de la fila (escala). Mantenlo con una nota clara.
+- wind: se repite en bucle; deja el final enlazando con el principio.
+- Sin recursos de terceros: si usas sonidos ajenos, comprueba que su licencia permita venderlos.

@@ -14,6 +14,29 @@ const NOTE_C6 := 1046.5
 const NOTE_E6 := 1318.5
 
 
+## Todos los bancos de sonido del juego: nombre -> variantes. Lo usan AudioManager
+## (al arrancar) y tools/export_sfx.gd (para sacarlos a WAV y editarlos en Audacity).
+static func build_banks() -> Dictionary:
+	return {
+		&"pick": [pick(11), pick(23), pick(37)],
+		&"place": [place(5, NOTE_E5), place(17, NOTE_G5), place(29, NOTE_A5)],
+		&"deny": [deny(3), deny(8)],
+		&"set_down": [set_down(2), set_down(9), set_down(14)],
+		&"collection": [collection()],
+		&"room_complete": [room_complete()],
+		&"step": [step(1), step(4), step(7), step(12)],
+		&"wind": [wind_loop()],
+		&"bird": [bird(4), bird(15), bird(26), bird(41)],
+		&"throw": [throw_whoosh(3), throw_whoosh(9)],
+		&"bounce_soft": [bounce_soft(2), bounce_soft(6), bounce_soft(13)],
+		&"bounce_hard": [bounce_hard(2), bounce_hard(6), bounce_hard(13)],
+		&"bounce_wood": [bounce_wood(2), bounce_wood(6), bounce_wood(13)],
+		&"bounce_metal": [bounce_metal(2), bounce_metal(6), bounce_metal(13)],
+		&"bounce_fabric": [bounce_fabric(2), bounce_fabric(6)],
+		&"ui_click": [ui_click()],
+	}
+
+
 ## Recoger: roce suave de lana + pequeño "whup" ascendente.
 static func pick(seed_value: int) -> AudioStreamWAV:
 	var rng := _rng(seed_value)

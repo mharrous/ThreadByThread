@@ -6,10 +6,13 @@ extends Node
 const SFX_BUS := &"SFX"
 ## Semitonos de la escala pentatónica que suena al ir llenando una fila.
 const PENTATONIC: Array[int] = [0, 2, 4, 7, 9, 12]
+const SFX_DIR := "res://art/audio/sfx/"
 const POOL_3D := 10
 const POOL_2D := 6
 
 var ready_to_play := false
+## Bancos cuyo sonido viene de un fichero editado en vez de la síntesis.
+var overridden: Array[StringName] = []
 
 var _banks: Dictionary = {}
 var _last_variant: Dictionary = {}
@@ -119,31 +122,44 @@ func _connect_events() -> void:
 
 # Corre en un hilo de trabajo.
 func _synthesize_all() -> void:
-	var banks := {
-		&"pick": [SfxSynth.pick(11), SfxSynth.pick(23), SfxSynth.pick(37)],
-		&"place": [
-			SfxSynth.place(5, SfxSynth.NOTE_E5),
-			SfxSynth.place(17, SfxSynth.NOTE_G5),
-			SfxSynth.place(29, SfxSynth.NOTE_A5),
-		],
-		&"deny": [SfxSynth.deny(3), SfxSynth.deny(8)],
-		&"set_down": [SfxSynth.set_down(2), SfxSynth.set_down(9), SfxSynth.set_down(14)],
-		&"collection": [SfxSynth.collection()],
-		&"room_complete": [SfxSynth.room_complete()],
-		&"step": [SfxSynth.step(1), SfxSynth.step(4), SfxSynth.step(7), SfxSynth.step(12)],
-		&"wind": [SfxSynth.wind_loop()],
-		&"bird": [SfxSynth.bird(4), SfxSynth.bird(15), SfxSynth.bird(26), SfxSynth.bird(41)],
-		&"throw": [SfxSynth.throw_whoosh(3), SfxSynth.throw_whoosh(9)],
-		&"bounce_soft": [SfxSynth.bounce_soft(2), SfxSynth.bounce_soft(6), SfxSynth.bounce_soft(13)],
-		&"bounce_hard": [SfxSynth.bounce_hard(2), SfxSynth.bounce_hard(6), SfxSynth.bounce_hard(13)],
-		&"bounce_wood": [SfxSynth.bounce_wood(2), SfxSynth.bounce_wood(6), SfxSynth.bounce_wood(13)],
-		&"bounce_metal": [SfxSynth.bounce_metal(2), SfxSynth.bounce_metal(6), SfxSynth.bounce_metal(13)],
-		&"bounce_fabric": [SfxSynth.bounce_fabric(2), SfxSynth.bounce_fabric(6)],
-		&"ui_click": [SfxSynth.ui_click()],
-	}
-	_publish_banks.call_deferred(banks)
+	_publish_banks.call_deferred(SfxSynth.build_banks())
 
 
 func _publish_banks(banks: Dictionary) -> void:
+	_apply_overrides(banks)
 	_banks = banks
 	ready_to_play = true
+
+
+## Si existe art/audio/sfx/<sonido>_<n>.wav (editado en Audacity u otro programa),
+## sustituye a la variante n sintetizada. Se pueden reemplazar solo algunas variantes
+## o añadir más. Los sonidos no editados siguen siendo los sintetizados.
+func _apply_overrides(banks: Dictionary) -> void:
+	for sound: StringName in banks.keys():
+		var variants: Array = banks[sound]
+		var i := 1
+		var replaced := false
+		while i <= variants.size() or ResourceLoader.exists("%s%s_%d.wav" % [SFX_DIR, sound, i]):
+			var path := "%s%s_%d.wav" % [SFX_DIR, sound, i]
+			if ResourceLoader.exists(path):
+				var stream := load(path) as AudioStreamWAV
+				if stream != null:
+					if sound == &"wind":
+						stream = _looped(stream)
+					if i <= variants.size():
+						variants[i - 1] = stream
+					else:
+						variants.append(stream)
+					replaced = true
+			i += 1
+		if replaced:
+			overridden.append(sound)
+
+
+func _looped(stream: AudioStreamWAV) -> AudioStreamWAV:
+	var s := stream.duplicate() as AudioStreamWAV
+	var bytes_per_frame := (2 if s.format == AudioStreamWAV.FORMAT_16_BITS else 1) * (2 if s.stereo else 1)
+	s.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	s.loop_begin = 0
+	s.loop_end = s.data.size() / bytes_per_frame
+	return s

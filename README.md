@@ -106,6 +106,17 @@ Los materiales viven en `data/motion/`: `wool`, `plastic`, `wood`, `metal`, `fab
 
 Las texturas son PNG normales: puedes retocarlas en Krita o GIMP y Godot las reimporta solo.
 
+## Editar sonidos con Audacity
+
+Audacity 4.0.1 está instalado (`C:\Program Files\Audacity 4\bin\Audacity4.exe`). Esta versión no tiene scripting, así que se edita a mano:
+
+1. Los sonidos originales están en `art/audio/raw/` (39 WAV, p. ej. `place_1.wav`). Si faltan: `godot --headless --path . --script res://tools/export_sfx.gd`.
+2. Ábrelos en Audacity y edítalos (reverb, ecualizador, tono, recorte, fundidos).
+3. Exporta como WAV 16 bit, mono, 44100 Hz a `art/audio/sfx/` con **el mismo nombre**.
+4. Abre el proyecto en Godot para que lo importe y prueba. Borra el fichero de `sfx/` para volver al sintetizado.
+
+Se pueden reemplazar solo algunas variantes o añadir más (`pick_4.wav`). Más detalle en `art/audio/LEEME.txt`.
+
 ## Capas de física
 
 `world` 1 · `items` 2 · `shelf_aim` 3 · `player` 4 · `settable` 5 · `pick` 6 (volumen de puntería de los objetos).

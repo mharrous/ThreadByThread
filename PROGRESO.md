@@ -34,7 +34,7 @@ Entrega 2 (hecho y verificado con capturas + pruebas):
 Pendiente de la Fase 2 (siguientes entregas):
 
 - Iluminación: ajuste fino con tus comentarios (hoy sol por la ventana, lámpara y focos; sin iluminación global).
-- Sonidos editados a mano (Audacity, no instalado). Hoy: síntesis por código, sin escuchar.
+- Sonidos editados a mano: **flujo listo** (ver `README.md`, "Editar sonidos con Audacity"). Audacity 4.0.1 está instalado pero no tiene scripting, así que la edición la haces tú: abres `art/audio/raw/*.wav`, exportas a `art/audio/sfx/` con el mismo nombre y el juego usa tu versión (verificado con ficheros de prueba). Hasta entonces suena la síntesis por código, que nadie ha escuchado todavía.
 - Cuadros, reloj y lámpara siguen siendo geometría sencilla; se pueden modelar más adelante.
 - Estantería con otras medidas (filas/anchura distintas) vuelve a usar cajas; el modelo de Blender solo vale para las medidas por defecto.
 
