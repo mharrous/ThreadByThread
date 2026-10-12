@@ -20,6 +20,10 @@ static func build_banks() -> Dictionary:
 	return {
 		&"pick": [pick(11), pick(23), pick(37)],
 		&"place": [place(5, NOTE_E5), place(17, NOTE_G5), place(29, NOTE_A5)],
+		&"place_click": [place_click(5, NOTE_E5), place_click(17, NOTE_G5), place_click(29, NOTE_A5)],
+		&"place_wood": [place_wood(5, NOTE_E5), place_wood(17, NOTE_G5), place_wood(29, NOTE_A5)],
+		&"place_soft": [place_soft(5, NOTE_E5), place_soft(17, NOTE_G5), place_soft(29, NOTE_A5)],
+		&"place_metal": [place_metal(5, NOTE_E5), place_metal(17, NOTE_G5), place_metal(29, NOTE_A5)],
 		&"deny": [deny(3), deny(8)],
 		&"set_down": [set_down(2), set_down(9), set_down(14)],
 		&"collection": [collection()],
@@ -34,6 +38,13 @@ static func build_banks() -> Dictionary:
 		&"bounce_metal": [bounce_metal(2), bounce_metal(6), bounce_metal(13)],
 		&"bounce_fabric": [bounce_fabric(2), bounce_fabric(6)],
 		&"door_open": [door_open(5)],
+		&"car_loop": [engine_loop(31, 46.0, 0.5, 0.55, 7)],
+		&"van_loop": [engine_loop(32, 36.0, 0.8, 0.5, 8)],
+		&"moto_loop": [moto_loop()],
+		&"bike_loop": [bike_loop()],
+		&"horn": [horn(2, 0.32), horn(3, 0.6)],
+		&"bike_bell": [bike_bell(3), bike_bell(8)],
+		&"dog_bark": [dog_bark(2, 330.0), dog_bark(5, 480.0), dog_bark(7, 650.0)],
 		&"ui_click": [ui_click()],
 	}
 
@@ -66,6 +77,62 @@ static func place(seed_value: int, note: float) -> AudioStreamWAV:
 		b[i] = sin(ph) * 0.9 * _ad(t, 0.001, 0.05) + lp * 0.35 * _ad(t, 0.0005, 0.006)
 	_add_bell(b, 0.02, note, 0.30, 0.28)
 	return _to_stream(b, 0.6)
+
+
+## Colocar un botón o pieza dura: pequeño clic con una nota muy suave detrás.
+static func place_click(seed_value: int, note: float) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.55)
+	for i in int(0.14 * RATE):
+		var t := float(i) / RATE
+		b[i] = (sin(TAU * 2400.0 * t) * 0.6 + sin(TAU * 3600.0 * t) * 0.2) * _ad(t, 0.0004, 0.008) \
+			+ rng.randf_range(-1.0, 1.0) * 0.2 * _ad(t, 0.0003, 0.003) \
+			+ sin(TAU * 320.0 * t) * 0.45 * _ad(t, 0.001, 0.02)
+	_add_bell(b, 0.015, note * 2.0, 0.10, 0.14)
+	return _to_stream(b, 0.4)
+
+
+## Colocar en madera (carretes, cajas): "tok" hueco y cálido.
+static func place_wood(seed_value: int, note: float) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.7)
+	var ph := 0.0
+	var lp := 0.0
+	for i in int(0.22 * RATE):
+		var t := float(i) / RATE
+		ph += TAU * (150.0 + 90.0 * exp(-t / 0.02)) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.3
+		b[i] = sin(ph) * 0.9 * _ad(t, 0.001, 0.06) + sin(ph * 2.3) * 0.25 * _ad(t, 0.001, 0.03) + lp * 0.3 * _ad(t, 0.0005, 0.007)
+	_add_bell(b, 0.02, note, 0.16, 0.22)
+	return _to_stream(b, 0.55)
+
+
+## Colocar tela o cinta: golpecito mullido, casi sin eco.
+static func place_soft(seed_value: int, note: float) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.7)
+	var lp := 0.0
+	var ph := 0.0
+	for i in int(0.2 * RATE):
+		var t := float(i) / RATE
+		ph += TAU * (95.0 + 40.0 * exp(-t / 0.03)) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.07
+		b[i] = lp * 1.8 * _ad(t, 0.004, 0.05) + sin(ph) * 0.5 * _ad(t, 0.003, 0.05)
+	_add_bell(b, 0.03, note, 0.12, 0.25)
+	return _to_stream(b, 0.45)
+
+
+## Colocar metal (tijeras, planchas, dedales): "tin" corto con resonancia.
+static func place_metal(seed_value: int, note: float) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.8)
+	var f := rng.randf_range(1700.0, 2100.0)
+	for i in int(0.4 * RATE):
+		var t := float(i) / RATE
+		b[i] = (sin(TAU * f * t) * _ad(t, 0.0004, 0.09) + sin(TAU * f * 2.4 * t) * 0.45 * _ad(t, 0.0004, 0.05) \
+			+ sin(TAU * f * 0.5 * t) * 0.3 * _ad(t, 0.001, 0.06)) * 0.6
+	_add_bell(b, 0.01, note, 0.14, 0.3)
+	return _to_stream(b, 0.45)
 
 
 ## Rechazo: "boop" grave y amable, sin estridencia.
@@ -259,6 +326,157 @@ static func bird(seed_value: int) -> AudioStreamWAV:
 			b[i] += sin(ph + 1.4 * sin(TAU * 38.0 * tt)) * env * 0.5
 		cursor += dur + rng.randf_range(0.06, 0.15)
 	return _to_stream(b, 0.35)
+
+
+# --- Calle: vehículos, timbre, bocina y perros ------------------------------
+
+## Motor de coche + ruido de rodadura, en bucle. `f0` = frecuencia de giro (Hz), `rough` = aspereza.
+static func engine_loop(seed_value: int, f0: float, rough: float, tyre: float, harmonics: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var loop_len := int(3.0 * RATE)
+	var fade := int(0.4 * RATE)
+	var raw := PackedFloat32Array()
+	raw.resize(loop_len + fade)
+	var lp_fast := 0.0
+	var lp_slow := 0.0
+	var phase := 0.0
+	for i in raw.size():
+		var t := float(i) / RATE
+		# Pequeña irregularidad del régimen del motor.
+		var wobble := 1.0 + 0.03 * sin(t * 2.1) + 0.015 * sin(t * 5.3 + 1.0)
+		phase += TAU * f0 * wobble / RATE
+		var v := 0.0
+		for h in range(1, harmonics + 1):
+			v += sin(phase * h + h * 0.7) * (1.0 / pow(float(h), 1.25))
+		# Pulsos de combustión: modulación de amplitud al ritmo del motor.
+		var pulse := 1.0 - rough * 0.5 * (0.5 + 0.5 * sin(phase * 0.5))
+		v *= pulse
+		# Rodadura: ruido de banda media-alta.
+		var n := rng.randf_range(-1.0, 1.0)
+		lp_fast += (n - lp_fast) * 0.35
+		lp_slow += (n - lp_slow) * 0.06
+		v += (lp_fast - lp_slow) * tyre
+		raw[i] = v
+	return _looped(raw, loop_len, fade, 0.5)
+
+
+## Motocicleta: régimen más alto y "zumbido" de dos tiempos.
+static func moto_loop() -> AudioStreamWAV:
+	var rng := _rng(61)
+	var loop_len := int(3.0 * RATE)
+	var fade := int(0.4 * RATE)
+	var raw := PackedFloat32Array()
+	raw.resize(loop_len + fade)
+	var phase := 0.0
+	var lp := 0.0
+	for i in raw.size():
+		var t := float(i) / RATE
+		phase += TAU * 118.0 * (1.0 + 0.02 * sin(t * 3.1)) / RATE
+		var v := 0.0
+		for h in range(1, 13):
+			v += sin(phase * h) * (1.0 / pow(float(h), 0.9))        # diente de sierra suave
+		v *= 0.7 + 0.3 * sin(phase * 0.5)
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.25
+		v += lp * 0.5
+		raw[i] = v
+	return _looped(raw, loop_len, fade, 0.45)
+
+
+## Bicicleta: carraca de la rueda libre y un siseo suave.
+static func bike_loop() -> AudioStreamWAV:
+	var rng := _rng(71)
+	var loop_len := int(2.4 * RATE)
+	var fade := int(0.3 * RATE)
+	var raw := PackedFloat32Array()
+	raw.resize(loop_len + fade)
+	var lp := 0.0
+	var tick_phase := 0.0
+	for i in raw.size():
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.04
+		var v := lp * 0.5
+		tick_phase = fmod(t * 11.0, 1.0)                              # ~11 clics por segundo
+		v += sin(TAU * 2400.0 * tick_phase * 0.01) * exp(-tick_phase * 90.0) * 0.5 \
+			+ rng.randf_range(-1.0, 1.0) * exp(-tick_phase * 140.0) * 0.4
+		raw[i] = v
+	return _looped(raw, loop_len, fade, 0.3)
+
+
+## Bocina de coche: dos tonos con armónicos. `length` en segundos.
+static func horn(seed_value: int, length: float) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(length + 0.1)
+	var f1 := rng.randf_range(395.0, 420.0)
+	var f2 := f1 * 1.26
+	for i in b.size():
+		var t := float(i) / RATE
+		var env := minf(t / 0.015, 1.0) * clampf((length - t) / 0.06, 0.0, 1.0) if t < length else 0.0
+		var v := 0.0
+		for f in [f1, f2]:
+			v += sin(TAU * f * t) + 0.35 * sin(TAU * f * 3.0 * t) + 0.18 * sin(TAU * f * 5.0 * t)
+		b[i] = v * env * (1.0 + 0.05 * sin(t * 40.0))
+	return _to_stream(b, 0.45)
+
+
+## Timbre de bicicleta: dos "ding" metálicos seguidos.
+static func bike_bell(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(1.3)
+	var f := rng.randf_range(2650.0, 2900.0)
+	for strike_t: float in [0.0, 0.30]:
+		_add_partials(b, strike_t, f, 0.5, 0.4, [1.0, 1.51, 2.37, 3.1], [1.0, 0.55, 0.3, 0.12], [1.0, 0.7, 0.45, 0.3])
+	return _to_stream(b, 0.4)
+
+
+## Ladrido: voz con dos formantes y un poco de aire. `f0` grave = perro grande.
+static func dog_bark(seed_value: int, f0: float) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var dur := 0.2 + 120.0 / f0 * 0.0
+	var b := _buf(0.32)
+	var phase := 0.0
+	var lp := 0.0
+	for i in int(dur * RATE):
+		var t := float(i) / RATE
+		var f := f0 * (1.0 + 0.35 * exp(-t / 0.05) - 0.25 * t / dur)    # empieza alto y cae
+		phase += TAU * f / RATE
+		var v := 0.0
+		for h in range(1, 10):
+			var fh := f * h
+			var formant := exp(-pow((fh - 750.0) / 450.0, 2.0)) + 0.55 * exp(-pow((fh - 1700.0) / 650.0, 2.0)) + 0.08
+			v += sin(phase * h) * formant / float(h) * 1.6
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.3
+		b[i] = (v + lp * 0.5) * _ad(t, 0.008, 0.075)
+	return _to_stream(b, 0.5)
+
+
+## Suma una nota con parciales a medida (timbres, campanas pequeñas...).
+static func _add_partials(buf: PackedFloat32Array, start: float, freq: float, amp: float, decay: float, ratios: Array, amps: Array, decs: Array) -> void:
+	var s0 := int(start * RATE)
+	for i in range(s0, buf.size()):
+		var t := float(i - s0) / RATE
+		if t > decay * 6.0:
+			break
+		var v := 0.0
+		for k in ratios.size():
+			v += sin(TAU * freq * ratios[k] * t) * amps[k] * exp(-t / (decay * decs[k]))
+		buf[i] += v * amp * minf(t / 0.002, 1.0)
+
+
+## Convierte un buffer en un bucle continuo (mezcla el final con el principio).
+static func _looped(raw: PackedFloat32Array, loop_len: int, fade: int, peak: float) -> AudioStreamWAV:
+	var b := PackedFloat32Array()
+	b.resize(loop_len)
+	for i in loop_len:
+		if i < fade:
+			var w := float(i) / fade
+			b[i] = raw[i] * w + raw[loop_len + i] * (1.0 - w)
+		else:
+			b[i] = raw[i]
+	var stream := _to_stream(b, peak)
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = loop_len
+	return stream
 
 
 ## Puerta corredera de madera: clic del cierre, rodadura grave y golpe suave al llegar al tope.

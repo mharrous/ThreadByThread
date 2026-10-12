@@ -154,6 +154,9 @@ func _run() -> void:
 	for room_i in mini(shop.rooms.size(), max_rooms):
 		await _test_room(shop.rooms[room_i], room_i)
 
+	print("-- Calle")
+	await _test_street()
+
 	print("-- Menú de pausa")
 	var menu: CanvasLayer = main.get_node("PauseMenu")
 	await _press(&"pause")
@@ -174,6 +177,32 @@ func _run() -> void:
 	else:
 		print("RESULTADO: %d FALLOS" % _failures)
 	get_tree().quit(1 if _failures > 0 else 0)
+
+
+## Cada tipo de suceso de la calle se crea, avanza, anima sus ruedas o miembros y lleva su sonido.
+func _test_street() -> void:
+	var landscape := main.get_node("World/Landscape") as Landscape
+	var life := landscape.get_street_life()
+	_check(life != null, "el paisaje tiene su StreetLife")
+	if life == null:
+		return
+	life.enabled = false
+	for kind: StringName in [&"car", &"van", &"bike", &"moto", &"walker", &"dogwalker"]:
+		var actor := life.spawn(kind)
+		var z0 := actor.position.z
+		var moved := await _wait_until(func(): return is_instance_valid(actor) and absf(actor.position.z - z0) > 0.05, 4.0)
+		_check(moved, "'%s' avanza por la calle" % kind)
+		if kind in [&"car", &"van", &"bike", &"moto"]:
+			_check(actor.wheels.size() == (2 if kind in [&"bike", &"moto"] else 4), "'%s' tiene sus ruedas (%d)" % [kind, actor.wheels.size()])
+			_check(absf(actor.wheels[0].rotation.x) > 0.001, "las ruedas de '%s' giran" % kind)
+			_check(actor.engine != null and actor.engine.stream != null, "'%s' lleva su sonido de motor/rodadura" % kind)
+		else:
+			_check(actor.legs.size() == 2 and absf(actor.legs[0].rotation.x) > 0.001, "'%s' mueve las piernas" % kind)
+		if kind == &"dogwalker":
+			_check(actor.dog_legs.size() == 4 and absf(actor.dog_legs[0].rotation.x) > 0.001, "el perro mueve las patas")
+		actor.queue_free()
+		life._actors.erase(actor)
+	_check(life._actors.is_empty(), "la calle queda vacía tras retirar los sucesos de prueba")
 
 
 func _test_room(room: RoomController, room_i: int) -> void:

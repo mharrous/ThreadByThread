@@ -4,6 +4,17 @@ extends Node
 ## Los sonidos se sintetizan en un hilo al arrancar (ver SfxSynth).
 
 const SFX_BUS := &"SFX"
+## Sonidos de la calle: pasan por un filtro que simula el cristal de la ventana.
+const OUTDOOR_BUS := &"Outdoor"
+const POOL_OUT := 8
+## Sonido de colocar según el sonido de impacto del material.
+const PLACE_BANKS := {
+	&"bounce_soft": &"place",
+	&"bounce_hard": &"place_click",
+	&"bounce_wood": &"place_wood",
+	&"bounce_metal": &"place_metal",
+	&"bounce_fabric": &"place_soft",
+}
 ## Semitonos de la escala pentatónica que suena al ir llenando una fila.
 const PENTATONIC: Array[int] = [0, 2, 4, 7, 9, 12]
 const SFX_DIR := "res://art/audio/sfx/"
@@ -18,6 +29,8 @@ var _banks: Dictionary = {}
 var _last_variant: Dictionary = {}
 var _pool_3d: Array[AudioStreamPlayer3D] = []
 var _pool_2d: Array[AudioStreamPlayer] = []
+var _pool_out: Array[AudioStreamPlayer3D] = []
+var _next_out := 0
 var _next_3d := 0
 var _next_2d := 0
 var _synth_task := -1
@@ -36,6 +49,10 @@ func _ready() -> void:
 		p.panning_strength = 0.5
 		add_child(p)
 		_pool_3d.append(p)
+	for i in POOL_OUT:
+		var po := make_outdoor_player()
+		add_child(po)
+		_pool_out.append(po)
 	for i in POOL_2D:
 		var p2 := AudioStreamPlayer.new()
 		p2.bus = SFX_BUS
@@ -53,7 +70,7 @@ func _exit_tree() -> void:
 
 
 ## Reproduce un efecto. `pos` = Vector3 para sonido posicional, null para sonido plano.
-func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_variation: float = 0.06, pitch_base: float = 1.0) -> void:
+func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_variation: float = 0.06, pitch_base: float = 1.0, outdoor: bool = false) -> void:
 	if not ready_to_play or not _banks.has(sound):
 		return
 	var variants: Array = _banks[sound]
@@ -63,7 +80,15 @@ func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_
 	_last_variant[sound] = idx
 	var pitch := pitch_base * (1.0 + _rng.randf_range(-pitch_variation, pitch_variation))
 	var vol := volume_db + _rng.randf_range(-1.0, 0.5)
-	if pos is Vector3:
+	if pos is Vector3 and outdoor:
+		var po := _pool_out[_next_out]
+		_next_out = (_next_out + 1) % POOL_OUT
+		po.stream = variants[idx]
+		po.global_position = pos
+		po.pitch_scale = pitch
+		po.volume_db = vol
+		po.play()
+	elif pos is Vector3:
 		var p := _pool_3d[_next_3d]
 		_next_3d = (_next_3d + 1) % POOL_3D
 		p.stream = variants[idx]
@@ -87,13 +112,40 @@ func get_stream(sound: StringName) -> AudioStream:
 	return (_banks[sound] as Array)[0]
 
 
+## Reproductor posicional de largo alcance para sonidos de la calle (bucles de motor, etc.).
+func make_outdoor_player(sound: StringName = &"", volume_db: float = 0.0) -> AudioStreamPlayer3D:
+	var p := AudioStreamPlayer3D.new()
+	p.bus = OUTDOOR_BUS
+	p.unit_size = 14.0
+	p.max_distance = 160.0
+	p.panning_strength = 0.6
+	p.doppler_tracking = AudioStreamPlayer3D.DOPPLER_TRACKING_IDLE_STEP
+	p.volume_db = volume_db
+	if sound != &"":
+		p.stream = get_stream(sound)
+	return p
+
+
 func _setup_bus() -> void:
-	if AudioServer.get_bus_index(SFX_BUS) != -1:
-		return
-	AudioServer.add_bus()
-	var idx := AudioServer.bus_count - 1
-	AudioServer.set_bus_name(idx, SFX_BUS)
-	AudioServer.set_bus_send(idx, &"Master")
+	if AudioServer.get_bus_index(SFX_BUS) == -1:
+		AudioServer.add_bus()
+		var idx := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(idx, SFX_BUS)
+		AudioServer.set_bus_send(idx, &"Master")
+	if AudioServer.get_bus_index(OUTDOOR_BUS) == -1:
+		AudioServer.add_bus()
+		var out_idx := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(out_idx, OUTDOOR_BUS)
+		AudioServer.set_bus_send(out_idx, SFX_BUS)
+		AudioServer.set_bus_volume_db(out_idx, -3.0)
+		var lpf := AudioEffectLowPassFilter.new()
+		lpf.cutoff_hz = 3200.0
+		AudioServer.add_bus_effect(out_idx, lpf)
+		var reverb := AudioEffectReverb.new()
+		reverb.room_size = 0.35
+		reverb.wet = 0.1
+		reverb.dry = 0.95
+		AudioServer.add_bus_effect(out_idx, reverb)
 
 
 func _apply_volumes() -> void:
@@ -109,7 +161,9 @@ func _connect_events() -> void:
 		# Cada hueco tiene su nota: rellenar una fila de izquierda a derecha toca una escala.
 		var steps := PENTATONIC.size()
 		var degree := clampi(int(float(item.slot_index) / float(shelf.slots_per_row) * steps), 0, steps - 1)
-		play(&"place", item.global_position, 0.0, 0.01, pow(2.0, PENTATONIC[degree] / 12.0)))
+		# El sonido depende del material del objeto: lana, plástico, madera, metal o tela.
+		var bank: StringName = PLACE_BANKS.get(item.data.get_motion().impact_sound, &"place")
+		play(bank, item.global_position, 0.0, 0.01, pow(2.0, PENTATONIC[degree] / 12.0)))
 	Events.item_set_down.connect(func(item): play(&"set_down", item.global_position))
 	Events.item_rejected.connect(func(_item, _reason): play(&"deny"))
 	Events.item_thrown.connect(func(item): play(&"throw", item.global_position))

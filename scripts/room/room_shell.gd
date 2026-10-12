@@ -204,7 +204,7 @@ func _window(wall: StringName) -> void:
 	var hd := ROOM_D * 0.5
 	var frame := _mat(Color("f3e4c8"), 0.55)
 	var glass := StandardMaterial3D.new()
-	glass.albedo_color = Color(0.85, 0.93, 1.0, 0.10)
+	glass.albedo_color = Color(0.85, 0.93, 1.0, 0.05)
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	glass.roughness = 0.05
 	if wall == &"west":
@@ -212,8 +212,8 @@ func _window(wall: StringName) -> void:
 		_box(self, Vector3(0.1, 0.07, 1.96), Vector3(x, 2.2 + 0.03, 0), frame, false)
 		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, -0.92), frame, false)
 		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, 0.92), frame, false)
-		_box(self, Vector3(0.05, 1.3, 0.045), Vector3(x, 1.55, 0), frame, false)
-		_box(self, Vector3(0.05, 0.045, 1.8), Vector3(x, 1.55, 0), frame, false)
+		# Solo montante vertical: un travesaño a 1,55 m quedaría justo a la altura de los ojos y taparía la calle.
+		_box(self, Vector3(0.05, 1.3, 0.03), Vector3(x, 1.55, 0), frame, false)
 		_box(self, Vector3(0.28, 0.045, 2.06), Vector3(-hw + 0.08, 0.915, 0), frame, false)
 		# Con colisión: los objetos lanzados rebotan en el cristal en vez de salir volando.
 		_box(self, Vector3(0.04, 1.3, 1.8), Vector3(-hw - 0.1, 1.55, 0), glass, true, 1, false)

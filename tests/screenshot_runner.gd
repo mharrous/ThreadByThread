@@ -15,6 +15,7 @@ const POSES := [
 var _out_dir := ""
 var _filled := false
 var _only_room := -1
+var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
 
 func _ready() -> void:
@@ -25,6 +26,8 @@ func _ready() -> void:
 			_filled = true
 		elif arg.begins_with("--room="):
 			_only_room = int(arg.trim_prefix("--room="))
+		elif arg == "--street":
+			_street = true
 	if _out_dir == "":
 		_out_dir = ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -57,6 +60,39 @@ func _fill_room(room: RoomController) -> void:
 		it.global_transform = unit.slot_transform(row, slot, it)
 
 
+## Vista de la ventana: primero la calle vacía y luego cada tipo de suceso congelado delante de la ventana.
+func _run_street(main: Node, player: Player) -> void:
+	var landscape := main.get_node("World/Landscape") as Landscape
+	var life := landscape.get_street_life()
+	life.enabled = false
+	player.teleport(Vector3(-2.3, 0.0, 0.0))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	player.look_at_point(Vector3(-12.0, 1.5, 0.0))
+	for i in 10:
+		await get_tree().process_frame
+	await _shot("ventana_vacia")
+	player.look_at_point(Vector3(-12.0, 1.9, 6.0))
+	for i in 6:
+		await get_tree().process_frame
+	await _shot("ventana_lado")
+	player.look_at_point(Vector3(-12.0, 1.5, 0.0))
+	for kind: StringName in [&"car", &"van", &"bike", &"moto", &"walker", &"dogwalker"]:
+		var actor := life.spawn(kind)
+		# Se lleva al centro de la ventana y se avanza el paso a mano; luego se congela para la foto.
+		# Termina a 2 m del centro de la ventana (a la derecha): el montante no tapa el motivo.
+		actor.position.z = -2.0 - actor.velocity.z * 0.96
+		for i in 8:
+			actor._process(0.12)
+		actor.set_process(false)
+		for i in 6:
+			await get_tree().process_frame
+		await _shot("ventana_%s" % kind)
+		actor.queue_free()
+		life._actors.erase(actor)
+	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
+
+
 func _run() -> void:
 	var main := (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	add_child(main)
@@ -64,6 +100,10 @@ func _run() -> void:
 		await get_tree().process_frame
 	var shop: Shop = main.get_node("Shop")
 	var player: Player = main.get_node("Player")
+	if _street:
+		await _run_street(main, player)
+		get_tree().quit()
+		return
 	var tag := "lleno" if _filled else "caos"
 	for room in shop.rooms:
 		if _only_room >= 0 and room.index != _only_room:

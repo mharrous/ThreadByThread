@@ -13,13 +13,14 @@ func _ready() -> void:
 
 
 func _build_environment() -> void:
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color("6fb4e8")
-	sky_mat.sky_horizon_color = Color("d4e8f4")
-	sky_mat.ground_horizon_color = Color("d4e8f4")
-	sky_mat.ground_bottom_color = Color("a5c47f")
+	var sky_mat := ShaderMaterial.new()
+	sky_mat.shader = preload("res://shaders/sky.gdshader")
+	sky_mat.set_shader_parameter("sun_dir", -sun_direction.normalized())
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
+	# Las nubes se mueven con TIME: la radiancia (reflejos) se refresca de a poco, una cara por fotograma.
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
+	sky.radiance_size = Sky.RADIANCE_SIZE_128
 
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY

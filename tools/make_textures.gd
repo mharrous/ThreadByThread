@@ -19,6 +19,10 @@ func _init() -> void:
 	_make_plaster()
 	_make_beadboard()
 	_make_rug()
+	_make_asphalt()
+	_make_pavement()
+	_make_grass()
+	_make_roof_tiles()
 	print("Texturas generadas en ", OUT)
 	quit()
 
@@ -249,3 +253,113 @@ func _make_rug() -> void:
 			height.set_pixel(x, y, Color(hg, hg, hg))
 	_save(albedo, "rug_albedo.png")
 	_save(_height_to_normal(height, 2.0), "rug_normal.png")
+
+
+# --- Exterior (calle y jardín) ---------------------------------------------
+
+## Asfalto: gravilla fina, parches y alguna grieta. Gris oscuro.
+func _make_asphalt() -> void:
+	var n := 512
+	var coarse := _noise(71, 0.015, n, 3)
+	var grit := _noise(72, 0.45, n, 2)
+	var crack := _noise(73, 0.03, n, 2)
+	var albedo := Image.create(n, n, true, Image.FORMAT_RGB8)
+	var height := Image.create(n, n, false, Image.FORMAT_L8)
+	for y in n:
+		for x in n:
+			var c := _sample(coarse, x, y)
+			var g := _sample(grit, x, y)
+			var k := absf(_sample(crack, x, y) - 0.5)
+			var v := 0.30 + 0.07 * (c - 0.5) + 0.12 * (g - 0.5)
+			if k < 0.012:
+				v *= 0.55          # grieta
+			var col := Color(v, v * 1.01, v * 1.04)
+			albedo.set_pixel(x, y, col)
+			var hg := 0.5 + 0.3 * (g - 0.5) - (0.25 if k < 0.012 else 0.0)
+			height.set_pixel(x, y, Color(hg, hg, hg))
+	_save(albedo, "asphalt_albedo.png")
+	_save(_height_to_normal(height, 2.4), "asphalt_normal.png")
+
+
+## Acera de losetas de hormigón (4 x 4 losetas por azulejo) con juntas y manchas.
+func _make_pavement() -> void:
+	var n := 512
+	var cells := 4
+	var cw := n / cells
+	var blotch := _noise(81, 0.02, n, 3)
+	var grit := _noise(82, 0.4, n, 2)
+	var albedo := Image.create(n, n, true, Image.FORMAT_RGB8)
+	var height := Image.create(n, n, false, Image.FORMAT_L8)
+	var tone: Array[float] = []
+	for i in cells * cells:
+		tone.append(_rng.randf_range(-0.04, 0.04))
+	for y in n:
+		for x in n:
+			var cx := x / cw
+			var cy := y / cw
+			var b := _sample(blotch, x, y)
+			var g := _sample(grit, x, y)
+			var v := 0.66 + tone[cy * cells + cx] + 0.08 * (b - 0.5) + 0.06 * (g - 0.5)
+			var hg := 0.8
+			var lx := x % cw
+			var ly := y % cw
+			if lx < 3 or ly < 3:       # junta entre losetas
+				v *= 0.62
+				hg = 0.1
+			albedo.set_pixel(x, y, Color(v, v * 0.99, v * 0.96))
+			height.set_pixel(x, y, Color(hg, hg, hg))
+	_save(albedo, "pavement_albedo.png")
+	_save(_height_to_normal(height, 3.0), "pavement_normal.png")
+
+
+## Hierba para el terreno (casi blanca/verde claro: el color grande lo pone el vértice).
+func _make_grass() -> void:
+	var n := 512
+	var blades := _noise(91, 0.35, n, 3)
+	var tufts := _noise(92, 0.05, n, 3)
+	var fine := _noise(93, 0.9, n, 1)
+	var albedo := Image.create(n, n, true, Image.FORMAT_RGB8)
+	var height := Image.create(n, n, false, Image.FORMAT_L8)
+	for y in n:
+		for x in n:
+			var b := _sample(blades, x * 2, y)    # hojas algo alargadas
+			var t := _sample(tufts, x, y)
+			var f := _sample(fine, x, y)
+			var v := 0.80 + 0.28 * (b - 0.5) + 0.20 * (t - 0.5) + 0.08 * (f - 0.5)
+			v = clampf(v, 0.0, 1.0)
+			albedo.set_pixel(x, y, Color(v * 0.97, v, v * 0.90))
+			height.set_pixel(x, y, Color(b, b, b))
+	_save(albedo, "grass_albedo.png")
+	_save(_height_to_normal(height, 3.0), "grass_normal.png")
+
+
+## Tejas curvas solapadas (hileras de arcos). Casi blancas: el tinte lo pone el material.
+func _make_roof_tiles() -> void:
+	var n := 512
+	var rows := 8
+	var cols := 8
+	var rh := n / rows
+	var cw := n / cols
+	var grit := _noise(101, 0.3, n, 2)
+	var blotch := _noise(102, 0.03, n, 3)
+	var albedo := Image.create(n, n, true, Image.FORMAT_RGB8)
+	var height := Image.create(n, n, false, Image.FORMAT_L8)
+	for y in n:
+		for x in n:
+			var row := y / rh
+			var shift := (cw / 2) if row % 2 == 1 else 0
+			var lx := float((x + shift) % cw) / cw     # 0..1 a lo ancho de la teja
+			var ly := float(y % rh) / rh                # 0..1 a lo largo (arriba = bajo la teja de encima)
+			var curve := sin(lx * PI)                   # sección curva de la teja
+			var shade := 0.74 + 0.22 * curve + 0.16 * ly
+			if ly < 0.12:
+				shade *= 0.55                           # sombra bajo la hilera superior
+			var g := _sample(grit, x, y)
+			var b := _sample(blotch, x, y)
+			shade += 0.06 * (g - 0.5) + 0.12 * (b - 0.5)
+			shade = clampf(shade, 0.0, 1.0)
+			albedo.set_pixel(x, y, Color(shade, shade, shade))
+			var hg := 0.3 + 0.45 * curve + 0.25 * ly
+			height.set_pixel(x, y, Color(hg, hg, hg))
+	_save(albedo, "roof_tiles_albedo.png")
+	_save(_height_to_normal(height, 4.0), "roof_tiles_normal.png")
