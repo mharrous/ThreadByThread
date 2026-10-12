@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"yarn_pink"
+display_name = "Ovillo rosa chicle"
+detail = "Algodón peinado"
+family = 0
+sort_key = &"pink"
+sort_label = "Rosa chicle"
+color = Color(0.933, 0.525, 0.706, 1)
+radius = 0.06
+thread_density = 30.0

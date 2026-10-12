@@ -1,0 +1,61 @@
+extends Node
+## Configuración del jugador. Se guarda en user://settings.cfg.
+## Tolerante a ficheros corruptos o incompletos: usa valores por defecto.
+
+signal changed
+
+const PATH := "user://settings.cfg"
+
+var mouse_sensitivity := 1.0
+var master_volume := 0.8
+var sfx_volume := 1.0
+var fullscreen := false
+var vsync := true
+var msaa := true
+
+
+func _ready() -> void:
+	load_settings()
+	apply_display()
+
+
+func load_settings() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(PATH) != OK:
+		return
+	mouse_sensitivity = clampf(float(cf.get_value("controls", "mouse_sensitivity", 1.0)), 0.2, 3.0)
+	master_volume = clampf(float(cf.get_value("audio", "master", 0.8)), 0.0, 1.0)
+	sfx_volume = clampf(float(cf.get_value("audio", "sfx", 1.0)), 0.0, 1.0)
+	fullscreen = bool(cf.get_value("graphics", "fullscreen", false))
+	vsync = bool(cf.get_value("graphics", "vsync", true))
+	msaa = bool(cf.get_value("graphics", "msaa", true))
+
+
+func save_settings() -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("controls", "mouse_sensitivity", mouse_sensitivity)
+	cf.set_value("audio", "master", master_volume)
+	cf.set_value("audio", "sfx", sfx_volume)
+	cf.set_value("graphics", "fullscreen", fullscreen)
+	cf.set_value("graphics", "vsync", vsync)
+	cf.set_value("graphics", "msaa", msaa)
+	var err := cf.save(PATH)
+	if err != OK:
+		push_warning("No se pudo guardar la configuración (%s)" % error_string(err))
+
+
+func apply_display() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+	if DisplayServer.window_get_mode() != mode:
+		DisplayServer.window_set_mode(mode)
+	DisplayServer.window_set_vsync_mode(
+		DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa else Viewport.MSAA_DISABLED
+
+
+## Llamar tras modificar cualquier valor desde la interfaz.
+func notify_changed() -> void:
+	apply_display()
+	changed.emit()

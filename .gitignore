@@ -1,0 +1,9 @@
+# Godot
+.godot/
+*.translation
+export_presets.cfg
+
+# Salidas locales
+captures/
+build/
+*.log

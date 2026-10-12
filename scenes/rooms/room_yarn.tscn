@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/room/room_controller.gd" id="1_room"]
+[ext_resource type="Script" path="res://scripts/room/room_shell.gd" id="2_shell"]
+[ext_resource type="Script" path="res://scripts/room/room_lighting.gd" id="3_light"]
+[ext_resource type="Script" path="res://scripts/room/placement_fx.gd" id="4_fx"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="5_shelf"]
+[ext_resource type="PackedScene" path="res://scenes/items/yarn_ball.tscn" id="6_ball"]
+[ext_resource type="Resource" path="res://data/catalog_yarn.tres" id="7_catalog"]
+
+[node name="RoomYarn" type="Node3D"]
+script = ExtResource("1_room")
+catalog = ExtResource("7_catalog")
+item_scene = ExtResource("6_ball")
+items_per_color = 1
+
+[node name="Shell" type="Node3D" parent="."]
+script = ExtResource("2_shell")
+
+[node name="Lighting" type="Node3D" parent="."]
+script = ExtResource("3_light")
+
+[node name="Shelves" type="Node3D" parent="."]
+
+[node name="ShelfLeft" parent="Shelves" instance=ExtResource("5_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, -2.5)
+
+[node name="ShelfRight" parent="Shelves" instance=ExtResource("5_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, -2.5)
+
+[node name="Items" type="Node3D" parent="."]
+
+[node name="PlacementFx" type="Node3D" parent="."]
+script = ExtResource("4_fx")

@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/core/pickable_item.gd" id="1_item"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.055
+height = 0.11
+radial_segments = 28
+rings = 14
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_ball"]
+radius = 0.07
+
+[node name="YarnBall" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_item")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_ball")
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_ball")

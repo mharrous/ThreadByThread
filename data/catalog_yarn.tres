@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemCatalog" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_catalog.gd" id="1_cat"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_data"]
+[ext_resource type="Resource" path="res://data/items/yarn_red.tres" id="3_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_orange.tres" id="4_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_yellow.tres" id="5_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_lime.tres" id="6_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_green.tres" id="7_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_turquoise.tres" id="8_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_blue.tres" id="9_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_violet.tres" id="10_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_pink.tres" id="11_item"]
+[ext_resource type="Resource" path="res://data/items/yarn_white.tres" id="12_item"]
+
+[resource]
+script = ExtResource("1_cat")
+items = Array[ExtResource("2_data")]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item")])

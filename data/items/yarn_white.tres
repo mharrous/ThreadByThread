@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"yarn_white"
+display_name = "Ovillo blanco hueso"
+detail = "Lana cruda"
+family = 0
+sort_key = &"white"
+sort_label = "Blanco hueso"
+color = Color(0.937, 0.906, 0.839, 1)
+radius = 0.06
+thread_density = 24.0

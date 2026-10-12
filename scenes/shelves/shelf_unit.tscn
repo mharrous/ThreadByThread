@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/core/shelf_unit.gd" id="1_shelf"]
+
+[node name="ShelfUnit" type="Node3D"]
+script = ExtResource("1_shelf")

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"yarn_lime"
+display_name = "Ovillo verde manzana"
+detail = "Lana merino fina"
+family = 0
+sort_key = &"lime"
+sort_label = "Verde manzana"
+color = Color(0.545, 0.765, 0.29, 1)
+radius = 0.06
+thread_density = 28.0

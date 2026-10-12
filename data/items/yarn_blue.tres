@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"yarn_blue"
+display_name = "Ovillo azul cobalto"
+detail = "Lana merino fina"
+family = 0
+sort_key = &"blue"
+sort_label = "Azul cobalto"
+color = Color(0.239, 0.463, 0.788, 1)
+radius = 0.06
+thread_density = 28.0

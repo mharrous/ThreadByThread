@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"yarn_turquoise"
+display_name = "Ovillo turquesa"
+detail = "Algodón peinado"
+family = 0
+sort_key = &"turquoise"
+sort_label = "Turquesa"
+color = Color(0.208, 0.702, 0.69, 1)
+radius = 0.06
+thread_density = 30.0
