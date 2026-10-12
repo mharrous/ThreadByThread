@@ -26,6 +26,8 @@ var jitter := 1.0
 ## Sala a la que pertenece y posición en su lista (clave del guardado).
 var room: RoomController = null
 var index := -1
+## Copia de un tesoro ya hallado, expuesta en la repisa: se puede examinar pero no cuenta ni se guarda.
+var is_display := false
 
 ## Hueco que ocupa si está colocado.
 var container: StorageUnit = null
@@ -126,6 +128,25 @@ func play_collect(show_pos: Vector3, end_pos: Vector3) -> void:
 	spin.tween_property(self, "rotation:y", rotation.y + TAU * 1.6, 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
+## Examinar un tesoro ya expuesto: sube hasta `show_pos` (delante de la cámara), gira y vuelve a su sitio.
+func play_inspect(show_pos: Vector3) -> void:
+	var home := global_transform
+	set_pickable(false)
+	var move := create_tween()
+	move.tween_property(self, "global_position", show_pos, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	move.tween_interval(1.3)
+	move.tween_property(self, "global_position", home.origin, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	move.tween_callback(func():
+		global_transform = home
+		set_pickable(true))
+	var spin := create_tween()
+	spin.tween_property(self, "rotation:y", rotation.y + TAU * 1.5, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func is_pickable() -> bool:
+	return _proxy.collision_layer != 0
+
+
 ## Aparece con un "pop" elástico (decoración desbloqueada, tesoro expuesto).
 func play_appear() -> void:
 	_squash.scale = Vector3.ONE * 0.01
@@ -173,6 +194,7 @@ func launch(velocity: Vector3, spin: Vector3) -> void:
 	collision_layer = LAYER_ITEMS
 	collision_mask = MASK_FLIGHT
 	freeze = false
+	can_sleep = false   # si el motor lo durmiera, _integrate_forces dejaria de llamarse y no se asentaria nunca
 	continuous_cd = true
 	contact_monitor = true
 	max_contacts_reported = 4
@@ -208,7 +230,7 @@ func _integrate_forces(ps: PhysicsDirectBodyState3D) -> void:
 		_rest_time += dt
 	else:
 		_rest_time = 0.0
-	if ps.transform.origin.y < -3.0:
+	if ps.transform.origin.y < -1.0 or _left_the_building(ps.transform.origin):
 		_recover.call_deferred()
 	elif _rest_time > 0.4 or _flight_time > MAX_FLIGHT_TIME:
 		_settle.call_deferred()
@@ -230,9 +252,18 @@ func _settle() -> void:
 	freeze = true
 	contact_monitor = false
 	continuous_cd = false
+	can_sleep = true
 	state = State.LOOSE
 	set_pickable(true)
 	Events.item_landed.emit(self)
+
+
+## ¿Ha salido por una pared (norte/sur o el fondo oeste)? No debería pasar nunca; es la red de seguridad.
+func _left_the_building(p: Vector3) -> bool:
+	if room == null:
+		return false
+	var local := room.to_local(p)
+	return absf(local.z) > 3.0 or p.x < -3.5
 
 
 ## Red de seguridad: si se cae del mundo vuelve al suelo de la sala.

@@ -39,8 +39,8 @@ La partida se guarda sola (cada 20 s si hay cambios, al pausar, al completar una
 4. **Lanzar** (F): rebota, se aplasta un poco, suelta polvillo, rueda y se para. Cada material rebota distinto (lana, plástico, madera, metal, tela).
 5. Completa una fila: arpegio. Completa la sala: melodía, banner, **se abre la puerta** de la siguiente y, un momento después, **aparece una guirnalda de banderines**.
 6. **Mira por la ventana de la sala 1** y espera un par de minutos: pasan coches, alguna bicicleta (con timbre), una moto, gente paseando y perros (que a veces ladran). Debe ser tranquilo y no repetitivo. Las salas 2–4 miran a un jardín trasero.
-7. **Tesoros**: cada sala esconde dos objetos de lujo (sobre estanterías altas, cajones o pilas de cajas). Se ven destellos dorados muy leves de cerca; el panel de arriba a la izquierda dice cuántos hay. Al cogerlos se enseñan un momento y aparecen en la repisa de la pared sur.
-8. Esc → **Libro de colecciones**: progreso de cada colección y de los tesoros por sala.
+7. **Tesoros**: cada sala esconde dos objetos de lujo (sobre estanterías altas, cajones o pilas de cajas). Se ven destellos dorados muy leves de cerca; el panel de arriba a la izquierda dice cuántos hay. Al cogerlos se enseñan un momento y aparecen en la repisa de la pared sur (sus pastillas llevan el color y el nombre del tesoro). Los de lo alto de una estantería se apuntan con una ayuda de puntería: basta mirar hacia ellos desde 1–3 m. Los ya expuestos se pueden **examinar** con E (vienen a la mano, giran y vuelven).
+8. Esc → **Libro de colecciones**: dibujo de cada colección con su barra de progreso, escarapela al completarla y los tesoros (silueta con "?" hasta encontrarlos).
 9. Cierra el juego a mitad de una sala y vuelve a abrirlo: todo debe seguir donde lo dejaste.
 
 Dime qué sientes raro: fuerza del lanzamiento, sonidos (nada de audio se ha escuchado aún), frecuencia de la calle, sensibilidad, dificultad de encontrar los tesoros.
@@ -54,6 +54,9 @@ powershell -File tests\run_smoke.ps1 -Count 0            # cantidades del juego 
 
 # Guardado y carga entre dos procesos distintos
 powershell -File tests\run_persist.ps1
+
+# Prueba de "mono": acciones aleatorias (andar, coger, colocar, lanzar, pausar, guardar...) con comprobación de invariantes
+powershell -File tests\run_fuzz.ps1 -Steps 1200 -Seed 5 -Count 3
 
 # Capturas de render (abren una ventana unos segundos)
 powershell -File tests\run_shots.ps1          # salas -> captures\

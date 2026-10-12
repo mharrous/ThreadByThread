@@ -159,12 +159,41 @@ func _run() -> void:
 	if _book:
 		var room: RoomController = shop.rooms[0]
 		room._restore_treasure(room.treasure_catalog.items[0].id)
+		# Para ver el libro con contenido: media sala 1 colocada, la sala 2 abierta y un tesoro en cada una.
+		var placed_n := 0
+		for it in room.get_items():
+			var found := room.find_row(it.data.sort_key)
+			if found.is_empty() or placed_n >= 100:
+				continue
+			var unit: StorageUnit = found["unit"]
+			var row: int = found["row"]
+			var slot := unit.first_free_slot(row)
+			if slot < 0:
+				continue
+			unit.reserve(row, slot, it)
+			it.container = unit
+			it.slot_row = row
+			it.slot_index = slot
+			it.state = PickableItem.State.PLACED
+			it.global_transform = unit.slot_transform(row, slot, it)
+			Events.item_placed.emit(it, unit)
+			placed_n += 1
+		for k in range(1, shop.rooms.size()):
+			shop.unlock_room(k, false)
+		var room2: RoomController = shop.rooms[1]
+		room2._restore_treasure(room2.treasure_catalog.items[1].id)
 		var menu := main.get_node("PauseMenu")
 		menu.open()
 		menu._show_book(true)
 		for i in 12:
 			await get_tree().process_frame
 		await _shot("libro")
+		var scroll := menu._book_content.get_parent() as ScrollContainer
+		for pos in [560, 1120, 1680, 2240]:
+			scroll.scroll_vertical = pos
+			for i in 6:
+				await get_tree().process_frame
+			await _shot("libro_%d" % pos)
 		menu._show_book(false)
 		for i in 12:
 			await get_tree().process_frame

@@ -137,6 +137,12 @@ func slot_world_position(row: int, slot: int, item: PickableItem) -> Vector3:
 	return slot_transform(row, slot, item).origin
 
 
+## El objeto de arriba de un montón (telas dobladas apiladas): solo ese se puede coger sin descolocar los demás.
+func top_of_stack(row: int, slot: int) -> PickableItem:
+	var stack: Array = _slots[row][slot]
+	return stack.back() if not stack.is_empty() else null
+
+
 func reserve(row: int, slot: int, item: PickableItem) -> void:
 	(_slots[row][slot] as Array).append(item)
 	_set_marker_visible(row, slot, has_room(row, slot))
@@ -154,11 +160,24 @@ func celebrate_row(row: int, delay: float = 0.0) -> void:
 		var tw := create_tween()
 		tw.tween_interval(delay + n * 0.04)
 		n += 1
-		var base_y := it.global_position.y
-		tw.tween_property(it, "global_position:y", base_y + 0.02, 0.11) \
+		# La altura base se toma al empezar y el salto se cancela si el objeto ya no está en esta balda
+		# (si alguien lo coge o lo lanza durante el salto, no se le debe mover).
+		var base := {"y": 0.0}
+		tw.tween_callback(func():
+			if _still_here(it):
+				base["y"] = it.global_position.y)
+		tw.tween_method(func(t: float):
+			if _still_here(it):
+				it.global_position.y = base["y"] + 0.02 * t, 0.0, 1.0, 0.11) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tw.tween_property(it, "global_position:y", base_y, 0.16) \
+		tw.tween_method(func(t: float):
+			if _still_here(it):
+				it.global_position.y = base["y"] + 0.02 * t, 1.0, 0.0, 0.16) \
 			.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+
+
+func _still_here(it: PickableItem) -> bool:
+	return is_instance_valid(it) and it.state == PickableItem.State.PLACED and it.container == self
 
 
 func _no_slot() -> Dictionary:
@@ -166,10 +185,11 @@ func _no_slot() -> Dictionary:
 
 
 func _status_for(row: int, slot: int, item: PickableItem) -> SlotStatus:
-	if slot < 0:
-		return SlotStatus.ROW_FULL
+	# Primero el tipo: un objeto de otro tipo apuntado a una fila llena debe decir "fila equivocada".
 	if _row_data[row] == null or _row_data[row].sort_key != item.data.sort_key:
 		return SlotStatus.WRONG_ROW
+	if slot < 0:
+		return SlotStatus.ROW_FULL
 	return SlotStatus.OK
 
 

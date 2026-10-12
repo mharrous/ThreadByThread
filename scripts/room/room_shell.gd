@@ -598,6 +598,16 @@ func _build_display_shelf() -> void:
 		plate.position = Vector3(x0 + sx, y, z - 0.113)
 		add_child(plate)
 		_display_plates.append(plate)
+		# Y el mismo nombre tumbado sobre la tabla, delante de la pastilla, para leerlo desde arriba.
+		var top := Label3D.new()
+		top.font_size = 30
+		top.pixel_size = 0.0007
+		top.outline_size = 0
+		top.modulate = Color("3a2a1c")
+		top.rotation = Vector3(-PI * 0.5, PI, 0.0)
+		top.position = Vector3(x0 + sx, y + 0.0175 + 0.002, z - 0.093)
+		add_child(top)
+		_display_plates.append(top)
 
 
 ## Cada sitio de la repisa lleva el color del tesoro que le toca (la pastilla) y su nombre en el canto,
@@ -606,7 +616,8 @@ func set_display_slot(i: int, color: Color, text: String) -> void:
 	if i < 0 or i >= _display_pad_mats.size():
 		return
 	_display_pad_mats[i].albedo_color = Color(color.r, color.g, color.b, 1.0)
-	_display_plates[i].text = text
+	_display_plates[i * 2].text = text
+	_display_plates[i * 2 + 1].text = text
 
 
 ## Registra una decoración oculta hasta que se desbloquee (`unlock_decor`).

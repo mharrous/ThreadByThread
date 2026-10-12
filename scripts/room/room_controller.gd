@@ -238,15 +238,28 @@ func _on_item_removed(item: PickableItem, _unit: StorageUnit) -> void:
 
 
 func _announce_completion() -> void:
-	await get_tree().create_timer(0.7).timeout
+	await get_tree().create_timer(0.7, false).timeout
 	Events.room_completed.emit(self)
 	# Premio visual: la guirnalda de banderines aparece cuando ya se ha leído el cartel de sala ordenada.
-	await get_tree().create_timer(1.6).timeout
+	await get_tree().create_timer(1.6, false).timeout
 	shell.unlock_decor(&"bunting", true)
 	Events.decor_unlocked.emit(self, &"bunting")
 
 
 # --- Tesoros y colecciones -------------------------------------------------
+
+## Tesoros que se pueden apuntar ahora: los escondidos y las copias expuestas (que se examinan).
+func get_treasure_candidates() -> Array[PickableItem]:
+	var out: Array[PickableItem] = []
+	for t in _treasures:
+		if is_instance_valid(t) and t.is_pickable():
+			out.append(t)
+	for id in _displays:
+		var d: PickableItem = _displays[id]
+		if is_instance_valid(d) and d.is_pickable() and d.visible:
+			out.append(d)
+	return out
+
 
 func treasures_total() -> int:
 	return treasure_catalog.items.size() if treasure_catalog != null else 0
@@ -262,7 +275,7 @@ func treasure_status() -> Array[Dictionary]:
 	if treasure_catalog == null:
 		return out
 	for data in treasure_catalog.items:
-		out.append({"name": data.display_name, "detail": data.detail, "found": _found.has(data.id)})
+		out.append({"name": data.display_name, "detail": data.detail, "found": _found.has(data.id), "data": data})
 	return out
 
 
@@ -272,7 +285,7 @@ func collection_status() -> Array[Dictionary]:
 	for data in catalog.items:
 		var total: int = _total_by_key.get(data.sort_key, 0)
 		var placed: int = _placed_by_key.get(data.sort_key, 0)
-		out.append({"label": data.sort_label, "placed": placed, "total": total, "done": total > 0 and placed == total})
+		out.append({"label": data.sort_label, "placed": placed, "total": total, "done": total > 0 and placed == total, "data": data})
 	return out
 
 
@@ -306,7 +319,8 @@ func _show_display(data: ItemData, animate: bool) -> void:
 	if _displays.has(data.id) or shell == null:
 		return
 	var item := _instantiate_item(data, 1.0, 0)
-	item.set_pickable(false)
+	item.is_display = true
+	item.set_pickable(not animate)
 	item.freeze = true
 	var slot := shell.display_slot(treasure_catalog.items.find(data))
 	item.position = slot + Vector3(0.0, item.half_height, 0.0)
@@ -315,9 +329,10 @@ func _show_display(data: ItemData, animate: bool) -> void:
 	if animate:
 		# Aparece cuando el tesoro recién hallado ya se ha enseñado y guardado.
 		item.visible = false
-		await get_tree().create_timer(1.9).timeout
+		await get_tree().create_timer(1.9, false).timeout
 		item.visible = true
 		item.play_appear()
+		item.set_pickable(true)
 
 
 ## Marca un tesoro como encontrado al cargar una partida: desaparece del sitio donde estaba y se expone.
@@ -352,7 +367,7 @@ func capture_state() -> Dictionary:
 		if it.state == PickableItem.State.PLACED and it.container != null:
 			items_state.append({"s": "p", "u": _units.find(it.container), "r": it.slot_row, "k": it.slot_index})
 		else:
-			var t := it.global_transform
+			var t := _resting_transform(it)
 			var q := t.basis.get_rotation_quaternion()
 			var local := to_local(t.origin)
 			items_state.append({
@@ -364,6 +379,27 @@ func capture_state() -> Dictionary:
 	for id in _found:
 		found_ids.append(String(id))
 	return {"sig": signature(), "completed": is_completed, "items": items_state, "treasures": found_ids}
+
+
+## Pose con la que se guarda un objeto que no está colocado. Si está en la mano o en el aire (se guarda
+## a mitad de un lanzamiento o con algo sostenido) se deja sobre lo que haya debajo, para que al cargar no
+## quede flotando.
+func _resting_transform(it: PickableItem) -> Transform3D:
+	if it.state == PickableItem.State.LOOSE:
+		return it.global_transform
+	var from := it.global_position + Vector3(0.0, 0.05, 0.0)
+	var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 4.0, 1 | 16)
+	# Las estanterias no cuentan: una mano pegada a una balda no debe dejar el objeto dentro de ella.
+	var skip: Array[RID] = []
+	for unit in _units:
+		var body := unit.get_node_or_null("Body") as CollisionObject3D
+		if body != null:
+			skip.append(body.get_rid())
+	query.exclude = skip
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var ground_y: float = hit["position"].y if not hit.is_empty() else global_position.y
+	var yaw := it.global_basis.get_euler().y
+	return Transform3D(Basis(Vector3.UP, yaw), Vector3(from.x, ground_y + it.half_height, from.z))
 
 
 ## Restaura el estado guardado. Devuelve false (sin tocar nada) si no encaja con esta sala.
@@ -386,6 +422,9 @@ func apply_state(state: Dictionary) -> bool:
 			var unit := _units[unit_i]
 			var row := int(s["r"])
 			var slot := int(s["k"])
+			# Un guardado que no encaja con la disposicion actual de la unidad (o editado a mano) no debe romper la carga.
+			if row < 0 or row >= unit.rows or slot < 0 or slot >= unit.slots_per_row or not unit.has_room(row, slot):
+				continue
 			unit.reserve(row, slot, it)
 			it.container = unit
 			it.slot_row = row

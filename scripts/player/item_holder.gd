@@ -12,6 +12,9 @@ const MASK_ITEMS := 2
 const MASK_STORAGE_AIM := 4
 const MASK_SETTABLE := 16
 const MASK_PICK := 32
+## Ayuda de puntería de los tesoros: cono de 7° y alcance algo mayor que el normal.
+const TREASURE_AIM_COS := 0.9925
+const TREASURE_REACH := 3.6
 
 @export var throw_min_speed := 3.2
 @export var throw_max_speed := 9.5
@@ -57,6 +60,7 @@ var _last_info: Dictionary = {}
 func _ready() -> void:
 	_player = get_parent() as Player
 	_camera = _player.get_node("CameraRig/Camera3D")
+	Events.pause_toggled.connect(func(_paused: bool): _cancel_charge())
 	process_priority = 10   # después del jugador: usa la cámara ya actualizada
 	_build_ghost()
 
@@ -108,6 +112,10 @@ func try_pick() -> bool:
 		_collect_treasure(item)
 		return true
 	if item.state == PickableItem.State.PLACED and item.container != null:
+		# En un montón solo se puede coger el de arriba (si no, los demás quedarían flotando).
+		var top := item.container.top_of_stack(item.slot_row, item.slot_index)
+		if top != null and top != item:
+			item = top
 		var old_unit := item.container
 		old_unit.release(item.slot_row, item.slot_index, item)
 		item.container = null
@@ -120,8 +128,7 @@ func try_pick() -> bool:
 	held.set_pickable(false)
 	_spin = 0.0
 	_wobble = 0.0
-	_charging = false
-	_charge = 0.0
+	_cancel_charge()
 	_hold_dist = hold_distance
 	_smooth_pos = held.global_position
 	_ghost.mesh = held.get_ghost_mesh()
@@ -139,8 +146,21 @@ func _collect_treasure(item: PickableItem) -> void:
 	var cam := _camera.global_transform
 	var show_pos := cam.origin - cam.basis.z * 0.55 + cam.basis.y * 0.03
 	var end_pos := cam.origin - cam.basis.z * 0.35 - cam.basis.x * 0.28 + cam.basis.y * 0.22
+	if item.is_display:
+		# Un tesoro ya expuesto en la repisa solo se examina: viene a la mano, gira y vuelve a su sitio.
+		item.play_inspect(show_pos)
+		return
 	Events.treasure_found.emit(item)
 	item.play_collect(show_pos, end_pos)
+
+
+## Anula la carga del lanzamiento (al pausar, dejar, colocar o coger otra cosa) y apaga el arco del HUD:
+## si no, una tecla F soltada durante la pausa dejaria la carga subiendo sola.
+func _cancel_charge() -> void:
+	if _charging or _charge > 0.0:
+		_charging = false
+		_charge = 0.0
+		Events.throw_charge_changed.emit(0.0)
 
 
 func try_place() -> void:
@@ -186,6 +206,12 @@ func try_throw() -> void:
 	_ghost.visible = false
 	_last_info = {&"stale": true}   # fuerza que se vuelva a publicar el estado
 	aim_status = StorageUnit.SlotStatus.NONE
+	# Con la mano pegada a una pared o a una esquina el objeto puede estar ya al otro lado: sale desde la
+	# cámara, así que se coloca justo antes de la primera superficie que haya entre la cámara y la mano.
+	var wall_hit := _camera.get_world_3d().direct_space_state.intersect_ray(
+		PhysicsRayQueryParameters3D.create(cam.origin, item.global_position, MASK_WORLD))
+	if not wall_hit.is_empty():
+		item.global_position = (wall_hit["position"] as Vector3) + (wall_hit["normal"] as Vector3) * (item.radius + 0.03)
 	item.launch(velocity, spin)
 	Events.item_thrown.emit(item)
 	Events.held_item_changed.emit(null)
@@ -194,6 +220,7 @@ func try_throw() -> void:
 func try_set_down() -> void:
 	if state != State.HOLDING:
 		return
+	_cancel_charge()
 	var hit := _raycast(MASK_SETTABLE)
 	if hit.is_empty() or (hit["normal"] as Vector3).y < 0.7:
 		Events.hint_requested.emit("Apúntalo al suelo o a una mesa para dejarlo")
@@ -222,36 +249,51 @@ func _process_empty() -> void:
 	_set_hover(item)
 	if item:
 		_publish({
-			"key": "E", "action": "Recoger",
+			"key": "E", "action": "Examinar" if item.is_display else "Recoger",
 			"title": item.data.display_name, "detail": item.data.detail,
-			"hint": "Tesoro escondido" if item.data.treasure else "",
+			"hint": ("Tesoro de tu colección" if item.is_display else "Tesoro escondido") if item.data.treasure else "",
 			"kind": "pick",
 		})
 	else:
 		_publish({})
 
 
-## Los tesoros sobre una estantería alta quedan tapados por el canto de la estantería (la cámara va a
-## 1,6 m y la balda de arriba está a 1,92 m). Se apuntan con un rayo que solo ve los volúmenes de
-## puntería, y vale si entre la cámara y el tesoro no hay nada más que estanterías.
+## Ayuda de puntería para los tesoros (el volumen de puntería y el rayo no bastan cuando están en lo
+## alto de una estantería, tapados por su canto): vale cualquier tesoro (escondido o ya expuesto) de la
+## sala activa que quede dentro de un cono estrecho alrededor de la mirada, a poca distancia y sin nada
+## en medio salvo estanterías. Se elige el que más cerca esté del centro de la mirada.
 func _treasure_in_view() -> PickableItem:
-	var hit := _raycast(MASK_PICK, true)
-	if hit.is_empty():
+	var shop := get_tree().get_first_node_in_group(&"shop") as Shop
+	if shop == null or shop.active_room == null:
 		return null
-	var proxy := hit["collider"] as Area3D
-	var item := proxy.get_parent() as PickableItem if proxy != null else null
-	if item == null or not item.data.treasure or item.room == null:
-		return null
+	var origin := _camera.global_position
+	var forward := -_camera.global_basis.z
+	var best: PickableItem = null
+	var best_cos := TREASURE_AIM_COS
+	for t in shop.active_room.get_treasure_candidates():
+		var to: Vector3 = t.global_position - origin
+		var dist := to.length()
+		if dist > TREASURE_REACH or dist < 0.05:
+			continue
+		var c := forward.dot(to / dist)
+		if c > best_cos and _line_clear(origin, t):
+			best = t
+			best_cos = c
+	return best
+
+
+## ¿Hay línea de visión desde `origin` hasta el objeto? Las estanterías no cuentan como obstáculo
+## (los tesoros están encima de ellas) pero sí paredes, muebles y el resto.
+func _line_clear(origin: Vector3, item: PickableItem) -> bool:
 	var exclude: Array[RID] = []
-	for unit in item.room.get_units():
-		var body := unit.get_node_or_null("Body") as CollisionObject3D
-		if body != null:
-			exclude.append(body.get_rid())
-	var q := PhysicsRayQueryParameters3D.create(_camera.global_position, hit["position"], MASK_WORLD)
+	if item.room != null:
+		for unit in item.room.get_units():
+			var body := unit.get_node_or_null("Body") as CollisionObject3D
+			if body != null:
+				exclude.append(body.get_rid())
+	var q := PhysicsRayQueryParameters3D.create(origin, item.global_position, MASK_WORLD)
 	q.exclude = exclude
-	if not _camera.get_world_3d().direct_space_state.intersect_ray(q).is_empty():
-		return null
-	return item
+	return _camera.get_world_3d().direct_space_state.intersect_ray(q).is_empty()
 
 
 func _process_picking(delta: float) -> void:
@@ -323,6 +365,7 @@ func _finish_place() -> void:
 
 
 func _start_place(target: Transform3D) -> void:
+	_cancel_charge()
 	_begin_anim(held.global_transform, target, place_duration)
 	held.state = PickableItem.State.MOVING
 	state = State.PLACING

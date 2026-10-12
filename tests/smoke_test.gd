@@ -56,12 +56,13 @@ func _settle() -> void:
 	await get_tree().physics_frame
 
 
-func _press(action: StringName) -> void:
+func _press(action: StringName, hold_frames: int = 1) -> void:
 	var ev := InputEventAction.new()
 	ev.action = action
 	ev.pressed = true
 	Input.parse_input_event(ev)
-	await get_tree().process_frame
+	for i in hold_frames:
+		await get_tree().process_frame
 	var rel := InputEventAction.new()
 	rel.action = action
 	rel.pressed = false
@@ -289,6 +290,72 @@ func _set_down_somewhere_free(room: RoomController, item: PickableItem) -> bool:
 			return true
 	return false
 
+## Lanzar a máxima fuerza desde pegado a las paredes, esquinas y la ventana: ningún objeto debe atravesar
+## el muro y salir del edificio (se encontró con la prueba de "mono": la mano pegada a una esquina
+## sacaba el objeto por fuera de la pared).
+func _test_wall_throws(room: RoomController, items: Array) -> void:
+	print("-- Lanzar contra paredes, esquinas y ventana")
+	var cases: Array = [
+		["pared sur", Vector3(0.0, 0, 2.15), Vector3(0.0, 1.0, 2.7)],
+		["esquina sur-oeste", Vector3(-2.6, 0, 2.15), Vector3(-3.1, 0.9, 2.7)],
+		["esquina sur-este", Vector3(2.6, 0, 2.15), Vector3(3.1, 0.9, 2.7)],
+		["pared oeste", Vector3(-2.55, 0, 1.6), Vector3(-3.1, 1.0, 1.6)],
+		["ventana", Vector3(-2.5, 0, 0.0), Vector3(-3.3, 1.3, 0.0)],
+		["pared este", Vector3(2.55, 0, 1.6), Vector3(3.1, 1.0, 1.6)],
+		["suelo pegado a la pared", Vector3(0.0, 0, 2.2), Vector3(0.0, 0.1, 2.7)],
+	]
+	var next_item := 2
+	for c in cases:
+		var item: PickableItem = items[next_item % items.size()]
+		next_item += 1
+		if not await _pick(room, item):
+			_check(false, "preparar el lanzamiento (%s)" % c[0])
+			continue
+		player.teleport(room.global_position + c[1])
+		await _settle()
+		player.look_at_point(room.global_position + c[2])
+		await _frames(3)
+		await _press(&"throw", 60)
+		var flew := await _wait_until(func(): return item.state == PickableItem.State.THROWN or item.state == PickableItem.State.LOOSE, 2.0)
+		_check(flew, "el lanzamiento contra '%s' sale de la mano" % c[0])
+		await _wait_until(func(): return item.state != PickableItem.State.THROWN, 14.0)
+		var local := room.to_local(item.global_position)
+		var inside := absf(local.x) <= 3.1 and absf(local.z) <= 2.55 and local.y > -0.05 and local.y < 3.0
+		_check(inside, "lanzado contra '%s' sigue dentro de la sala (%s)" % [c[0], str(local.snapped(Vector3.ONE * 0.01))])
+		# Si se escapó, se devuelve al suelo para no contaminar el resto de la prueba.
+		if not inside:
+			item.global_position = room.global_position + Vector3(0.0, item.half_height, 1.0)
+
+
+## En un montón (telas dobladas apiladas) solo se puede coger la de arriba: si se apunta a la de abajo,
+## el juego coge la de arriba y las demás no quedan flotando.
+func _test_stacks(room: RoomController) -> void:
+	for unit in room.get_units():
+		if unit.stack_capacity <= 1:
+			continue
+		for row in unit.rows:
+			for slot in unit.slots_per_row:
+				if unit.stack_size(row, slot) < 2:
+					continue
+				var stack: Array = unit._slots[row][slot]
+				var bottom: PickableItem = stack[0]
+				var top: PickableItem = stack.back()
+				var before := stack.size()
+				print("-- Montón de %d en %s (fila %d, hueco %d)" % [stack.size(), unit.name, row, slot])
+				# Se fuerza el objeto apuntado (el rayo normal acertaria antes en el de arriba) y se pulsa coger.
+				player.teleport(unit.stand_hint(row, slot, top)["position"])
+				await _settle()
+				holder.hover_item = bottom
+				holder.try_pick()
+				var ok := await _wait_until(func(): return holder.state == ItemHolder.State.HOLDING, 3.0)
+				_check(ok and holder.held == top, "apuntando a la pieza de abajo se coge la de arriba del montón")
+				_check(unit.stack_size(row, slot) == before - 1, "el montón conserva el resto (%d piezas)" % unit.stack_size(row, slot))
+				# Se devuelve a su sitio para dejar la sala como estaba.
+				if holder.state == ItemHolder.State.HOLDING:
+					_check(await _place_on_correct_row(room, holder.held), "la pieza vuelve al montón")
+				return
+
+
 func _test_room(room: RoomController, room_i: int) -> void:
 	print("== Sala %d: %s ==" % [room_i + 1, room.display_name])
 	player.teleport(room.entry_point())
@@ -346,6 +413,10 @@ func _test_room(room: RoomController, room_i: int) -> void:
 
 		print("-- Lanzar: rebote y reposo")
 		_check(await _pick(room, first), "recoger el objeto del suelo otra vez")
+		# Guardar con un objeto en la mano no lo deja flotando: se guarda apoyado en lo que haya debajo.
+		var saved_items: Array = room.capture_state()["items"]
+		var saved_y := float((saved_items[items.find(first)]["p"] as Array)[1])
+		_check(saved_y < 0.9 and saved_y > -0.05, "un objeto sostenido se guarda apoyado en el suelo (y=%.2f)" % saved_y)
 		player.teleport(room.global_position + Vector3(-1.0, 0.0, 1.5))
 		await _settle()
 		player.look_at_point(room.global_position + Vector3(-0.6, 0.6, -0.8))
@@ -371,6 +442,8 @@ func _test_room(room: RoomController, room_i: int) -> void:
 		_check(absf(p.x) < 3.0 and absf(p.z) < 2.5 and p.y > -0.05 and p.y < 2.0, "queda dentro de la sala (%s)" % str(p.snapped(Vector3.ONE * 0.01)))
 		_check(first.collision_layer == PickableItem.LAYER_ITEMS and first.freeze, "vuelve a ser recogible y está congelado")
 
+	if room_i == 0:
+		await _test_wall_throws(room, items)
 	print("-- Ordenar los %d objetos" % total)
 	var failed_items := 0
 	for i in items.size():
@@ -389,6 +462,10 @@ func _test_room(room: RoomController, room_i: int) -> void:
 	_check(_collections - collections_before == room.catalog.items.size() - 1, "%d colecciones completadas antes de la última (%d)" % [room.catalog.items.size() - 1, _collections - collections_before])
 	await _wait_until(func(): return _completed_rooms.has(room), 3.0)
 	_check(_completed_rooms.has(room) and room.is_completed, "sala completada")
+	var hud := main.get_node("HUD")
+	await _frames(2)
+	_check(hud._count_label.text == "Organizados  %d / %d" % [total, total], "el HUD muestra el progreso de la sala (" + hud._count_label.text + ")")
+	await _test_stacks(room)
 	await _wait_until(func(): return room.shell.is_decor_unlocked(&"bunting"), 4.0)
 	_check(room.shell.is_decor_unlocked(&"bunting"), "la guirnalda de banderines se desbloquea al completar la sala")
 

@@ -17,6 +17,7 @@ const STEPS := [
 
 var _index := 0
 var _busy := false
+var _seen: Dictionary = {}   # eventos ya ocurridos: si pasan antes de su paso, ese paso se da por hecho al llegar
 var _panel: PanelContainer
 var _step_label: Label
 var _text_label: Label
@@ -91,9 +92,13 @@ func _show_step(index: int, animate: bool = true) -> void:
 		_panel.modulate.a = 0.0
 		create_tween().tween_property(_panel, "modulate:a", 1.0, 0.35)
 	_busy = false
+	var step_event := StringName(STEPS[index]["event"])
+	if _seen.has(step_event):
+		_complete.call_deferred(step_event)
 
 
 func _complete(event: StringName) -> void:
+	_seen[event] = true
 	if _busy or _index >= STEPS.size() or StringName(STEPS[_index]["event"]) != event:
 		return
 	_busy = true

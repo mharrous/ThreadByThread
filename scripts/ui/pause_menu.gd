@@ -344,7 +344,9 @@ func _build_main() -> Control:
 	left.add_child(spacer)
 	left.add_child(_keys_card())
 	var quit := _sewn_button("Salir del juego", BROWN, BROWN.darkened(0.25))
-	quit.pressed.connect(func(): get_tree().quit())
+	quit.pressed.connect(func():
+		GameSettings.save_settings()
+		get_tree().quit())
 	left.add_child(quit)
 
 	# Columna derecha: ajustes.
@@ -396,11 +398,11 @@ func _build_book() -> Control:
 	panel.add_child(vb)
 	var ribbon := Ribbon.new()
 	ribbon.text = "Libro de colecciones"
-	ribbon.custom_minimum_size = Vector2(560, 70)
+	ribbon.custom_minimum_size = Vector2(600, 70)
 	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vb.add_child(ribbon)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(740, 400)
+	scroll.custom_minimum_size = Vector2(840, 430)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vb.add_child(scroll)
 	_book_content = VBoxContainer.new()
@@ -426,7 +428,8 @@ func _show_book(on: bool) -> void:
 		_resume.grab_focus()
 
 
-## Rellena el libro con el estado actual: por sala, las colecciones (tipos de objeto) y los tesoros.
+## Rellena el libro con el estado actual: por sala, una cabecera con su dibujo y su barra de progreso,
+## una ficha ilustrada por cada colección y los tesoros (silueta hasta que se encuentran).
 func _fill_book() -> void:
 	for c in _book_content.get_children():
 		c.queue_free()
@@ -438,29 +441,65 @@ func _fill_book() -> void:
 	for room in shop.rooms:
 		found_total += room.treasures_found()
 		treasure_total += room.treasures_total()
-	_book_content.add_child(_book_label("Tesoros encontrados: %d de %d" % [found_total, treasure_total], 18, GOLD_INK))
+	var summary := _book_label("Tesoros encontrados: %d de %d" % [found_total, treasure_total], 18, GOLD_INK)
+	_book_content.add_child(summary)
 	for room in shop.rooms:
 		_book_content.add_child(_thread_line())
+		_book_content.add_child(_room_header(room))
 		if not room.is_unlocked:
-			_book_content.add_child(_book_label("%s  ·  sala por descubrir" % room.display_name, 18, INK_SOFT))
 			continue
-		var head := "%s  ·  ordenados %d de %d" % [room.display_name, room.placed_items, room.total_items]
-		if room.is_completed:
-			head += "  ·  completada"
-		_book_content.add_child(_book_label(head, 19, RED_DARK))
 		var flow := HFlowContainer.new()
-		flow.add_theme_constant_override(&"h_separation", 16)
-		flow.add_theme_constant_override(&"v_separation", 4)
+		flow.add_theme_constant_override(&"h_separation", 10)
+		flow.add_theme_constant_override(&"v_separation", 10)
+		flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for entry in room.collection_status():
-			var chip := _book_label("%s %d/%d" % [entry["label"], entry["placed"], entry["total"]], 14, TEAL_DARK if entry["done"] else INK_SOFT)
-			chip.autowrap_mode = TextServer.AUTOWRAP_OFF
-			flow.add_child(chip)
+			var card := CollectionCard.new()
+			card.data = entry["data"]
+			card.label = entry["label"]
+			card.placed = entry["placed"]
+			card.total = entry["total"]
+			flow.add_child(card)
 		_book_content.add_child(flow)
+		var gems := HFlowContainer.new()
+		gems.add_theme_constant_override(&"h_separation", 10)
+		gems.add_theme_constant_override(&"v_separation", 10)
+		gems.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for treasure in room.treasure_status():
-			if treasure["found"]:
-				_book_content.add_child(_book_label("Tesoro: %s  ·  %s" % [treasure["name"], treasure["detail"]], 15, GOLD_INK))
-			else:
-				_book_content.add_child(_book_label("Tesoro: %s  ·  sin encontrar, escondido en algún rincón de la sala" % treasure["name"], 15, INK_SOFT))
+			var card := CollectionCard.new()
+			card.treasure = true
+			card.found = treasure["found"]
+			card.data = treasure["data"]
+			card.label = treasure["name"]
+			card.detail = treasure["detail"]
+			gems.add_child(card)
+		_book_content.add_child(gems)
+
+
+## Cabecera de sala: dibujo de uno de sus objetos, nombre, barra de hilo con el progreso y su estado.
+func _room_header(room: RoomController) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 12)
+	if not room.is_unlocked:
+		row.add_child(CollectionCard.Padlock.new())
+		var l := _book_label("%s  ·  sala por descubrir: ordena la anterior para abrir su puerta" % room.display_name, 17, INK_SOFT)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(l)
+		return row
+	var first: ItemData = room.catalog.items[0]
+	row.add_child(ItemIcon.new(first, false, 46.0))
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	col.add_theme_constant_override(&"separation", 2)
+	row.add_child(col)
+	col.add_child(_book_label(room.display_name + ("  ·  ¡completada!" if room.is_completed else ""), 19, RED_DARK))
+	var bar := CollectionCard.ThreadBar.new()
+	bar.ratio = 0.0 if room.total_items == 0 else float(room.placed_items) / float(room.total_items)
+	bar.color = TEAL if room.is_completed else RED
+	bar.text = "ordenados %d de %d" % [room.placed_items, room.total_items]
+	col.add_child(bar)
+	return row
 
 
 func _book_label(text: String, size: int, color: Color) -> Label:

@@ -27,6 +27,7 @@ func _ready() -> void:
 		rooms[i].index = i
 		rooms[i].is_unlocked = i == 0
 	Events.room_completed.connect(_on_room_completed)
+	Events.room_progress_changed.connect(_on_room_progress)
 	Events.item_placed.connect(func(_i, _u): _dirty = true)
 	Events.item_removed.connect(func(_i, _u): _dirty = true)
 	Events.item_set_down.connect(func(_i): _dirty = true)
@@ -49,6 +50,7 @@ func _process(delta: float) -> void:
 	if not _loaded:
 		return
 	_update_active_room(false)
+	_refresh_visibility()
 	_autosave_timer -= delta
 	if _autosave_timer <= 0.0:
 		_autosave_timer = AUTOSAVE_SECONDS
@@ -95,6 +97,26 @@ func _on_room_completed(room: RoomController) -> void:
 	save_game()
 
 
+## El contador del HUD sigue a la sala en la que estás.
+func _on_room_progress(room: RoomController, placed: int, total: int) -> void:
+	if room == active_room:
+		Events.progress_changed.emit(placed, total)
+
+
+## Solo se dibujan la sala del jugador y las contiguas; también la sala de la que viene el objeto que
+## lleva en la mano (los objetos cuelgan de su sala: si no, desaparecerían de la mano al alejarse).
+func _refresh_visibility() -> void:
+	if _player == null or rooms.is_empty():
+		return
+	var idx := room_index_at(_player.global_position.x)
+	var holder := _player.get_node_or_null("ItemHolder") as ItemHolder
+	var held_room: RoomController = null
+	if holder != null and holder.held != null and is_instance_valid(holder.held):
+		held_room = holder.held.room
+	for r in rooms:
+		r.visible = absi(r.index - idx) <= NEAR_ROOMS or r == held_room
+
+
 func _update_active_room(force: bool) -> void:
 	if _player == null or rooms.is_empty():
 		return
@@ -102,8 +124,7 @@ func _update_active_room(force: bool) -> void:
 	var room := rooms[idx]
 	if room != active_room or force:
 		active_room = room
-		for r in rooms:
-			r.visible = absi(r.index - idx) <= NEAR_ROOMS
+		_refresh_visibility()
 		Events.active_room_changed.emit(room)
 		Events.progress_changed.emit(room.placed_items, room.total_items)
 
@@ -141,6 +162,10 @@ func load_game() -> bool:
 		var r := room_by_id(StringName(id))
 		if r != null and r.index > 0:
 			unlock_room(r.index, false)
+	# Una sala completada abre siempre la siguiente (el guardado pudo hacerse entre completarla y abrir la puerta).
+	for r in rooms:
+		if r.is_completed:
+			unlock_room(r.index + 1, false)
 	var active := room_by_id(StringName(data.get("active", "")))
 	if active != null and _player != null:
 		_player.teleport(active.entry_point())

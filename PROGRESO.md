@@ -44,6 +44,27 @@
 
 **Sonidos nuevos** (sintetizados): colocación por material (clic, madera, tela, metal), apertura de puerta, tesoro, decoración y todo el sonido de la calle.
 
+## Revisión de errores (segunda vuelta de la Fase 3)
+
+Hecha con tres métodos: una **prueba de "mono"** (`tests\fuzz_test.gd`: acciones aleatorias durante miles de pasos con comprobación de invariantes), la **prueba de humo con cantidades completas** y una **revisión de código independiente** (un segundo agente leyó todos los scripts; cada hallazgo se comprobó antes de arreglarlo).
+
+Errores reales encontrados y arreglados:
+
+- **El contador del HUD no se actualizaba al colocar objetos** (solo al cambiar de sala): "Organizados 0 / 150" aunque ya hubieras colocado diez, y la barra y "Sala completada" tampoco. Las pruebas solo miraban el estado interno; ahora la prueba de humo comprueba también el texto del HUD.
+- **Tesoros sobre estanterías sin acción de recoger**: el canto de la estantería tapaba el rayo de puntería. Ahora hay una ayuda de puntería por cono (7°, hasta 3,6 m) para los tesoros, sin tener en cuenta las estanterías.
+- Objeto lanzado con la mano pegada a una esquina podía salir por la pared del edificio (la prueba de "mono" lo vio una vez; no he conseguido reproducirlo a voluntad). Ahora sale desde la cámara y, si aun así se saliera, vuelve al suelo de la sala (antes hacía falta caer a −3 m).
+- Guardar con un objeto en la mano o en el aire lo dejaba **flotando** al cargar; ahora se guarda apoyado en lo que haya debajo (sin contar estanterías).
+- En un montón de telas dobladas, coger la pieza de abajo dejaba las demás flotando; ahora siempre se coge la de arriba.
+- Guardado: una sala completada pero guardada justo antes de abrirse la puerta quedaba con la siguiente cerrada para siempre; ahora al cargar una sala completada siempre se abre la siguiente. Un guardado que no encaja con la disposición actual de una estantería ya no rompe la carga.
+- El objeto en la mano **desaparecía** al alejarse dos salas de la suya (las salas lejanas se ocultan); ahora la sala de origen sigue visible mientras lo llevas.
+- Al salir desde el menú o cerrar la ventana no se guardaban los ajustes; ya se guardan.
+- Carga del lanzamiento: soltar F durante la pausa o pulsar E con F apretada dejaba el arco del HUD lleno o congelado.
+- Los saltos de celebración de una fila podían mover un objeto que ya habías cogido; los temporizadores de "sala completada" seguían corriendo durante la pausa; el tutorial podía atascarse en "apunta" si apuntabas antes de tiempo; un objeto lanzado podía quedarse dormido en pleno vuelo.
+
+Resultado de la prueba de "mono" tras los arreglos: 7 semillas × 1200 pasos sin violaciones (salvo la vez que se vio la fuga por la pared, antes del arreglo).
+
+No arreglado (decisión de diseño o sin importancia): el jingle de colección se repite si repones la última pieza de una colección ya completa; costuras de 0,5–6 m sin suelo lejano en el terreno (invisibles por la bruma); si algún día sustituyes los bucles de motor por WAV editados, habría que marcarlos como bucle.
+
 ## Rendimiento medido
 
 Ryzen 7 3700X + RX 7900 XT, 1920×1080, sin VSync, 450 objetos en 4 salas, MSAA 4x, SSAO, glow, niebla volumétrica, calle y paisaje:

@@ -39,6 +39,12 @@ func load_settings() -> void:
 	tutorial_done = bool(cf.get_value("progress", "tutorial_done", false))
 
 
+## Cerrar la ventana con Alt+F4 o la X tambien guarda los ajustes.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_settings()
+
+
 func save_settings() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("controls", "mouse_sensitivity", mouse_sensitivity)
