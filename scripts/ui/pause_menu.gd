@@ -378,6 +378,8 @@ func _build_main() -> Control:
 		func(on: bool): GameSettings.vsync = on))
 	right.add_child(_check_row("Bordes suaves (MSAA 4x)", GameSettings.msaa,
 		func(on: bool): GameSettings.msaa = on))
+	right.add_child(_check_row("Iluminación avanzada", GameSettings.high_quality,
+		func(on: bool): GameSettings.high_quality = on))
 	return panel
 
 

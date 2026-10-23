@@ -66,6 +66,7 @@ func _ready() -> void:
 	_build_sign()
 	_build_display_shelf()
 	_build_decor()
+	_build_atmosphere()
 
 
 ## ¿Está ocupado por mobiliario este punto del suelo (con margen)?
@@ -687,3 +688,70 @@ func brighten_lamps(animate: bool) -> void:
 			lamp.create_tween().tween_property(lamp, "light_energy", target, 2.0).set_trans(Tween.TRANS_SINE)
 		else:
 			lamp.light_energy = target
+
+
+# --- Ambiente -----------------------------------------------------------------
+
+## Sonda de reflejos que cubre toda la sala (barniz, metales y cristal reflejan la sala y no el cielo) y
+## motas de polvo flotando en la luz que entra por la ventana oeste.
+func _build_atmosphere() -> void:
+	var probe := ReflectionProbe.new()
+	probe.name = "RoomReflections"
+	probe.size = Vector3(room_w, room_h, room_d)
+	probe.position = Vector3(0.0, room_h * 0.5, 0.0)
+	probe.origin_offset = Vector3(0.0, 1.6 - room_h * 0.5, 0.0)
+	probe.box_projection = true
+	probe.interior = true
+	probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	probe.ambient_mode = ReflectionProbe.AMBIENT_DISABLED
+	add_child(probe)
+	for c in west_windows:
+		add_child(_make_dust(Vector3(-room_w * 0.5 + 2.2, 1.55, c), Vector3(2.0, 0.75, 1.1)))
+
+
+## Motas finas, lentas y casi transparentes: solo se notan a contraluz.
+func _make_dust(center: Vector3, extents: Vector3) -> GPUParticles3D:
+	var dust := GPUParticles3D.new()
+	dust.name = "Dust"
+	dust.position = center
+	dust.amount = 90
+	dust.lifetime = 14.0
+	dust.preprocess = 14.0
+	dust.visibility_aabb = AABB(-extents - Vector3.ONE * 0.5, (extents + Vector3.ONE * 0.5) * 2.0)
+	dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = extents
+	pm.gravity = Vector3(0.0, -0.004, 0.0)
+	pm.direction = Vector3(1.0, 0.2, 0.0)
+	pm.spread = 180.0
+	pm.initial_velocity_min = 0.005
+	pm.initial_velocity_max = 0.03
+	pm.turbulence_enabled = true
+	pm.turbulence_noise_strength = 0.4
+	pm.turbulence_noise_speed_random = 0.2
+	pm.turbulence_influence_min = 0.02
+	pm.turbulence_influence_max = 0.06
+	pm.scale_min = 0.6
+	pm.scale_max = 1.4
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 0))
+	fade.add_point(0.2, Color(1, 1, 1, 1))
+	fade.add_point(0.8, Color(1, 1, 1, 1))
+	fade.set_color(fade.get_point_count() - 1, Color(1, 1, 1, 0))
+	var ramp := GradientTexture1D.new()
+	ramp.gradient = fade
+	pm.color_ramp = ramp
+	dust.process_material = pm
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.006, 0.006)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = Color(1.0, 0.93, 0.78, 0.18)
+	quad.material = m
+	dust.draw_pass_1 = quad
+	return dust

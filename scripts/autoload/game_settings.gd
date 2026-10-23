@@ -13,6 +13,9 @@ var sfx_volume := 1.0
 var fullscreen := false
 var vsync := true
 var msaa := true
+## Iluminación avanzada: luz rebotada (SDFGI), oclusión ambiental, niebla volumétrica y brillo.
+## Desactivada = modo para equipos modestos.
+var high_quality := true
 var tutorial_done := false
 
 ## Las pruebas automáticas (--test-mode) usan otro fichero para no tocar tu configuración.
@@ -36,6 +39,7 @@ func load_settings() -> void:
 	fullscreen = bool(cf.get_value("graphics", "fullscreen", false))
 	vsync = bool(cf.get_value("graphics", "vsync", true))
 	msaa = bool(cf.get_value("graphics", "msaa", true))
+	high_quality = bool(cf.get_value("graphics", "high_quality", true))
 	tutorial_done = bool(cf.get_value("progress", "tutorial_done", false))
 
 
@@ -53,6 +57,7 @@ func save_settings() -> void:
 	cf.set_value("graphics", "fullscreen", fullscreen)
 	cf.set_value("graphics", "vsync", vsync)
 	cf.set_value("graphics", "msaa", msaa)
+	cf.set_value("graphics", "high_quality", high_quality)
 	cf.set_value("progress", "tutorial_done", tutorial_done)
 	var err := cf.save(_path)
 	if err != OK:

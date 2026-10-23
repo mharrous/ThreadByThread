@@ -73,7 +73,7 @@ func spawn(kind: StringName) -> StreetActor:
 	var actor: StreetActor
 	match kind:
 		&"van":
-			actor = _make_vehicle(&"car_van", &"wheel_van", 0.36, 0.9, [1.55, -1.5], &"van_loop", -9.0)
+			actor = _make_vehicle(&"car_van", &"wheel_van", 0.36, 0.9, [1.55, -1.5], &"van_loop", -19.0)
 			_place_on_lane(actor, randf_range(5.5, 8.0))
 			_maybe_honk(actor, 0.08)
 		&"bike":
@@ -87,7 +87,7 @@ func spawn(kind: StringName) -> StreetActor:
 			actor = _make_walker(true)
 		_:
 			var sedan := randf() < 0.4
-			actor = _make_vehicle(&"car_sedan" if sedan else &"car_hatch", &"wheel_car", 0.31, 0.78, [1.4, -1.4] if sedan else [1.25, -1.2], &"car_loop", -10.0)
+			actor = _make_vehicle(&"car_sedan" if sedan else &"car_hatch", &"wheel_car", 0.31, 0.78, [1.4, -1.4] if sedan else [1.25, -1.2], &"car_loop", -20.0)
 			_place_on_lane(actor, randf_range(6.0, 9.5))
 			_maybe_honk(actor, 0.12)
 	actor.kind = kind
@@ -142,7 +142,7 @@ func _make_moto() -> StreetActor:
 	StreetAssets.skin(helmet)
 	helmet.position = Vector3(0, 0.78, 0.0)
 	(rider.get_meta(&"torso") as Node3D).add_child(helmet)
-	a.engine = _attach_engine(a, &"moto_loop", -8.0)
+	a.engine = _attach_engine(a, &"moto_loop", -18.0)
 	a.engine_pitch = randf_range(0.9, 1.15)
 	return a
 
@@ -303,7 +303,7 @@ func _place_on_lane(actor: StreetActor, speed: float) -> void:
 
 func _maybe_honk(actor: StreetActor, chance: float) -> void:
 	if randf() < chance:
-		actor.scheduled.append({"z": randf_range(-12.0, 12.0), "sound": &"horn", "volume": -1.0, "done": false})
+		actor.scheduled.append({"z": randf_range(-12.0, 12.0), "sound": &"horn", "volume": -10.0, "done": false})
 
 
 func _attach_engine(actor: StreetActor, loop: StringName, volume_db: float) -> AudioStreamPlayer3D:
