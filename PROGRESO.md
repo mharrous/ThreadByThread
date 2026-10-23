@@ -50,6 +50,8 @@
 
 Hubo un pico aislado de 49 ms al girar (probablemente compilación de un shader).
 
+Con "Iluminación avanzada" apagada (`testsun_perf.ps1 -Low`): 497 FPS en el peor caso y 581 en la entrada. Es poca diferencia en este equipo de gama alta; donde se notará es en GPU modestas. Falta probarlo en una.
+
 ## Fase 4 — Una sola sala (2026-10-23)
 
 Las cuatro salas con puertas se sustituyen por **una sola sala de 12 × 9 m**. Los 450 objetos empiezan

@@ -36,6 +36,10 @@ func _measure(label: String) -> void:
 
 
 func _run() -> void:
+	# --low: mide con "Iluminación avanzada" apagada (modo para equipos modestos).
+	if OS.get_cmdline_user_args().has("--low"):
+		GameSettings.high_quality = false
+		GameSettings.notify_changed()
 	var main := (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	add_child(main)
 	for i in 90:
