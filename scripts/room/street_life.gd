@@ -177,7 +177,7 @@ func _make_bike() -> StreetActor:
 	a.rotation.y = PI if not south else 0.0
 	# Timbre: a veces, una vez cuando pasa por delante.
 	if randf() < 0.45:
-		a.scheduled.append({"z": randf_range(-14.0, 6.0) if not south else randf_range(-6.0, 14.0), "sound": &"bike_bell", "volume": -2.0, "done": false})
+		a.scheduled.append({"z": randf_range(-14.0, 6.0) if not south else randf_range(-6.0, 14.0), "sound": &"bike_bell", "volume": -12.0, "done": false})
 	return a
 
 
@@ -218,7 +218,7 @@ func _make_walker(with_dog: bool) -> StreetActor:
 			var count := randi_range(1, 3)
 			var dir := 1.0 if south else -1.0
 			for i in count:
-				a.scheduled.append({"z": z0 + dir * 1.6 * i, "sound": &"dog_bark", "volume": -3.0, "done": false})
+				a.scheduled.append({"z": z0 + dir * 1.6 * i, "sound": &"dog_bark", "volume": -13.0, "done": false})
 	return a
 
 
@@ -303,7 +303,7 @@ func _place_on_lane(actor: StreetActor, speed: float) -> void:
 
 func _maybe_honk(actor: StreetActor, chance: float) -> void:
 	if randf() < chance:
-		actor.scheduled.append({"z": randf_range(-12.0, 12.0), "sound": &"horn", "volume": -10.0, "done": false})
+		actor.scheduled.append({"z": randf_range(-12.0, 12.0), "sound": &"horn", "volume": -14.0, "done": false})
 
 
 func _attach_engine(actor: StreetActor, loop: StringName, volume_db: float) -> AudioStreamPlayer3D:

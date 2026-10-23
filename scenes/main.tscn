@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/room/placement_fx.gd" id="10_fx"]
 [ext_resource type="Script" path="res://scripts/room/shop.gd" id="11_shop"]
 [ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="12_title"]
+[ext_resource type="Script" path="res://scripts/room/next_item_hint.gd" id="13_hint"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -30,6 +31,9 @@ script = ExtResource("9_amb")
 
 [node name="PlacementFx" type="Node3D" parent="World"]
 script = ExtResource("10_fx")
+
+[node name="NextItemHint" type="Node" parent="World"]
+script = ExtResource("13_hint")
 
 [node name="Shop" type="Node3D" parent="."]
 script = ExtResource("11_shop")

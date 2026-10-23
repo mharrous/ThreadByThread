@@ -50,6 +50,7 @@ static func build_banks() -> Dictionary:
 		&"ui_click": [ui_click()],
 		&"sparkle": [sparkle(NOTE_E5)],
 		&"aim_ok": [aim_tick()],
+		&"shop_bell": [shop_bell()],
 	}
 
 
@@ -60,6 +61,15 @@ static func sparkle(note: float) -> AudioStreamWAV:
 	_add_bell(b, 0.045, note * 4.0, 0.18, 0.16)
 	_add_partials(b, 0.0, note * 3.0, 0.08, 0.3, [1.0, 1.5], [1.0, 0.5], [1.0, 0.6])
 	return _to_stream(b, 0.45)
+
+
+## Campanilla de la puerta de la tienda: dos golpes de badajo sobre una campana de latón, claros y con
+## cola larga, el segundo un poco más flojo (la puerta rebota).
+static func shop_bell() -> AudioStreamWAV:
+	var b := _buf(2.4)
+	for hit: Array in [[0.0, 1.0], [0.16, 0.6], [0.31, 0.3]]:
+		_add_partials(b, hit[0], 1568.0, 0.5 * float(hit[1]), 0.55, [1.0, 2.0, 2.76, 4.07], [1.0, 0.45, 0.3, 0.12], [1.0, 0.6, 0.45, 0.25])
+	return _to_stream(b, 0.7)
 
 
 ## Tic de "aquí sí": clic muy corto y agudo, casi un pestañeo.

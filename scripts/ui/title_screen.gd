@@ -13,8 +13,14 @@ const BROWN := Color("8a6a4a")
 ## Tras "Nueva partida" la escena se recarga: esta vez se entra directamente al juego.
 static var _skip_next := false
 
+## Dibujos decorativos de la tarjeta (los mismos del libro de colecciones).
+const ICON_ITEMS := ["res://data/items/yarn_red.tres", "res://data/items/spool_blue.tres", "res://data/items/btn_wood_light.tres"]
+
 var _root: Control
 var _card: PanelContainer
+var _veil: ColorRect
+var _confirm_new := false
+var _new_btn: Button
 
 
 func _ready() -> void:
@@ -28,11 +34,14 @@ func _ready() -> void:
 	get_tree().paused = true
 	# Diferido: la escena principal captura el ratón en su _ready, que llega después que este.
 	(func(): Input.mouse_mode = Input.MOUSE_MODE_VISIBLE).call_deferred()
+	# Entra desde negro: primero se aclara la pantalla, luego aparece la tarjeta.
 	_card.modulate.a = 0.0
 	_card.scale = Vector2(0.96, 0.96)
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_card, "modulate:a", 1.0, 0.6)
-	tw.tween_property(_card, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_veil.color.a = 1.0
+	var tw := create_tween()
+	tw.tween_property(_veil, "color:a", 0.0, 1.0).set_trans(Tween.TRANS_SINE)
+	tw.parallel().tween_property(_card, "modulate:a", 1.0, 0.6).set_delay(0.5)
+	tw.parallel().tween_property(_card, "scale", Vector2.ONE, 0.7).set_delay(0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Esc no abre el menú de pausa mientras está el título.
@@ -73,6 +82,13 @@ func _build() -> void:
 	col.add_theme_constant_override(&"separation", 14)
 	col.custom_minimum_size = Vector2(460, 0)
 	_card.add_child(col)
+	var icons := HBoxContainer.new()
+	icons.alignment = BoxContainer.ALIGNMENT_CENTER
+	icons.add_theme_constant_override(&"separation", 18)
+	for path in ICON_ITEMS:
+		if ResourceLoader.exists(path):
+			icons.add_child(ItemIcon.new(load(path), false, 52.0))
+	col.add_child(icons)
 	col.add_child(_label("THREAD BY THREAD", 54, INK))
 	col.add_child(_label("una mercería por ordenar, hilo a hilo", 20, INK_SOFT))
 	var gap := Control.new()
@@ -84,9 +100,9 @@ func _build() -> void:
 	play.pressed.connect(_start)
 	col.add_child(play)
 	if has_save:
-		var fresh := _button("Nueva partida", TEAL)
-		fresh.pressed.connect(_new_game)
-		col.add_child(fresh)
+		_new_btn = _button("Nueva partida", TEAL)
+		_new_btn.pressed.connect(_new_game)
+		col.add_child(_new_btn)
 	var quit := _button("Salir", BROWN)
 	quit.pressed.connect(func():
 		GameSettings.save_settings()
@@ -94,10 +110,18 @@ func _build() -> void:
 	col.add_child(quit)
 	col.add_child(_label("Demo · 15–25 minutos · Esc: pausa, ajustes y libro de colecciones", 15, INK_SOFT))
 	play.grab_focus.call_deferred()
+	# Velo negro por encima de todo para los fundidos de entrada y salida.
+	_veil = ColorRect.new()
+	_veil.color = Color(0.05, 0.035, 0.02, 0.0)
+	_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(_veil)
 
 
 func _start() -> void:
 	AudioManager.play(&"ui_click")
+	# La campanilla de la puerta: entras en la tienda.
+	AudioManager.play(&"shop_bell", null, 0.0, 0.0)
 	set_process_input(false)
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(_card, "modulate:a", 0.0, 0.35)
@@ -109,8 +133,13 @@ func _start() -> void:
 
 
 ## Borra la partida y recarga la escena; el tutorial vuelve a empezar.
+## Pide un segundo clic: borra la partida guardada.
 func _new_game() -> void:
 	AudioManager.play(&"ui_click")
+	if not _confirm_new:
+		_confirm_new = true
+		_new_btn.text = "¿Seguro? Se borra la partida"
+		return
 	SaveGame.delete_save()
 	GameSettings.tutorial_done = false
 	GameSettings.save_settings()

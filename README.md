@@ -147,13 +147,13 @@ Las texturas son PNG normales: puedes retocarlas en Krita o GIMP y Godot las rei
 
 ## Música
 
-`art/audio/music/shop_loop.wav` es un bucle original de 53 s (piano eléctrico, bajo, melodía pentatónica, shaker). Se compone y sintetiza con
+La música son tres bucles originales de 53 s en `art/audio/music/`: `shop_base` (siempre), `shop_mid` (entra al 33 % ordenado) y `shop_full` (al 66 %). Se componen y sintetizan con
 
 ```
 "%LOCALAPPDATA%\Programs\Godot\Godot_v4.7.2-stable_win64.exe" --headless --path . --script res://tools/make_music.gd
 ```
 
-El bucle sale del `.import` (`edit/loop_mode=2`). Tiene su propio bus ("Music") y volumen en los ajustes.
+El bucle sale del `.import` (`edit/loop_mode=2` en cada uno; al regenerarlos, compruébalo). Tiene su propio bus ("Music") y volumen en los ajustes.
 
 ## Duración de la demo
 

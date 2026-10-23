@@ -12,6 +12,39 @@
 | 4 · Demo comercial (15–25 min, ejecutable de Windows) | **En curso**: sala única hecha (ver abajo) |
 | 5 · Pruebas y expansión | No empezada |
 
+## Fase 4 — Respuesta de racha, pista, música por capas, título y volúmenes (2026-10-23, tercera parte)
+
+1. **Respuesta de la racha**:
+   - El objeto colocado da un pulso de escala (solo visual, en su nodo `Squash`) que crece con la racha, hasta +25 % a ×10.
+   - La ráfaga de chispas y la onda crecen con la racha. Desde ×3 las chispas se mezclan con dorado.
+   - El texto "Racha ×N" del HUD tiembla (seno amortiguado de 0,3 s, más fuerte cuanto más larga la racha) y da un destello blanco.
+2. **Pista del siguiente objeto** (`scripts/room/next_item_hint.gd`):
+   - Al colocar, el objeto suelto más cercano del mismo tipo respira con un brillo cálido flojo.
+   - Si lo apuntas, manda el resaltado normal.
+   - Se retira si coges cualquier cosa, si lo has visto y apartas la vista más de 80°, o si pasan 12 s sin mirarlo.
+3. **Música por capas** (`tools/make_music.gd`): tres pistas sincronizadas de 53 s.
+   - **base**: bajo y acorde dispersos. Suena siempre.
+   - **mid**: ecos del piano, colchón cálido y shaker. Entra al 33 % ordenado.
+   - **full**: melodía y contracanto. Entra al 66 %.
+   - Fundidos de 4 s. Si el progreso baja, la capa vuelve a salir.
+4. **Pantalla de título**:
+   - Fundido desde negro y fila de dibujos (ovillo, carrete, botón).
+   - Jugar, o Continuar + Nueva partida si hay partida guardada, y Salir.
+   - Nueva partida pide un segundo clic. Fundido al entrar.
+5. **Repaso de volúmenes**:
+   - La calle queda al menos 10 dB por debajo de colocar (0 dB): timbre de bici −12 dB, ladrido −13 dB, bocina −14 dB, motores entre −17 y −20 dB, todo por el bus exterior (−3 dB y filtro).
+   - El destello de racha arranca en −9 dB y sube hasta −3 dB: siempre por encima del ambiente (pájaros −15 dB, viento −20 dB).
+   - **Campanilla de la puerta** nueva, pulida en Audacity: tres golpes claros a 0 dB al entrar desde el título y cuando la tienda pasa a ABIERTO.
+
+Pruebas:
+
+- Humo con 215 objetos: pasa. Ahora comprueba también que las 3 capas de música suenan, que la campanilla existe y que la pista cae en el siguiente objeto del mismo tipo.
+- Guardado entre procesos: pasa.
+- Prueba de "mono" (semilla 7, 800 pasos): sin violaciones.
+- Ejecutable re-exportado.
+
+Sin comprobar a mano: cómo se oye y se ve todo esto. Nada de este audio se ha escuchado aún.
+
 ## Fase 4 — Mejoras de ambiente, arte, sonido y demo (2026-10-23, segunda parte)
 
 **Luz**:
@@ -50,7 +83,8 @@
 
 Hubo un pico aislado de 49 ms al girar (probablemente compilación de un shader).
 
-Con "Iluminación avanzada" apagada (`testsun_perf.ps1 -Low`): 497 FPS en el peor caso y 581 en la entrada. Es poca diferencia en este equipo de gama alta; donde se notará es en GPU modestas. Falta probarlo en una.
+Con "Iluminación avanzada" apagada (`tests
+un_perf.ps1 -Low`): 497 FPS en el peor caso y 581 en la entrada. Es poca diferencia en este equipo de gama alta; donde se notará es en GPU modestas. Falta probarlo en una.
 
 ## Fase 4 — Una sola sala (2026-10-23)
 

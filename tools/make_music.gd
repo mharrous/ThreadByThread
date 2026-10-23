@@ -1,15 +1,17 @@
 extends SceneTree
-## Compone y sintetiza la música de la tienda (original) y la guarda en art/audio/music/.
+## Compone y sintetiza la música de la tienda (original) en tres capas y la guarda en art/audio/music/.
 ##   godot --headless --path . --script res://tools/make_music.gd
-## Es un bucle tranquilo de 16 compases a 72 ppm: piano eléctrico suave con acordes de séptima, bajo
-## redondo, una melodía pentatónica que va y viene y un shaker muy bajo. Las colas que pasan del final
-## se suman al principio, así el bucle no tiene corte. Se genera aquí (no al arrancar) porque cuesta
-## unos segundos; el juego solo carga el WAV.
+## Bucle de 16 compases a 72 ppm, en tres pistas de la misma duración que suenan a la vez:
+##   shop_base.wav  bajo redondo y acorde de piano en el 1: dispersa, mucho aire (siempre suena)
+##   shop_mid.wav   ecos del piano, colchón cálido sostenido y shaker suave (entra al 33 % ordenado)
+##   shop_full.wav  melodía pentatónica y campanita de contracanto (entra al 66 %)
+## Las colas que pasan del final se suman al principio, así el bucle no tiene corte. Se genera aquí (no al
+## arrancar) porque cuesta unos segundos; el juego solo carga los WAV.
 
 const RATE := 44100
 const BPM := 72.0
 const BARS := 16
-const OUT := "res://art/audio/music/shop_loop.wav"
+const DIR := "res://art/audio/music/"
 
 ## Progresión (Do mayor, cálida): Cmaj7 · Am7 · Fmaj7 · G6, luego Em7 · Am7 · Dm7 · G7sus.
 const CHORDS := [
@@ -20,37 +22,80 @@ const PENTA := [60, 62, 64, 67, 69, 72, 74, 76]
 
 var _buf := PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
+var _beat := 60.0 / BPM
+var _bar := _beat * 4.0
 
 
 func _init() -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(DIR))
+	_layer("shop_base", _compose_base)
+	_layer("shop_mid", _compose_mid)
+	_layer("shop_full", _compose_full)
+	quit()
+
+
+func _layer(file: String, compose: Callable) -> void:
 	_rng.seed = 1977
-	var beat := 60.0 / BPM
-	var bar := beat * 4.0
-	_buf.resize(int(bar * BARS * RATE))
+	_buf = PackedFloat32Array()
+	_buf.resize(int(_bar * BARS * RATE))
+	compose.call()
+	# Mismo pico relativo en las tres capas: el volumen de cada una lo pone el juego.
+	var stream := _to_stream(0.5)
+	var path := DIR + file + ".wav"
+	var err := stream.save_to_wav(ProjectSettings.globalize_path(path))
+	print("Música: %s (%.1f s) -> %s" % [path, _buf.size() / float(RATE), error_string(err)])
+
+
+func _compose_base() -> void:
 	for b in BARS:
 		var chord: Array = CHORDS[b % CHORDS.size()]
-		var t0 := b * bar
-		# Bajo: fundamental en el 1 y quinta (o la misma) en el 3.
-		_note(t0, _midi(chord[0] - 12), 0.32, 1.4, 1)
-		_note(t0 + beat * 2.0, _midi(chord[0] - 12 + (7 if b % 2 == 0 else 0)), 0.22, 1.1, 1)
-		# Piano eléctrico: acorde en el 1 y un eco suave en el "y" del 2.
+		var t0 := b * _bar
+		_note(t0, _midi(chord[0] - 12), 0.30, 1.6, 1)
 		for i in range(1, 4):
-			_note(t0 + i * 0.012, _midi(chord[i]), 0.12, 2.4, 0)
-			_note(t0 + beat * 1.5 + i * 0.01, _midi(chord[i]), 0.06, 1.2, 0)
-		# Melodía: a ratos, notas de la escala cerca del acorde (la segunda mitad responde a la primera).
+			_note(t0 + i * 0.015, _midi(chord[i]), 0.10, 2.8, 0)
+
+
+func _compose_mid() -> void:
+	for b in BARS:
+		var chord: Array = CHORDS[b % CHORDS.size()]
+		var t0 := b * _bar
+		# Bajo de paso en el 3 y ecos del piano en el "y" del 2 y en el 4.
+		_note(t0 + _beat * 2.0, _midi(chord[0] - 12 + (7 if b % 2 == 0 else 0)), 0.2, 1.1, 1)
+		for i in range(1, 4):
+			_note(t0 + _beat * 1.5 + i * 0.01, _midi(chord[i]), 0.06, 1.2, 0)
+			_note(t0 + _beat * 3.0 + i * 0.01, _midi(chord[i]), 0.045, 1.0, 0)
+		# Colchón: el acorde sostenido una octava arriba, entrada lenta.
+		for i in range(1, 4):
+			_pad(t0, _bar, _midi(chord[i] + 12), 0.025)
+		for k in 8:
+			_shaker(t0 + k * _beat * 0.5, 0.018 if k % 2 == 0 else 0.03)
+
+
+func _compose_full() -> void:
+	for b in BARS:
+		var t0 := b * _bar
 		if b >= 2:
 			for k in 4:
-				if _rng.randf() < (0.55 if b % 4 != 3 else 0.3):
+				if _rng.randf() < (0.6 if b % 4 != 3 else 0.3):
 					var n: int = PENTA[_rng.randi_range(2, PENTA.size() - 1)]
-					_note(t0 + k * beat + (beat * 0.5 if _rng.randf() < 0.3 else 0.0), _midi(n), 0.09, 1.6, 2)
-		# Shaker en corcheas, muy bajito, con acento en el contratiempo.
-		for k in 8:
-			_shaker(t0 + k * beat * 0.5, 0.025 if k % 2 == 0 else 0.04)
-	var stream := _to_stream(0.55)
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT.get_base_dir()))
-	var err := stream.save_to_wav(ProjectSettings.globalize_path(OUT))
-	print("Música: %s (%.1f s) -> %s" % [OUT, _buf.size() / float(RATE), error_string(err)])
-	quit()
+					_note(t0 + k * _beat + (_beat * 0.5 if _rng.randf() < 0.3 else 0.0), _midi(n), 0.09, 1.6, 2)
+		# Contracanto: una campanita aguda al final de cada par de compases.
+		if b % 2 == 1:
+			_note(t0 + _beat * 3.5, _midi(PENTA[_rng.randi_range(4, PENTA.size() - 1)] + 12), 0.035, 1.2, 2)
+		for k in 4:
+			_shaker(t0 + (k + 0.75) * _beat, 0.02)
+
+
+## Nota sostenida con ataque y caída lentos (colchón cálido).
+func _pad(start: float, length: float, freq: float, amp: float) -> void:
+	var n := _buf.size()
+	var s0 := int(start * RATE)
+	var total := int((length + 1.2) * RATE)
+	for i in total:
+		var t := float(i) / RATE
+		var env := minf(t / 0.6, 1.0) * (1.0 if t < length else exp(-(t - length) / 0.4))
+		var v := sin(TAU * freq * t) + 0.3 * sin(TAU * freq * 1.003 * t) + 0.12 * sin(TAU * freq * 2.0 * t)
+		_buf[(s0 + i) % n] += v * env * amp
 
 
 func _midi(n: int) -> float:

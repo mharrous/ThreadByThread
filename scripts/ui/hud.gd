@@ -62,6 +62,7 @@ var _held_section: ShopSection
 ## "Racha ×N" bajo la mira cuando se colocan cosas seguidas.
 var _streak_label: Label
 var _streak_tween: Tween
+var _streak_rest_x := 0.0
 var _room: RoomController
 var _toast: Label
 var _banner: PanelContainer
@@ -198,7 +199,9 @@ func _build() -> void:
 	_streak_label.anchor_bottom = 0.42
 	_streak_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_streak_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_streak_label.resized.connect(func(): _streak_label.pivot_offset = _streak_label.size * 0.5)
+	_streak_label.resized.connect(func():
+		_streak_label.pivot_offset = _streak_label.size * 0.5
+		_streak_rest_x = _streak_label.position.x)
 	_root.add_child(_streak_label)
 
 	# Aviso temporal
@@ -342,11 +345,18 @@ func _on_streak_changed(count: int) -> void:
 		_streak_tween.kill()
 	var peak := minf(1.0 + count * 0.03, 1.45)
 	_streak_label.scale = Vector2.ONE * (peak + 0.25)
-	_streak_label.modulate.a = 1.0
+	# Destello: blanco al saltar y vuelta al dorado.
+	_streak_label.modulate = Color(1.6, 1.6, 1.6, 1.0)
 	_streak_tween = create_tween()
+	_streak_tween.set_parallel(true)
 	_streak_tween.tween_property(_streak_label, "scale", Vector2.ONE * peak, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_streak_tween.tween_interval(4.5)
-	_streak_tween.tween_property(_streak_label, "modulate:a", 0.0, 1.2)
+	_streak_tween.tween_property(_streak_label, "modulate", Color.WHITE, 0.3)
+	# Temblor: seno amortiguado en horizontal (más fuerte con la racha) que acaba en reposo.
+	var amp := minf(4.0 + count * 0.8, 12.0)
+	_streak_tween.tween_method(func(t: float):
+		_streak_label.position.x = _streak_rest_x + sin(t * 38.0) * amp * (1.0 - t / 0.3), 0.0, 0.3, 0.3)
+	_streak_tween.chain().tween_interval(4.5)
+	_streak_tween.chain().tween_property(_streak_label, "modulate:a", 0.0, 1.2)
 
 
 func _on_section_completed(section) -> void:

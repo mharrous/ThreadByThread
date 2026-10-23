@@ -64,7 +64,7 @@ $Chains = @{
 function Get-Chain([string]$name) {
     $base = $name -replace '_\d+$', ''
     switch -Regex ($base) {
-        '^(place|collection|room_complete|treasure|decor_unlock|sparkle)$' { return 'chime' }
+        '^(place|collection|room_complete|treasure|decor_unlock|sparkle|shop_bell)$' { return 'chime' }
         '^bird$' { return 'bird' }
         # Bucles (un filtro rompería la unión) y sonidos de la calle: ya pasan por el bus "Outdoor" del juego
         # (filtro paso bajo + reverb), así que no se procesan dos veces.

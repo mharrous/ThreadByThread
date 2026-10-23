@@ -5,8 +5,15 @@ extends Node
 
 const SFX_BUS := &"SFX"
 const MUSIC_BUS := &"Music"
-## Música de la tienda (bucle original, generado con tools/make_music.gd).
-const MUSIC_PATH := "res://art/audio/music/shop_loop.wav"
+## Música de la tienda en capas (bucles originales de igual duración, tools/make_music.gd). La base suena
+## siempre; las demás entran según lo ordenado: la música crece con la tienda.
+const MUSIC_LAYERS := [
+	{"path": "res://art/audio/music/shop_base.wav", "from": 0.0, "db": -6.0},
+	{"path": "res://art/audio/music/shop_mid.wav", "from": 0.33, "db": -9.0},
+	{"path": "res://art/audio/music/shop_full.wav", "from": 0.66, "db": -9.0},
+]
+const MUSIC_SILENT_DB := -60.0
+const MUSIC_FADE := 4.0
 ## Sonidos de la calle: pasan por un filtro que simula el cristal de la ventana.
 const OUTDOOR_BUS := &"Outdoor"
 const POOL_OUT := 8
@@ -45,7 +52,10 @@ var _rng := RandomNumberGenerator.new()
 var _combo := -1
 var _last_place_ms := -100000
 var _aiming_ok := false
-var _music: AudioStreamPlayer
+var _music: Array[AudioStreamPlayer] = []
+var _music_on: Array[bool] = []
+var _music_tweens: Array[Tween] = []
+var _progress := 0.0
 
 
 func _ready() -> void:
@@ -69,9 +79,17 @@ func _ready() -> void:
 		p2.bus = SFX_BUS
 		add_child(p2)
 		_pool_2d.append(p2)
-	_music = AudioStreamPlayer.new()
-	_music.bus = MUSIC_BUS
-	add_child(_music)
+	for i in MUSIC_LAYERS.size():
+		var mp := AudioStreamPlayer.new()
+		mp.bus = MUSIC_BUS
+		mp.volume_db = MUSIC_SILENT_DB
+		add_child(mp)
+		_music.append(mp)
+		_music_on.append(false)
+		_music_tweens.append(null)
+	Events.progress_changed.connect(func(placed: int, total: int):
+		_progress = 0.0 if total <= 0 else float(placed) / float(total)
+		_update_music_layers())
 	GameSettings.changed.connect(_apply_volumes)
 	_apply_volumes()
 	_connect_events()
@@ -208,7 +226,11 @@ func _connect_events() -> void:
 	# El final de la mercería: la misma melodía, más grave y solemne.
 	Events.room_completed.connect(func(_room): play(&"room_complete", null, 0.0, 0.0, 0.84))
 	Events.treasure_found.connect(func(_item): play(&"treasure", null, -2.0, 0.0))
-	Events.decor_unlocked.connect(func(_room, _id): play(&"decor_unlock", null, -3.0, 0.0))
+	Events.decor_unlocked.connect(func(_room, id):
+		play(&"decor_unlock", null, -3.0, 0.0)
+		# El cartel de la puerta pasa a ABIERTO: suena la campanilla.
+		if id == &"bunting":
+			play(&"shop_bell", null, 0.0, 0.0))
 
 
 ## Colocar: el sonido del material afinado en la escala de la racha. Cada colocación seguida (menos de
@@ -227,7 +249,8 @@ func _on_item_placed(item, _shelf) -> void:
 	var bank: StringName = PLACE_BANKS.get(item.data.get_motion().impact_sound, &"place")
 	play(bank, item.global_position, 0.0, 0.0, pitch, false, 0)
 	if _combo >= 2:
-		play(&"sparkle", item.global_position, minf(-16.0 + _combo * 1.2, -5.0), 0.0, pitch, false, 0)
+		# Por encima del ambiente (pájaros -15 dB, viento -20 dB) desde el primer destello.
+		play(&"sparkle", item.global_position, minf(-9.0 + _combo * 0.8, -3.0), 0.0, pitch, false, 0)
 
 
 ## Hitos de una sección (25 %, 50 %, 75 %): arpegio corto, más agudo cuanto más avanzada.
@@ -252,19 +275,35 @@ func _publish_banks(banks: Dictionary) -> void:
 	_start_music()
 
 
-## La música entra despacio un poco después de arrancar (no compite con el primer vistazo a la sala).
+## Las capas arrancan juntas (mismo número de muestras: siguen sincronizadas en el bucle); la base entra
+## despacio y las demás según el progreso.
 func _start_music() -> void:
-	if not ResourceLoader.exists(MUSIC_PATH):
-		return
-	var stream := load(MUSIC_PATH) as AudioStreamWAV
-	if stream == null:
-		return
-	_music.stream = stream   # el bucle viene del .import (loop_mode = adelante)
-	_music.volume_db = -40.0
-	_music.play()
-	var tw := create_tween()
-	tw.tween_interval(2.0)
-	tw.tween_property(_music, "volume_db", -6.0, 6.0).set_trans(Tween.TRANS_SINE)
+	for i in MUSIC_LAYERS.size():
+		var path: String = MUSIC_LAYERS[i]["path"]
+		if not ResourceLoader.exists(path):
+			return
+		_music[i].stream = load(path)   # el bucle viene del .import (loop_mode = adelante)
+	for mp in _music:
+		mp.play()
+	_update_music_layers()
+
+
+func _update_music_layers() -> void:
+	for i in _music.size():
+		if _music[i].stream == null:
+			return
+		var on := _progress >= float(MUSIC_LAYERS[i]["from"])
+		if on == _music_on[i]:
+			continue
+		_music_on[i] = on
+		if _music_tweens[i] != null:
+			_music_tweens[i].kill()
+		var tw := create_tween()
+		if i == 0:
+			tw.tween_interval(2.0)
+		var target: float = MUSIC_LAYERS[i]["db"] if on else MUSIC_SILENT_DB
+		tw.tween_property(_music[i], "volume_db", target, MUSIC_FADE * (1.5 if i == 0 else 1.0)).set_trans(Tween.TRANS_SINE)
+		_music_tweens[i] = tw
 
 
 ## Si existe art/audio/sfx/<sonido>_<n>.wav (editado en Audacity u otro programa),

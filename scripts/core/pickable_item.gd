@@ -42,6 +42,8 @@ var _mesh: MeshInstance3D
 var _base_scale := Vector3.ONE
 var _overlay: StandardMaterial3D
 var _hl_tween: Tween
+var _hovered := false
+var _hinted := false
 var _has_shader_params := false
 
 # Aplastamiento elástico (muelle amortiguado): + aplasta, - estira.
@@ -158,6 +160,15 @@ func is_pickable() -> bool:
 
 
 ## Aparece con un "pop" elástico (decoración desbloqueada, tesoro expuesto).
+## Pulso al colocarlo: crece un poco y vuelve con rebote. `strength` 0..1 (sube con la racha).
+## Va en el nodo Squash (solo visual), así no mueve la física ni el hueco.
+func play_place_pulse(strength: float) -> void:
+	var peak := 1.06 + 0.19 * clampf(strength, 0.0, 1.0)
+	var tw := create_tween()
+	tw.tween_property(_squash, "scale", Vector3.ONE * peak, 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_squash, "scale", Vector3.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
 func play_appear() -> void:
 	_squash.scale = Vector3.ONE * 0.01
 	var tw := create_tween()
@@ -171,6 +182,24 @@ func set_pickable(on: bool) -> void:
 
 
 func set_highlighted(on: bool) -> void:
+	_hovered = on
+	_refresh_glow()
+
+
+## Pista de "el siguiente de este tipo": brillo cálido que respira, más flojo que el de apuntar.
+func set_hinted(on: bool) -> void:
+	if on == _hinted:
+		return
+	_hinted = on
+	_refresh_glow()
+
+
+func is_hinted() -> bool:
+	return _hinted
+
+
+## Apuntar manda sobre la pista; sin ninguna de las dos, el brillo se apaga y se quita el overlay.
+func _refresh_glow() -> void:
 	if _overlay == null:
 		_overlay = StandardMaterial3D.new()
 		_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -180,12 +209,26 @@ func set_highlighted(on: bool) -> void:
 		_overlay.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if _hl_tween:
 		_hl_tween.kill()
-	if on:
-		_mesh.material_overlay = _overlay
+	var a := _overlay.albedo_color.a
 	_hl_tween = create_tween()
-	_hl_tween.tween_method(_apply_highlight, _overlay.albedo_color.a, 0.2 if on else 0.0, 0.12)
-	if not on:
+	if _hovered:
+		_mesh.material_overlay = _overlay
+		_set_glow_color(Color(1.0, 0.96, 0.86))
+		_hl_tween.tween_method(_apply_highlight, a, 0.2, 0.12)
+	elif _hinted:
+		_mesh.material_overlay = _overlay
+		_set_glow_color(Color(1.0, 0.82, 0.5))
+		_apply_highlight(minf(a, 0.04))
+		_hl_tween.tween_method(_apply_highlight, 0.04, 0.13, 0.9).set_trans(Tween.TRANS_SINE)
+		_hl_tween.tween_method(_apply_highlight, 0.13, 0.04, 0.9).set_trans(Tween.TRANS_SINE)
+		_hl_tween.set_loops()
+	else:
+		_hl_tween.tween_method(_apply_highlight, a, 0.0, 0.12)
 		_hl_tween.tween_callback(func(): _mesh.material_overlay = null)
+
+
+func _set_glow_color(c: Color) -> void:
+	_overlay.albedo_color = Color(c.r, c.g, c.b, _overlay.albedo_color.a)
 
 
 ## Aplastamiento elástico (strength 1 = el de colocar en una balda).

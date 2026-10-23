@@ -168,6 +168,11 @@ func _run() -> void:
 
 	await _wait_until(func(): return AudioManager.ready_to_play, 8.0)
 	_check(AudioManager.ready_to_play, "sonidos cargados")
+	var layers_ok := AudioManager._music.size() == 3
+	for mp in AudioManager._music:
+		layers_ok = layers_ok and mp.stream != null and mp.playing
+	_check(layers_ok, "las 3 capas de música suenan a la vez")
+	_check(AudioManager._banks.has(&"shop_bell") and AudioManager._banks.has(&"sparkle"), "campanilla de la puerta y destello de racha disponibles")
 	print("        bancos con audio editado (art/audio/sfx): %d" % AudioManager.overridden.size())
 	_check(shop.room != null, "la mercería tiene su sala")
 	_check(shop.room.sections.size() == 4, "la sala tiene %d secciones" % shop.room.sections.size())
@@ -509,6 +514,8 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 			if not (placed and it.state == PickableItem.State.PLACED and room.placed_items == before + 1):
 				failed_items += 1
 				_check(false, "colocar #%d (%s) en su sitio (progreso %d)" % [i + 1, it.data.id, room.placed_items])
+			elif i == 0:
+				await _check_next_hint(room, it)
 		done = room.placed_items
 		await _wait_until(func(): return _completed_sections.has(section), 2.0)
 		_check(_completed_sections.has(section) and section.is_completed, "sección %s completada" % section.display_name)
@@ -535,6 +542,19 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(again.container == null and again.slot_row == -1, "el hueco queda libre")
 	_check(await _place_on_correct_row(room, again), "volver a colocarlo")
 	_check(room.placed_items == total, "progreso otra vez %d/%d" % [total, total])
+
+
+## Tras colocar, si queda otro suelto del mismo tipo, ese (el más cercano) brilla como pista.
+func _check_next_hint(room: RoomController, placed: PickableItem) -> void:
+	var hint := main.get_node("World/NextItemHint") as NextItemHint
+	var same: Array = []
+	for other: PickableItem in room.get_items():
+		if other.state == PickableItem.State.LOOSE and other.data.sort_key == placed.data.sort_key:
+			same.append(other)
+	if same.is_empty():
+		_check(hint._target == null, "sin más '%s' sueltos no hay pista" % placed.data.sort_key)
+		return
+	_check(hint._target != null and same.has(hint._target) and hint._target.is_hinted(), "pista en el siguiente '%s' suelto" % placed.data.sort_key)
 
 
 func _skipped(room: RoomController, max_sections: int) -> int:
