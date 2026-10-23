@@ -15,8 +15,12 @@ const PLACE_BANKS := {
 	&"bounce_metal": &"place_metal",
 	&"bounce_fabric": &"place_soft",
 }
-## Semitonos de la escala pentatónica que suena al ir llenando una fila.
-const PENTATONIC: Array[int] = [0, 2, 4, 7, 9, 12]
+## Escala pentatónica (octava y media) que sube con cada colocación seguida: la racha "toca" una melodía.
+const COMBO_SCALE: Array[int] = [0, 2, 4, 7, 9, 12, 14, 16]
+## Tiempo máximo entre dos colocaciones para que la racha siga subiendo.
+const COMBO_WINDOW_MS := 6000
+## Fracciones de una sección que suenan como hito.
+const MILESTONES: Array[float] = [0.25, 0.5, 0.75]
 const SFX_DIR := "res://art/audio/sfx/"
 const POOL_3D := 10
 const POOL_2D := 6
@@ -35,6 +39,9 @@ var _next_3d := 0
 var _next_2d := 0
 var _synth_task := -1
 var _rng := RandomNumberGenerator.new()
+var _combo := -1
+var _last_place_ms := -100000
+var _aiming_ok := false
 
 
 func _ready() -> void:
@@ -70,12 +77,15 @@ func _exit_tree() -> void:
 
 
 ## Reproduce un efecto. `pos` = Vector3 para sonido posicional, null para sonido plano.
-func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_variation: float = 0.06, pitch_base: float = 1.0, outdoor: bool = false) -> void:
+## `variant` >= 0 fuerza una variante concreta (melodías: misma nota base siempre).
+func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_variation: float = 0.06, pitch_base: float = 1.0, outdoor: bool = false, variant: int = -1) -> void:
 	if not ready_to_play or not _banks.has(sound):
 		return
 	var variants: Array = _banks[sound]
 	var idx := _rng.randi() % variants.size()
-	if variants.size() > 1 and idx == int(_last_variant.get(sound, -1)):
+	if variant >= 0:
+		idx = variant % variants.size()
+	elif variants.size() > 1 and idx == int(_last_variant.get(sound, -1)):
 		idx = (idx + 1) % variants.size()
 	_last_variant[sound] = idx
 	var pitch := pitch_base * (1.0 + _rng.randf_range(-pitch_variation, pitch_variation))
@@ -157,13 +167,14 @@ func _apply_volumes() -> void:
 
 func _connect_events() -> void:
 	Events.item_picked.connect(func(item): play(&"pick", item.global_position))
-	Events.item_placed.connect(func(item, shelf):
-		# Cada hueco tiene su nota: rellenar una fila de izquierda a derecha toca una escala.
-		var steps := PENTATONIC.size()
-		var degree := clampi(int(float(item.slot_index) / float(shelf.slots_per_row) * steps), 0, steps - 1)
-		# El sonido depende del material del objeto: lana, plástico, madera, metal o tela.
-		var bank: StringName = PLACE_BANKS.get(item.data.get_motion().impact_sound, &"place")
-		play(bank, item.global_position, 0.0, 0.01, pow(2.0, PENTATONIC[degree] / 12.0)))
+	Events.item_placed.connect(_on_item_placed)
+	Events.section_progress_changed.connect(_on_section_progress)
+	Events.target_changed.connect(func(info: Dictionary):
+		# Tic suave al pasar a apuntar a un hueco correcto (la mira se pone verde).
+		var ok: bool = info.get("kind", "") == "place"
+		if ok and not _aiming_ok:
+			play(&"aim_ok", null, -16.0, 0.03)
+		_aiming_ok = ok)
 	Events.item_set_down.connect(func(item): play(&"set_down", item.global_position))
 	Events.item_rejected.connect(func(_item, _reason): play(&"deny"))
 	Events.item_thrown.connect(func(item): play(&"throw", item.global_position))
@@ -176,6 +187,34 @@ func _connect_events() -> void:
 	Events.room_completed.connect(func(_room): play(&"room_complete", null, 0.0, 0.0, 0.84))
 	Events.treasure_found.connect(func(_item): play(&"treasure", null, -2.0, 0.0))
 	Events.decor_unlocked.connect(func(_room, _id): play(&"decor_unlock", null, -3.0, 0.0))
+
+
+## Colocar: el sonido del material afinado en la escala de la racha. Cada colocación seguida (menos de
+## 6 s entre una y otra) sube una nota; desde la tercera se suma un destello de campanillas que crece con
+## la racha. Al cortar la racha se vuelve a la nota base.
+func _on_item_placed(item, _shelf) -> void:
+	var now := Time.get_ticks_msec()
+	_combo = _combo + 1 if now - _last_place_ms < COMBO_WINDOW_MS else 0
+	_last_place_ms = now
+	var top := COMBO_SCALE.size() - 1
+	# Arriba del todo alterna las dos últimas notas en vez de seguir subiendo.
+	var step := _combo if _combo <= top else top - (_combo - top) % 2
+	var pitch := pow(2.0, COMBO_SCALE[step] / 12.0)
+	# El sonido depende del material del objeto: lana, plástico, madera, metal o tela.
+	var bank: StringName = PLACE_BANKS.get(item.data.get_motion().impact_sound, &"place")
+	play(bank, item.global_position, 0.0, 0.0, pitch, false, 0)
+	if _combo >= 2:
+		play(&"sparkle", item.global_position, minf(-16.0 + _combo * 1.2, -5.0), 0.0, pitch, false, 0)
+
+
+## Hitos de una sección (25 %, 50 %, 75 %): arpegio corto, más agudo cuanto más avanzada.
+func _on_section_progress(_section, placed: int, total: int) -> void:
+	if total <= 0:
+		return
+	for i in MILESTONES.size():
+		if placed == ceili(total * MILESTONES[i]):
+			play(&"collection", null, -7.0, 0.0, pow(2.0, (2 + i * 2) / 12.0))
+			return
 
 
 # Corre en un hilo de trabajo.

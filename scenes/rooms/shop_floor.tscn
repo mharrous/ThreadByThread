@@ -46,10 +46,10 @@ bunting_from = Vector3(-4.75, 3, -4)
 bunting_to = Vector3(-0.5, 3, -4)
 
 [node name="ShelfLeft" parent="Sections/Yarn" instance=ExtResource("4_shelf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.7, 0, -4.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.7, 0, -4.44)
 
 [node name="ShelfRight" parent="Sections/Yarn" instance=ExtResource("4_shelf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.55, 0, -4.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.55, 0, -4.44)
 
 [node name="Buttons" type="Node3D" parent="Sections"]
 script = ExtResource("3_section")
@@ -64,13 +64,13 @@ bunting_from = Vector3(0.5, 3, -4)
 bunting_to = Vector3(4.75, 3, -4)
 
 [node name="SpoolShelfA" parent="Sections/Buttons" instance=ExtResource("4_shelf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.55, 0, -4.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.55, 0, -4.44)
 slots_per_row = 24
 slot_spacing = 0.08
 marker_radius = 0.033
 
 [node name="SpoolShelfB" parent="Sections/Buttons" instance=ExtResource("4_shelf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7, 0, -4.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7, 0, -4.44)
 slots_per_row = 24
 slot_spacing = 0.08
 marker_radius = 0.033
@@ -95,17 +95,17 @@ bunting_from = Vector3(-5.3, 3, 4)
 bunting_to = Vector3(1.25, 3, 4)
 
 [node name="BoltRackA" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -4.2, 0, 4.5)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -4.2, 0, 4.44)
 depth = 0.5
 marker_radius = 0.05
 
 [node name="BoltRackB" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -2.05, 0, 4.5)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -2.05, 0, 4.44)
 depth = 0.5
 marker_radius = 0.05
 
 [node name="FoldedRack" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -6, 0, 2.6)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -5.94, 0, 2.6)
 depth = 0.5
 slots_per_row = 5
 slot_spacing = 0.38
@@ -113,7 +113,7 @@ marker_radius = 0.11
 stack_capacity = 3
 
 [node name="RibbonShelf" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.15, 0, 4.5)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.15, 0, 4.44)
 slots_per_row = 20
 slot_spacing = 0.085
 marker_radius = 0.034
@@ -132,13 +132,13 @@ bunting_from = Vector3(5.6, 3, -2.9)
 bunting_to = Vector3(5.6, 3, 1.5)
 
 [node name="PegBoard" parent="Sections/Store" instance=ExtResource("6_peg")]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 6, 0, -1.9)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 5.94, 0, -1.9)
 
 [node name="TrayStore" parent="Sections/Store" instance=ExtResource("5_tray")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.76, 1.4)
 
 [node name="StoreShelf" parent="Sections/Store" instance=ExtResource("4_shelf")]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 6, 0, 0.5)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 5.94, 0, 0.5)
 depth = 0.4
 slots_per_row = 5
 slot_spacing = 0.38

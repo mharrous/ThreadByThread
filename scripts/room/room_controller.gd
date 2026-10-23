@@ -386,7 +386,7 @@ func _announce_completion() -> void:
 	await get_tree().create_timer(1.6, false).timeout
 	shell.unlock_decor(&"bunting", true)
 	shell.unlock_decor(&"open_sign", true)
-	shell.brighten_lamps(true)
+	shell.open_shop(true)
 	Events.decor_unlocked.emit(self, &"bunting")
 
 
@@ -621,6 +621,6 @@ func apply_state(state: Dictionary) -> bool:
 	if is_completed:
 		shell.unlock_decor(&"bunting", false)
 		shell.unlock_decor(&"open_sign", false)
-		shell.brighten_lamps(false)
+		shell.open_shop(false)
 	_emit_progress()
 	return true

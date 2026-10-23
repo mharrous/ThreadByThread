@@ -46,6 +46,8 @@ var floor_bounds := Rect2()
 ## define en _build_furniture(); el tesoro n-ésimo (en el orden de las secciones) va al sitio n-ésimo.
 var treasure_spots: Array[Vector3] = []
 var lamps: Array[OmniLight3D] = []
+## Cartel colgado en el cristal de la puerta de la calle (CERRADO hasta ordenar la mercería).
+var door_sign: Label3D
 
 var _decor: Dictionary = {}
 var _display_slots: Array[Vector3] = []
@@ -231,10 +233,16 @@ func _build_ceiling() -> void:
 		_add_lamp(lamp_positions[i], i < shadow_lamps)
 
 
-## Lámpara colgante con su luz.
+## Lámpara colgante con su luz: el modelo esmaltado de Blender si está; si no, un cono sencillo.
 func _add_lamp(lamp_pos: Vector3, shadows: bool) -> void:
 	var cord := _mat(Color("5a4630"), 0.8)
-	_box(self, Vector3(0.012, room_h - lamp_pos.y - 0.15, 0.012), Vector3(lamp_pos.x, (room_h + lamp_pos.y + 0.15) * 0.5, lamp_pos.z), cord, false, 1, false)
+	var model := _instance_model("res://art/models/pendant_lamp.glb", lamp_pos)
+	var cord_from := lamp_pos.y + (0.27 if model != null else 0.15)
+	_box(self, Vector3(0.012, room_h - cord_from, 0.012), Vector3(lamp_pos.x, (room_h + cord_from) * 0.5, lamp_pos.z), cord, false, 1, false)
+	if model != null:
+		_no_shadows(model)
+		_add_lamp_light(lamp_pos, shadows)
+		return
 	var shade := MeshInstance3D.new()
 	var cone := CylinderMesh.new()
 	cone.top_radius = 0.07
@@ -254,10 +262,13 @@ func _add_lamp(lamp_pos: Vector3, shadows: bool) -> void:
 	bulb.position = lamp_pos - Vector3(0, 0.05, 0)
 	bulb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(bulb)
+	_add_lamp_light(lamp_pos, shadows)
 
+
+func _add_lamp_light(lamp_pos: Vector3, shadows: bool) -> void:
 	var lamp := OmniLight3D.new()
 	lamp.name = "PendantLamp"
-	lamp.position = lamp_pos
+	lamp.position = lamp_pos - Vector3(0, 0.08, 0)
 	lamp.light_color = Color("ffd9a6")
 	lamp.light_energy = lamp_energy
 	lamp.omni_range = 7.5
@@ -268,6 +279,13 @@ func _add_lamp(lamp_pos: Vector3, shadows: bool) -> void:
 	lamp.light_volumetric_fog_energy = 0.4
 	add_child(lamp)
 	lamps.append(lamp)
+
+
+func _no_shadows(node: Node) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for c in node.get_children():
+		_no_shadows(c)
 
 
 func _shade_material() -> StandardMaterial3D:
@@ -680,8 +698,12 @@ func _make_open_sign() -> Node3D:
 	return root
 
 
-## Final: las lámparas suben un poco (la tienda "se enciende"). Sin `animate`, de golpe.
-func brighten_lamps(animate: bool) -> void:
+## Final: las lámparas suben un poco (la tienda "se enciende") y el cartel de la puerta pasa a ABIERTO.
+## Sin `animate`, de golpe.
+func open_shop(animate: bool) -> void:
+	if door_sign != null:
+		door_sign.text = "ABIERTO"
+		door_sign.modulate = Color("2f7a4a")
 	for lamp in lamps:
 		var target := lamp_energy * 1.3
 		if animate:

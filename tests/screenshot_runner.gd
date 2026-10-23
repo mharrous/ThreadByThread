@@ -89,7 +89,7 @@ func _run_treasures(shop: Shop, player: Player) -> void:
 		section.show_completed(false)
 	room.shell.unlock_decor(&"bunting", false)
 	room.shell.unlock_decor(&"open_sign", false)
-	room.shell.brighten_lamps(false)
+	room.shell.open_shop(false)
 	await _look_from(player, room, Vector3(3.6, 0.0, 2.6), Vector3(4.6, 1.55, 4.4))
 	await _shot("repisa")
 	await _look_from(player, room, Vector3(0.0, 0.0, 3.4), Vector3(0.0, 2.4, -3.0))
