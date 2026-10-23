@@ -1,16 +1,19 @@
 class_name Landscape
 extends Node3D
-## Lo que se ve por la ventana oeste de la primera sala: jardín con valla, acera, calle con vida
+## Lo que se ve por las ventanas de la mercería (oeste: calle; sur: jardín trasero): jardín con valla, acera, calle con vida
 ## (StreetLife), casas de barrio enfrente con setos y árboles, un hueco con prado, estanque,
 ## colinas con bruma y montañas azuladas al fondo. Se genera todo por código a partir de los
 ## modelos de art/models/street (Blender) y unas pocas mallas procedurales; sin colisiones ni sombras,
 ## así que cuesta poco y no tapa el sol que entra en la sala.
 ##
-## Geometría (el edificio ocupa x > -3.6, la ventana mira hacia -X):
+## Geometría en coordenadas locales (el nodo va desplazado 3 m al oeste para que el edificio,
+## de 12 m de ancho, ocupe x > -3.6 igual que antes; la ventana oeste mira hacia -X):
 ##   jardín -3.6..-4.8 | valla -4.8 | acera -7.3..-5.5 | calzada -13.3..-7.3 | acera -15.1..-13.3
 ##   setos -16 | jardines -15.1..-18.8 | casas con la fachada en x = -18.8 | traseras, árboles y colinas.
 
 @export var seed_value := 7
+## Centros X (locales) de las ventanas sur: los árboles del jardín no se plantan delante.
+@export var south_window_xs: Array[float] = [5.4]
 
 const GROUND := -0.14
 const HAZE := Color("cfe5f2")
@@ -77,9 +80,9 @@ func _ready() -> void:
 	_build_terrain(Rect2(-330.0, -210.0, 266.0, 420.0), 8.0)                               # lejos: colinas y montañas
 	_build_terrain(Rect2(-64.0, 100.0, 394.0, 230.0), 8.0)                                 # fin de la calle por el sur
 	_build_terrain(Rect2(-64.0, -330.0, 394.0, 230.0), 8.0)                                # y por el norte
-	# Jardín trasero: lo que ven las ventanas sur de las demás salas.
-	_build_terrain(Rect2(-3.0, 2.6, 63.0, 97.4), 1.5)
-	_build_terrain(Rect2(60.0, 2.6, 270.0, 97.4), 8.0)
+	# Jardín trasero: lo que ve la ventana sur (empieza justo detrás de la fachada, para no asomar por el suelo).
+	_build_terrain(Rect2(-3.0, 4.6, 63.0, 95.4), 1.5)
+	_build_terrain(Rect2(60.0, 4.6, 270.0, 95.4), 8.0)
 	_build_pond()
 	_build_street()
 	_build_houses()
@@ -492,7 +495,7 @@ func _tree_spots() -> Array[Vector3]:
 				break
 		if ok:
 			spots.append(Vector3(x, z, _rng.randf_range(1.0, 1.7)))
-	# Jardín trasero: árboles repartidos, sin tapar el cristal de las ventanas sur (x = 6.4, 12.8, 19.2).
+	# Jardín trasero: árboles repartidos, sin tapar el cristal de las ventanas sur.
 	var south_count := spots.size() + 34
 	guard = 0
 	while spots.size() < south_count and guard < 1200:
@@ -500,7 +503,7 @@ func _tree_spots() -> Array[Vector3]:
 		var x := _rng.randf_range(-2.0, 52.0)
 		var z := _rng.randf_range(8.0, 70.0)
 		var blocks_window := false
-		for wx in [6.4, 12.8, 19.2]:
+		for wx in south_window_xs:
 			if absf(x - wx) < 4.5 and z < 22.0:
 				blocks_window = true
 		if blocks_window:
@@ -545,12 +548,12 @@ func _build_fence() -> void:
 		add_child(rail)
 
 
-## Valla baja del jardín trasero, a lo largo de la fachada sur de las salas.
+## Valla baja del jardín trasero, a lo largo de la fachada sur.
 func _build_south_fence() -> void:
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color("f1e6d0")
 	wood.roughness = 0.8
-	var fence_z := 5.2
+	var fence_z := 7.4
 	var posts := MultiMesh.new()
 	posts.transform_format = MultiMesh.TRANSFORM_3D
 	var post_mesh := BoxMesh.new()

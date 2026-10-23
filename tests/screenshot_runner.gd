@@ -1,21 +1,23 @@
 extends Node
 ## Captura imágenes del juego (necesita ventana, no headless).
 ##   godot --path . res://tests/screenshot_runner.tscn -- --out=<carpeta> --test-mode --no-autopause [--filled]
-## Por cada sala: vista de entrada, estanterías, mesa y detalle. Con --filled primero coloca todos
+## Vistas de la mercería: entrada, cada pared y el suelo. Con --filled primero coloca todos
 ## los objetos de golpe (sin animar) para ver los contenedores llenos.
 
 const POSES := [
-	{"name": "entrada", "pos": Vector3(0, 0, 1.9), "look": Vector3(0, 1.1, -2.5)},
-	{"name": "izq", "pos": Vector3(-0.9, 0, -0.1), "look": Vector3(-1.3, 1.0, -2.3)},
-	{"name": "der", "pos": Vector3(0.9, 0, -0.1), "look": Vector3(1.3, 1.0, -2.3)},
-	{"name": "centro", "pos": Vector3(0.0, 0, 2.1), "look": Vector3(0.0, 0.7, 0.6)},
-	{"name": "esquina", "pos": Vector3(1.8, 0, 0.9), "look": Vector3(-1.5, 0.6, 0.4)},
+	{"name": "entrada", "pos": Vector3(0, 0, 2.9), "look": Vector3(0, 1.1, -4.5)},
+	{"name": "norte_lanas", "pos": Vector3(-2.6, 0, -2.4), "look": Vector3(-2.6, 1.0, -4.5)},
+	{"name": "norte_carretes", "pos": Vector3(2.6, 0, -2.4), "look": Vector3(2.6, 1.0, -4.5)},
+	{"name": "este_sastreria", "pos": Vector3(2.6, 0, -0.4), "look": Vector3(6.0, 1.2, -0.7)},
+	{"name": "sur_telas", "pos": Vector3(-1.6, 0, 1.0), "look": Vector3(-2.0, 1.0, 4.5)},
+	{"name": "oeste_ventana", "pos": Vector3(-2.4, 0, 0.8), "look": Vector3(-6.0, 1.2, 1.4)},
+	{"name": "suelo", "pos": Vector3(2.0, 0, 2.6), "look": Vector3(-1.5, 0.0, 0.0)},
+	{"name": "esquina", "pos": Vector3(4.6, 0, 2.6), "look": Vector3(-5.5, 0.6, -3.5)},
 ]
 
 var _out_dir := ""
 var _filled := false
-var _only_room := -1
-var _treasures := false  # --treasures: tesoros escondidos, repisa con los hallados y guirnalda de cada sala
+var _treasures := false  # --treasures: tesoros escondidos, repisa con los hallados y guirnaldas
 var _book := false      # --book: libro de colecciones del menú de pausa
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
@@ -26,8 +28,6 @@ func _ready() -> void:
 			_out_dir = arg.trim_prefix("--out=")
 		elif arg == "--filled":
 			_filled = true
-		elif arg.begins_with("--room="):
-			_only_room = int(arg.trim_prefix("--room="))
 		elif arg == "--street":
 			_street = true
 		elif arg == "--book":
@@ -66,56 +66,56 @@ func _fill_room(room: RoomController) -> void:
 		it.global_transform = unit.slot_transform(row, slot, it)
 
 
-## Cada sala: el escondite de un tesoro (sin hallar), luego la repisa con los dos hallados y la guirnalda.
+func _look_from(player: Player, room: RoomController, stand: Vector3, at: Vector3) -> void:
+	player.teleport(room.to_global(stand))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	player.look_at_point(room.to_global(at))
+	for i in 12:
+		await get_tree().process_frame
+
+
+## Cada escondite de tesoro (sin hallar), luego la repisa con todos los hallados y las guirnaldas.
 func _run_treasures(shop: Shop, player: Player) -> void:
-	for room in shop.rooms:
-		if _only_room >= 0 and room.index != _only_room:
-			continue
-		room.visible = true
-		var spot := room.shell.treasure_spots[0]
-		var stand := Vector3(spot.x, 0.0, minf(spot.z + 1.5, 1.6))
-		player.teleport(room.to_global(stand))
-		await get_tree().physics_frame
-		await get_tree().physics_frame
-		player.look_at_point(room.to_global(spot + Vector3(0, 0.1, 0)))
-		for i in 12:
-			await get_tree().process_frame
-		await _shot("sala%d_tesoro_escondido" % (room.index + 1))
-		for data in room.treasure_catalog.items:
-			room._restore_treasure(data.id)
-		room.shell.unlock_decor(&"bunting", false)
-		player.teleport(room.to_global(Vector3(-0.6, 0.0, 0.4)))
-		await get_tree().physics_frame
-		await get_tree().physics_frame
-		player.look_at_point(room.to_global(Vector3(-1.85, 1.55, 2.4)))
-		for i in 12:
-			await get_tree().process_frame
-		await _shot("sala%d_repisa" % (room.index + 1))
-		player.teleport(room.to_global(Vector3(0.0, 0.0, 2.0)))
-		await get_tree().physics_frame
-		await get_tree().physics_frame
-		player.look_at_point(room.to_global(Vector3(0.0, 2.3, -1.5)))
-		for i in 12:
-			await get_tree().process_frame
-		await _shot("sala%d_guirnalda" % (room.index + 1))
+	var room := shop.room
+	for i in room.shell.treasure_spots.size():
+		var spot := room.shell.treasure_spots[i]
+		var inward := -Vector3(spot.x, 0.0, spot.z).normalized()
+		await _look_from(player, room, Vector3(spot.x, 0.0, spot.z) + inward * 1.6, spot + Vector3(0, 0.1, 0))
+		await _shot("tesoro_escondido_%d" % (i + 1))
+	for data in room._treasure_list:
+		room._restore_treasure(data.id)
+	for section in room.sections:
+		section.show_completed(false)
+	room.shell.unlock_decor(&"bunting", false)
+	room.shell.unlock_decor(&"open_sign", false)
+	room.shell.brighten_lamps(false)
+	await _look_from(player, room, Vector3(3.6, 0.0, 2.6), Vector3(4.6, 1.55, 4.4))
+	await _shot("repisa")
+	await _look_from(player, room, Vector3(0.0, 0.0, 3.4), Vector3(0.0, 2.4, -3.0))
+	await _shot("guirnaldas_y_abierto")
+	await _look_from(player, room, Vector3(3.0, 0.0, -0.6), Vector3(6.0, 2.4, -0.7))
+	await _shot("cartel_seccion_completa")
+
 
 ## Vista de la ventana: primero la calle vacía y luego cada tipo de suceso congelado delante de la ventana.
 func _run_street(main: Node, player: Player) -> void:
 	var landscape := main.get_node("World/Landscape") as Landscape
 	var life := landscape.get_street_life()
 	life.enabled = false
-	player.teleport(Vector3(-2.3, 0.0, 0.0))
+	# La ventana oeste está en x = -6 (el paisaje va desplazado 3 m al oeste).
+	player.teleport(Vector3(-5.3, 0.0, 0.0))
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	player.look_at_point(Vector3(-12.0, 1.5, 0.0))
+	player.look_at_point(Vector3(-15.0, 1.5, 0.0))
 	for i in 10:
 		await get_tree().process_frame
 	await _shot("ventana_vacia")
-	player.look_at_point(Vector3(-12.0, 1.9, 6.0))
+	player.look_at_point(Vector3(-15.0, 1.9, 6.0))
 	for i in 6:
 		await get_tree().process_frame
 	await _shot("ventana_lado")
-	player.look_at_point(Vector3(-12.0, 1.5, 0.0))
+	player.look_at_point(Vector3(-15.0, 1.5, 0.0))
 	for kind: StringName in [&"car", &"van", &"bike", &"moto", &"walker", &"dogwalker"]:
 		var actor := life.spawn(kind)
 		# Se lleva al centro de la ventana y se avanza el paso a mano; luego se congela para la foto.
@@ -129,19 +129,11 @@ func _run_street(main: Node, player: Player) -> void:
 		await _shot("ventana_%s" % kind)
 		actor.queue_free()
 		life._actors.erase(actor)
-	# Ventanas sur de las demás salas: el jardín trasero.
+	# Ventana sur: el jardín trasero.
 	var shop := main.get_node("Shop") as Shop
-	for room in shop.rooms:
-		if room.index == 0:
-			continue
-		room.visible = true
-		player.teleport(room.to_global(Vector3(0.0, 0.0, 1.3)))
-		await get_tree().physics_frame
-		await get_tree().physics_frame
-		player.look_at_point(room.to_global(Vector3(0.0, 1.55, 6.0)))
-		for i in 8:
-			await get_tree().process_frame
-		await _shot("ventana_sur_sala%d" % (room.index + 1))
+	for x in shop.room.shell.south_windows:
+		await _look_from(player, shop.room, Vector3(x, 0.0, 2.8), Vector3(x, 1.55, 10.0))
+		await _shot("ventana_sur")
 	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
 
 
@@ -157,9 +149,10 @@ func _run() -> void:
 		get_tree().quit()
 		return
 	if _book:
-		var room: RoomController = shop.rooms[0]
-		room._restore_treasure(room.treasure_catalog.items[0].id)
-		# Para ver el libro con contenido: media sala 1 colocada, la sala 2 abierta y un tesoro en cada una.
+		var room: RoomController = shop.room
+		room._restore_treasure(room._treasure_list[0].id)
+		room._restore_treasure(room._treasure_list[3].id)
+		# Para ver el libro con contenido: 100 objetos colocados y dos tesoros hallados.
 		var placed_n := 0
 		for it in room.get_items():
 			var found := room.find_row(it.data.sort_key)
@@ -178,10 +171,6 @@ func _run() -> void:
 			it.global_transform = unit.slot_transform(row, slot, it)
 			Events.item_placed.emit(it, unit)
 			placed_n += 1
-		for k in range(1, shop.rooms.size()):
-			shop.unlock_room(k, false)
-		var room2: RoomController = shop.rooms[1]
-		room2._restore_treasure(room2.treasure_catalog.items[1].id)
 		var menu := main.get_node("PauseMenu")
 		menu.open()
 		menu._show_book(true)
@@ -205,22 +194,11 @@ func _run() -> void:
 		get_tree().quit()
 		return
 	var tag := "lleno" if _filled else "caos"
-	for room in shop.rooms:
-		if _only_room >= 0 and room.index != _only_room:
-			continue
-		if _filled:
-			_fill_room(room)
-		# Para fotografiar, todas las salas visibles y puertas abiertas.
-		room.visible = true
-		if room.shell.east_door != null:
-			room.shell.east_door.unlock(false)
-		for pose: Dictionary in POSES:
-			player.teleport(room.to_global(pose["pos"]))
-			await get_tree().physics_frame
-			await get_tree().physics_frame
-			player.look_at_point(room.to_global(pose["look"]))
-			for i in 8:
-				await get_tree().process_frame
-			await _shot("sala%d_%s_%s" % [room.index + 1, pose["name"], tag])
+	var room := shop.room
+	if _filled:
+		_fill_room(room)
+	for pose: Dictionary in POSES:
+		await _look_from(player, room, pose["pos"], pose["look"])
+		await _shot("%s_%s" % [pose["name"], tag])
 	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
 	get_tree().quit()

@@ -13,6 +13,9 @@ const LAYER_ITEMS := 2
 const LAYER_PICK := 32
 const MASK_FLIGHT := 1 | 2
 const MAX_FLIGHT_TIME := 12.0
+## Por debajo de este radio el objeto es "pequeño": sin sombra y con distancia de dibujado.
+const SMALL_RADIUS := 0.035
+const SMALL_DRAW_DISTANCE := 11.0
 
 var data: ItemData
 var state: State = State.LOOSE
@@ -76,6 +79,13 @@ func setup(item_data: ItemData, size_jitter: float = 1.0, variant: int = 0) -> v
 		_base_scale = Vector3.ONE * (item_data.radius * size_jitter / BASE_RADIUS)
 	_mesh.scale = _base_scale
 	_apply_materials()
+	# Cientos de objetos en una sola sala: las piezas pequeñas no proyectan sombra (no se notaría) y
+	# dejan de dibujarse de lejos, con fundido (a esa distancia ocupan uno o dos píxeles).
+	if radius < SMALL_RADIUS:
+		_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_mesh.visibility_range_end = SMALL_DRAW_DISTANCE
+		_mesh.visibility_range_end_margin = 1.0
+		_mesh.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 
 	_shape.shape = _make_shape(item_data, size_jitter)
 	_shape.rotation_degrees = item_data.shape_rotation_deg
@@ -258,12 +268,12 @@ func _settle() -> void:
 	Events.item_landed.emit(self)
 
 
-## ¿Ha salido por una pared (norte/sur o el fondo oeste)? No debería pasar nunca; es la red de seguridad.
+## ¿Ha salido por alguna pared? No debería pasar nunca; es la red de seguridad.
 func _left_the_building(p: Vector3) -> bool:
-	if room == null:
+	if room == null or room.shell == null:
 		return false
 	var local := room.to_local(p)
-	return absf(local.z) > 3.0 or p.x < -3.5
+	return absf(local.x) > room.shell.room_w * 0.5 + 0.3 or absf(local.z) > room.shell.room_d * 0.5 + 0.3
 
 
 ## Red de seguridad: si se cae del mundo vuelve al suelo de la sala.

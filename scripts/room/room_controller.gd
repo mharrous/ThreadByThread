@@ -1,56 +1,73 @@
 class_name RoomController
 extends Node3D
-## Lógica de una sala: reparte los tipos de objeto entre sus contenedores, genera los
-## objetos desordenados (en montones por el suelo y sobre las mesas) y lleva la cuenta de
-## progreso (global y por colección). También captura y restaura su estado para guardar.
+## Lógica de la mercería (una sola sala con varias secciones): reparte los tipos de objeto de cada
+## sección entre sus muebles, genera todos los objetos desordenados (en montones por el suelo y sobre
+## las mesas, mezclando familias) y lleva la cuenta de progreso (global, por sección y por colección).
+## También captura y restaura su estado para guardar.
 
-@export var room_id: StringName = &"yarn"
-@export var display_name := "Sala de ovillos"
-@export var objective := "Objetivo: ordena los ovillos por color"
-@export var catalog: ItemCatalog
+@export var display_name := "Thread by Thread · Mercería"
+@export var objective := "Objetivo: cada cosa a su sitio"
 ## Escena por defecto de los objetos (la de cada ItemData la sustituye si la tiene).
 @export var item_scene: PackedScene
-## Tesoros escondidos de la sala (opcionales: no cuentan para ordenarla).
-@export var treasure_catalog: ItemCatalog
 ## > 0: cada tipo genera exactamente este número de objetos (pruebas). 0 = el `spawn_count` de cada tipo.
 @export var count_override := 0
 @export var rng_seed := 4242
 
-var index := 0
 var total_items := 0
 var placed_items := 0
 var is_completed := false
-## Los contenedores y objetos de una sala bloqueada existen pero no se pueden alcanzar.
-var is_unlocked := true
+var sections: Array[ShopSection] = []
 
-const CLUSTER_COUNT := 8
-const ROOM_FALLBACK_Z := 1.9
+const CLUSTER_COUNT := 14
+const FALLBACK_Z := 1.9
+## Espacio libre que se deja delante de cada mueble de pared al repartir objetos (para poder llegar a él).
+const UNIT_FRONT_CLEARANCE := 0.75
+## Celda de la rejilla espacial del reparto: cada comprobación de hueco libre mira solo las celdas vecinas.
+const GRID_CELL := 0.25
 
 var shell: RoomShell
 var _clusters: Array[Vector2] = []
-var _taken: Array[Vector4] = []        # x, y, z, radio de lo ya colocado en el reparto
+var _grid: Dictionary = {}                     # Vector2i -> Array[Vector4] (x, y, z, radio) de lo ya repartido
+var _grid_max_r := 0.0
 var _items: Array[PickableItem] = []
-var _treasures: Array[PickableItem] = []      # tesoros aún sin encontrar
-var _found: Dictionary = {}                   # id del tesoro -> true
-var _displays: Dictionary = {}                # id del tesoro -> copia expuesta en la repisa
+var _treasure_list: Array[ItemData] = []       # tesoros de todas las secciones, en orden (índice = sitio y repisa)
+var _treasures: Array[PickableItem] = []       # tesoros aún sin encontrar
+var _found: Dictionary = {}                    # id del tesoro -> true
+var _displays: Dictionary = {}                 # id del tesoro -> copia expuesta en la repisa
 var _units: Array[StorageUnit] = []
+var _section_by_key: Dictionary = {}           # sort_key -> ShopSection
+var _scene_by_id: Dictionary = {}              # id de ItemData -> escena de su sección
 var _total_by_key: Dictionary = {}
 var _placed_by_key: Dictionary = {}
 
 @onready var _items_root: Node3D = $Items
-@onready var _units_root: Node3D = $Units
+@onready var _sections_root: Node3D = $Sections
 
 
 func _ready() -> void:
 	shell = $Shell as RoomShell
-	for child in _units_root.get_children():
-		if child is StorageUnit:
-			_units.append(child)
+	for child in _sections_root.get_children():
+		if child is ShopSection:
+			var s := child as ShopSection
+			s.room = self
+			sections.append(s)
+			_units.append_array(s.get_units())
+			for data in s.catalog.items:
+				_section_by_key[data.sort_key] = s
+				if s.item_scene != null:
+					_scene_by_id[data.id] = s.item_scene
+			if s.treasure_catalog != null:
+				_treasure_list.append_array(s.treasure_catalog.items)
+				for data in s.treasure_catalog.items:
+					if s.item_scene != null:
+						_scene_by_id[data.id] = s.item_scene
+	_block_unit_fronts()
 	_assign_rows()
 	_spawn_items()
 	_spawn_treasures()
 	Events.item_placed.connect(_on_item_placed)
 	Events.item_removed.connect(_on_item_removed)
+	Events.item_picked.connect(_on_item_picked)
 	Events.treasure_found.connect(_on_treasure_found)
 	_emit_progress.call_deferred()
 
@@ -72,24 +89,75 @@ func find_row(sort_key: StringName) -> Dictionary:
 	return {}
 
 
-## Punto de entrada de la sala (donde aparece el jugador al llegar).
+func section_for_key(sort_key: StringName) -> ShopSection:
+	return _section_by_key.get(sort_key) as ShopSection
+
+
+func section_by_id(id: StringName) -> ShopSection:
+	for s in sections:
+		if s.section_id == id:
+			return s
+	return null
+
+
+## Sección cuyos muebles quedan más cerca de `world_pos` (la que tiene delante el jugador).
+func section_near(world_pos: Vector3) -> ShopSection:
+	var best: ShopSection = null
+	var best_d := INF
+	for s in sections:
+		var d := s.distance_to(world_pos)
+		if d < best_d:
+			best_d = d
+			best = s
+	return best
+
+
+## Colocados y total de un tipo de objeto (x = colocados, y = total).
+func collection_count(sort_key: StringName) -> Vector2i:
+	return Vector2i(int(_placed_by_key.get(sort_key, 0)), int(_total_by_key.get(sort_key, 0)))
+
+
+## Punto donde aparece el jugador: junto a la pared sur, mirando a la sala.
 func entry_point() -> Vector3:
-	return global_position + Vector3(0.0, 0.0, 1.9)
+	return global_position + Vector3(0.0, 0.0, shell.room_d * 0.5 - 1.6)
 
 
 # --- Preparación ---------------------------------------------------------
 
-## Reparte los tipos del catálogo entre los contenedores, en orden: cada contenedor
-## se queda con tantos tipos como filas tenga.
+## Reparte los tipos de cada sección entre sus muebles, en orden: cada mueble se queda con tantos
+## tipos como filas tenga.
 func _assign_rows() -> void:
-	var idx := 0
+	for s in sections:
+		var idx := 0
+		for unit in s.get_units():
+			var slice: Array = []
+			for r in unit.rows:
+				if idx < s.catalog.items.size():
+					slice.append(s.catalog.items[idx])
+					idx += 1
+			unit.assign_rows(slice)
+		if idx < s.catalog.items.size():
+			push_warning("La sección %s tiene %d tipos sin fila" % [s.section_id, s.catalog.items.size() - idx])
+
+
+## Delante de cada mueble de pared no se reparten objetos: así siempre se puede llegar a colocar.
+func _block_unit_fronts() -> void:
 	for unit in _units:
-		var slice: Array = []
-		for r in unit.rows:
-			if idx < catalog.items.size():
-				slice.append(catalog.items[idx])
-				idx += 1
-		unit.assign_rows(slice)
+		var size := Vector2.ZERO
+		if unit is ShelfUnit:
+			size = Vector2((unit as ShelfUnit).unit_width, (unit as ShelfUnit).depth)
+		elif unit is PegBoard:
+			size = Vector2((unit as PegBoard).board_width, 0.12)
+		else:
+			continue
+		var corners: Array[Vector3] = []
+		for cx in [-size.x * 0.5, size.x * 0.5]:
+			for cz in [0.0, size.y + UNIT_FRONT_CLEARANCE]:
+				corners.append(to_local(unit.to_global(Vector3(cx, 0.0, cz))))
+		var r := Rect2(Vector2(corners[0].x, corners[0].z), Vector2.ZERO)
+		for c in corners:
+			r = r.expand(Vector2(c.x, c.z))
+		shell.blocked_rects.append(r)
 
 
 func _count_for(data: ItemData) -> int:
@@ -100,12 +168,18 @@ func _spawn_items() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed
 	var list: Array[ItemData] = []
-	for data in catalog.items:
-		var n := _count_for(data)
-		_total_by_key[data.sort_key] = n
-		_placed_by_key[data.sort_key] = 0
-		for i in n:
-			list.append(data)
+	for s in sections:
+		var section_total := 0
+		for data in s.catalog.items:
+			var n := _count_for(data)
+			_total_by_key[data.sort_key] = n
+			_placed_by_key[data.sort_key] = 0
+			section_total += n
+			for i in n:
+				list.append(data)
+		s.total_items = section_total
+		s.placed_items = 0
+	# Todas las familias mezcladas: el caos es parte del juego.
 	for i in range(list.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
 		var tmp := list[i]
@@ -120,10 +194,11 @@ func _spawn_items() -> void:
 		item.basis = _random_basis(rng, data)
 		_items.append(item)
 	total_items = _items.size()
+	_grid.clear()
 
 
 func _instantiate_item(data: ItemData, jitter: float, variant: int) -> PickableItem:
-	var scene := data.scene if data.scene != null else item_scene
+	var scene: PackedScene = data.scene if data.scene != null else _scene_by_id.get(data.id, item_scene)
 	var item := scene.instantiate() as PickableItem
 	_items_root.add_child(item)
 	item.room = self
@@ -148,7 +223,7 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 	var r := item.radius
 	var h := item.half_height
 	var tables := shell.tables
-	# Primero con la separación normal entre objetos; si la sala está muy llena (telas largas,
+	# Primero con la separación normal entre objetos; si el suelo está muy lleno (telas largas,
 	# muchas piezas), se aprieta un poco. Así nunca queda nada inalcanzable.
 	for spacing in [1.15, 0.9, 0.7]:
 		for attempt in 160:
@@ -157,7 +232,7 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 				ItemData.SpawnZone.TABLE:
 					want_table = not tables.is_empty()
 				ItemData.SpawnZone.ANY:
-					want_table = not tables.is_empty() and rng.randf() < 0.25
+					want_table = not tables.is_empty() and rng.randf() < 0.2
 			var p: Vector3
 			if want_table:
 				var t: Dictionary = tables[rng.randi() % tables.size()]
@@ -169,13 +244,13 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 					rng.randf_range(rect.position.y + m, rect.end.y - m))
 			else:
 				var c := _clusters[rng.randi() % _clusters.size()]
-				var spread := 0.35 + attempt * 0.005   # si el montón está lleno, se ensancha
+				var spread := 0.4 + attempt * 0.006   # si el montón está lleno, se ensancha
 				var flat := Vector2(c.x + rng.randfn(0.0, spread), c.y + rng.randfn(0.0, spread))
 				if not shell.floor_bounds.has_point(flat) or shell.is_blocked(flat, r):
 					continue
 				p = Vector3(flat.x, h, flat.y)
 			if _is_free(p, r, spacing):
-				_taken.append(Vector4(p.x, p.y, p.z, r))
+				_take(p, r)
 				return p
 	# Último recurso: cualquier punto del suelo que no esté dentro de un mueble (nunca bajo una mesa).
 	var b := shell.floor_bounds
@@ -183,26 +258,56 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 		var flat := Vector2(rng.randf_range(b.position.x, b.end.x), rng.randf_range(b.position.y, b.end.y))
 		if not shell.is_blocked(flat, r):
 			var q := Vector3(flat.x, h, flat.y)
-			_taken.append(Vector4(q.x, q.y, q.z, r))
+			_take(q, r)
 			return q
-	push_warning("Sala %s: no hay sitio libre para %s" % [room_id, data.id])
-	return Vector3(0.0, h, ROOM_FALLBACK_Z)
+	push_warning("Sin sitio libre para %s" % data.id)
+	return Vector3(0.0, h, FALLBACK_Z)
 
 
+func _cell_of(x: float, z: float) -> Vector2i:
+	return Vector2i(floori(x / GRID_CELL), floori(z / GRID_CELL))
+
+
+func _take(p: Vector3, radius: float) -> void:
+	var key := _cell_of(p.x, p.z)
+	if not _grid.has(key):
+		_grid[key] = []
+	(_grid[key] as Array).append(Vector4(p.x, p.y, p.z, radius))
+	_grid_max_r = maxf(_grid_max_r, radius)
+
+
+## ¿Cabe un objeto de radio `radius` en `p`? Solo mira las celdas a las que puede llegar un vecino.
 func _is_free(p: Vector3, radius: float, spacing: float = 1.15) -> bool:
-	for q in _taken:
-		var min_d := (radius + q.w) * spacing
-		if Vector3(q.x, q.y, q.z).distance_squared_to(p) < min_d * min_d:
-			return false
+	var reach := (radius + _grid_max_r) * spacing
+	var c0 := _cell_of(p.x - reach, p.z - reach)
+	var c1 := _cell_of(p.x + reach, p.z + reach)
+	for cx in range(c0.x, c1.x + 1):
+		for cz in range(c0.y, c1.y + 1):
+			var cell: Variant = _grid.get(Vector2i(cx, cz))
+			if cell == null:
+				continue
+			for q: Vector4 in cell:
+				var min_d := (radius + q.w) * spacing
+				if Vector3(q.x, q.y, q.z).distance_squared_to(p) < min_d * min_d:
+					return false
 	return true
+
 
 func _make_clusters(rng: RandomNumberGenerator) -> void:
 	var b := shell.floor_bounds
 	var tries := 0
-	while _clusters.size() < CLUSTER_COUNT and tries < 300:
+	while _clusters.size() < CLUSTER_COUNT and tries < 600:
 		tries += 1
-		var c := Vector2(rng.randf_range(b.position.x + 0.4, b.end.x - 0.4), rng.randf_range(b.position.y + 0.4, b.end.y - 0.4))
-		if not shell.is_blocked(c, 0.3):
+		var c := Vector2(rng.randf_range(b.position.x + 0.5, b.end.x - 0.5), rng.randf_range(b.position.y + 0.5, b.end.y - 0.5))
+		if shell.is_blocked(c, 0.3):
+			continue
+		# Montones separados entre sí: el desorden ocupa toda la sala, no un rincón.
+		var far := true
+		for o in _clusters:
+			if o.distance_to(c) < 1.6:
+				far = false
+				break
+		if far:
 			_clusters.append(c)
 	if _clusters.is_empty():
 		_clusters.append(Vector2(0.0, 0.8))
@@ -212,6 +317,11 @@ func _make_clusters(rng: RandomNumberGenerator) -> void:
 
 func _emit_progress() -> void:
 	Events.room_progress_changed.emit(self, placed_items, total_items)
+	Events.progress_changed.emit(placed_items, total_items)
+
+
+func _emit_section_progress(s: ShopSection) -> void:
+	Events.section_progress_changed.emit(s, s.placed_items, s.total_items)
 
 
 func _on_item_placed(item: PickableItem, _unit: StorageUnit) -> void:
@@ -220,12 +330,30 @@ func _on_item_placed(item: PickableItem, _unit: StorageUnit) -> void:
 	placed_items += 1
 	var key := item.data.sort_key
 	_placed_by_key[key] = int(_placed_by_key.get(key, 0)) + 1
+	var s := section_for_key(key)
+	if s != null:
+		s.placed_items += 1
+		_emit_section_progress(s)
 	_emit_progress()
+	# Solo suena un premio por colocación: el final de la mercería, el de la sección o el de la colección.
 	if placed_items == total_items and not is_completed:
 		is_completed = true
+		if s != null and not s.is_completed:
+			_complete_section(s)
 		_announce_completion()
+	elif s != null and s.placed_items == s.total_items and not s.is_completed:
+		_complete_section(s)
 	elif _placed_by_key[key] == _total_by_key.get(key, -1):
 		Events.collection_completed.emit(key)
+
+
+## Pista al coger algo: su fila destino da un pulso de luz (en una sala grande ayuda a encontrarla).
+func _on_item_picked(item: PickableItem) -> void:
+	if item.room != self or item.data == null or item.data.treasure:
+		return
+	var found := find_row(item.data.sort_key)
+	if not found.is_empty():
+		(found["unit"] as StorageUnit).pulse_row(found["row"])
 
 
 func _on_item_removed(item: PickableItem, _unit: StorageUnit) -> void:
@@ -234,25 +362,41 @@ func _on_item_removed(item: PickableItem, _unit: StorageUnit) -> void:
 	placed_items = maxi(0, placed_items - 1)
 	var key := item.data.sort_key
 	_placed_by_key[key] = maxi(0, int(_placed_by_key.get(key, 0)) - 1)
+	var s := section_for_key(key)
+	if s != null:
+		s.placed_items = maxi(0, s.placed_items - 1)
+		_emit_section_progress(s)
 	_emit_progress()
 
 
-func _announce_completion() -> void:
+## Una sección completa se queda completa (sus premios no se retiran si luego se saca un objeto).
+func _complete_section(s: ShopSection) -> void:
+	s.is_completed = true
+	Events.section_completed.emit(s)
 	await get_tree().create_timer(0.7, false).timeout
+	s.show_completed(true)
+	Events.decor_unlocked.emit(self, s.section_id)
+
+
+func _announce_completion() -> void:
+	await get_tree().create_timer(1.6, false).timeout
 	Events.room_completed.emit(self)
-	# Premio visual: la guirnalda de banderines aparece cuando ya se ha leído el cartel de sala ordenada.
+	# Premio final: guirnaldas de pared a pared, cartel de ABIERTO y la tienda un poco más luminosa,
+	# cuando ya se ha leído el cartel de mercería ordenada.
 	await get_tree().create_timer(1.6, false).timeout
 	shell.unlock_decor(&"bunting", true)
+	shell.unlock_decor(&"open_sign", true)
+	shell.brighten_lamps(true)
 	Events.decor_unlocked.emit(self, &"bunting")
 
 
-# --- Tesoros y colecciones -------------------------------------------------
-
-## Coloca de golpe todos los objetos de la sala en su sitio, como si el jugador lo hubiera hecho (los
-## eventos son los mismos: contadores, colecciones, final de sala, puerta, guirnalda y guardado).
-func solve_instantly() -> void:
+## Coloca de golpe los objetos de una sección (o de toda la mercería con `section` nulo), como si el
+## jugador lo hubiera hecho: los eventos son los mismos (contadores, colecciones, premios y guardado).
+func solve_instantly(section: ShopSection = null) -> void:
 	for it in _items:
 		if it.state == PickableItem.State.PLACED:
+			continue
+		if section != null and section_for_key(it.data.sort_key) != section:
 			continue
 		if it.state == PickableItem.State.THROWN:
 			it.freeze = true
@@ -275,6 +419,8 @@ func solve_instantly() -> void:
 		Events.item_placed.emit(it, unit)
 
 
+# --- Tesoros ---------------------------------------------------------------
+
 ## Tesoros que se pueden apuntar ahora: los escondidos y las copias expuestas (que se examinan).
 func get_treasure_candidates() -> Array[PickableItem]:
 	var out: Array[PickableItem] = []
@@ -289,45 +435,29 @@ func get_treasure_candidates() -> Array[PickableItem]:
 
 
 func treasures_total() -> int:
-	return treasure_catalog.items.size() if treasure_catalog != null else 0
+	return _treasure_list.size()
 
 
 func treasures_found() -> int:
 	return _found.size()
 
 
-## Para el libro de colecciones: nombre, detalle y si ya se encontró cada tesoro.
-func treasure_status() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	if treasure_catalog == null:
-		return out
-	for data in treasure_catalog.items:
-		out.append({"name": data.display_name, "detail": data.detail, "found": _found.has(data.id), "data": data})
-	return out
-
-
-## Para el libro de colecciones: cada tipo de objeto con cuántos hay ya colocados.
-func collection_status() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	for data in catalog.items:
-		var total: int = _total_by_key.get(data.sort_key, 0)
-		var placed: int = _placed_by_key.get(data.sort_key, 0)
-		out.append({"label": data.sort_label, "placed": placed, "total": total, "done": total > 0 and placed == total, "data": data})
-	return out
+func is_treasure_found(id: StringName) -> bool:
+	return _found.has(id)
 
 
 func _spawn_treasures() -> void:
-	if treasure_catalog == null or shell == null:
+	if shell == null:
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed + 99
-	for i in treasure_catalog.items.size():
-		shell.set_display_slot(i, treasure_catalog.items[i].color, treasure_catalog.items[i].display_name)
-	for i in treasure_catalog.items.size():
+	for i in _treasure_list.size():
+		shell.set_display_slot(i, _treasure_list[i].color, _treasure_list[i].display_name)
+	for i in _treasure_list.size():
 		if i >= shell.treasure_spots.size():
-			push_warning("La sala %s no tiene sitio para el tesoro %d" % [room_id, i])
+			push_warning("No hay sitio para el tesoro %d" % i)
 			break
-		var item := _instantiate_item(treasure_catalog.items[i], 1.0, 0)
+		var item := _instantiate_item(_treasure_list[i], 1.0, 0)
 		item.position = shell.treasure_spots[i] + Vector3(0.0, item.half_height, 0.0)
 		item.basis = Basis(Vector3.UP, rng.randf() * TAU)
 		_treasures.append(item)
@@ -341,7 +471,7 @@ func _on_treasure_found(item: PickableItem) -> void:
 	_show_display(item.data, true)
 
 
-## Copia del tesoro sobre la repisa de la sala (solo decorativa: no se puede recoger).
+## Copia del tesoro sobre la repisa (solo decorativa: se puede examinar pero no recoger).
 func _show_display(data: ItemData, animate: bool) -> void:
 	if _displays.has(data.id) or shell == null:
 		return
@@ -349,7 +479,7 @@ func _show_display(data: ItemData, animate: bool) -> void:
 	item.is_display = true
 	item.set_pickable(not animate)
 	item.freeze = true
-	var slot := shell.display_slot(treasure_catalog.items.find(data))
+	var slot := shell.display_slot(_treasure_list.find(data))
 	item.position = slot + Vector3(0.0, item.half_height, 0.0)
 	item.rotation.y = 0.5
 	_displays[data.id] = item
@@ -364,9 +494,9 @@ func _show_display(data: ItemData, animate: bool) -> void:
 
 ## Marca un tesoro como encontrado al cargar una partida: desaparece del sitio donde estaba y se expone.
 func _restore_treasure(id: StringName) -> void:
-	if treasure_catalog == null or _found.has(id):
+	if _found.has(id):
 		return
-	for data in treasure_catalog.items:
+	for data in _treasure_list:
 		if data.id != id:
 			continue
 		_found[id] = true
@@ -379,15 +509,18 @@ func _restore_treasure(id: StringName) -> void:
 
 # --- Guardado ------------------------------------------------------------
 
-## Firma del contenido de la sala: si cambia el catálogo o los recuentos, un guardado viejo no vale.
+## Firma del contenido: si cambian las secciones, sus catálogos o los recuentos, un guardado viejo no vale.
 func signature() -> String:
 	var parts: PackedStringArray = []
-	for data in catalog.items:
-		parts.append("%s:%d" % [data.id, _count_for(data)])
+	for s in sections:
+		parts.append(String(s.section_id))
+		for data in s.catalog.items:
+			parts.append("%s:%d" % [data.id, _count_for(data)])
 	return "%d|%s" % [rng_seed, ",".join(parts)]
 
 
-## Estado de la sala para guardar: qué objetos están colocados (y dónde) y dónde están los sueltos.
+## Estado para guardar: qué objetos están colocados (y dónde), dónde están los sueltos y qué tesoros
+## y secciones se han completado.
 func capture_state() -> Dictionary:
 	var items_state: Array = []
 	for it in _items:
@@ -405,7 +538,11 @@ func capture_state() -> Dictionary:
 	var found_ids: Array = []
 	for id in _found:
 		found_ids.append(String(id))
-	return {"sig": signature(), "completed": is_completed, "items": items_state, "treasures": found_ids}
+	var done: Array = []
+	for s in sections:
+		if s.is_completed:
+			done.append(String(s.section_id))
+	return {"sig": signature(), "completed": is_completed, "sections": done, "items": items_state, "treasures": found_ids}
 
 
 ## Pose con la que se guarda un objeto que no está colocado. Si está en la mano o en el aire (se guarda
@@ -429,7 +566,7 @@ func _resting_transform(it: PickableItem) -> Transform3D:
 	return Transform3D(Basis(Vector3.UP, yaw), Vector3(from.x, ground_y + it.half_height, from.z))
 
 
-## Restaura el estado guardado. Devuelve false (sin tocar nada) si no encaja con esta sala.
+## Restaura el estado guardado. Devuelve false (sin tocar nada) si no encaja con esta mercería.
 func apply_state(state: Dictionary) -> bool:
 	if state.get("sig", "") != signature():
 		return false
@@ -439,18 +576,22 @@ func apply_state(state: Dictionary) -> bool:
 	placed_items = 0
 	for key in _placed_by_key.keys():
 		_placed_by_key[key] = 0
+	for s in sections:
+		s.placed_items = 0
 	for i in _items.size():
 		var it := _items[i]
-		var s: Dictionary = saved[i]
-		if s.get("s", "l") == "p":
-			var unit_i := int(s.get("u", -1))
+		var st: Dictionary = saved[i]
+		if st.get("s", "l") == "p":
+			var unit_i := int(st.get("u", -1))
 			if unit_i < 0 or unit_i >= _units.size():
 				continue
 			var unit := _units[unit_i]
-			var row := int(s["r"])
-			var slot := int(s["k"])
+			var row := int(st["r"])
+			var slot := int(st["k"])
 			# Un guardado que no encaja con la disposicion actual de la unidad (o editado a mano) no debe romper la carga.
 			if row < 0 or row >= unit.rows or slot < 0 or slot >= unit.slots_per_row or not unit.has_room(row, slot):
+				continue
+			if unit.row_data(row) == null or unit.row_data(row).sort_key != it.data.sort_key:
 				continue
 			unit.reserve(row, slot, it)
 			it.container = unit
@@ -460,16 +601,26 @@ func apply_state(state: Dictionary) -> bool:
 			it.global_transform = unit.slot_transform(row, slot, it)
 			placed_items += 1
 			_placed_by_key[it.data.sort_key] = int(_placed_by_key[it.data.sort_key]) + 1
+			var sec := section_for_key(it.data.sort_key)
+			if sec != null:
+				sec.placed_items += 1
 		else:
-			var p: Array = s["p"]
-			var q: Array = s["q"]
+			var p: Array = st["p"]
+			var q: Array = st["q"]
 			it.global_transform = Transform3D(
 				Basis(Quaternion(float(q[0]), float(q[1]), float(q[2]), float(q[3])).normalized()),
 				to_global(Vector3(float(p[0]), float(p[1]), float(p[2]))))
+	var done: Array = state.get("sections", [])
+	for s in sections:
+		if done.has(String(s.section_id)) or (s.total_items > 0 and s.placed_items == s.total_items):
+			s.show_completed(false)
+		_emit_section_progress(s)
 	is_completed = bool(state.get("completed", false)) or placed_items == total_items
 	for id in state.get("treasures", []):
 		_restore_treasure(StringName(id))
 	if is_completed:
 		shell.unlock_decor(&"bunting", false)
+		shell.unlock_decor(&"open_sign", false)
+		shell.brighten_lamps(false)
 	_emit_progress()
 	return true

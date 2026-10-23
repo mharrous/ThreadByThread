@@ -1,0 +1,147 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/room/room_controller.gd" id="1_room"]
+[ext_resource type="Script" path="res://scripts/room/room_shell_shop.gd" id="2_shell"]
+[ext_resource type="Script" path="res://scripts/room/shop_section.gd" id="3_section"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/shelf_unit.tscn" id="4_shelf"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/tray_unit.tscn" id="5_tray"]
+[ext_resource type="PackedScene" path="res://scenes/shelves/peg_board.tscn" id="6_peg"]
+[ext_resource type="PackedScene" path="res://scenes/items/item.tscn" id="7_item"]
+[ext_resource type="PackedScene" path="res://scenes/items/yarn_ball.tscn" id="8_ball"]
+[ext_resource type="Resource" path="res://data/catalog_yarn.tres" id="9_cat_yarn"]
+[ext_resource type="Resource" path="res://data/catalog_buttons_spools.tres" id="10_cat_buttons"]
+[ext_resource type="Resource" path="res://data/catalog_fabrics_ribbons.tres" id="11_cat_fabrics"]
+[ext_resource type="Resource" path="res://data/catalog_store.tres" id="12_cat_store"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_yarn.tres" id="13_tr_yarn"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_buttons.tres" id="14_tr_buttons"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_fabrics.tres" id="15_tr_fabrics"]
+[ext_resource type="Resource" path="res://data/treasures/catalog_store.tres" id="16_tr_store"]
+
+[node name="ShopFloor" type="Node3D"]
+script = ExtResource("1_room")
+item_scene = ExtResource("7_item")
+
+[node name="Shell" type="Node3D" parent="."]
+script = ExtResource("2_shell")
+west_windows = Array[float]([0.0])
+south_windows = Array[float]([2.4])
+sign_y = 2.5
+lamp_positions = Array[Vector3]([Vector3(-3, 2.5, -1), Vector3(3, 2.5, -1), Vector3(-3, 2.5, 2.4), Vector3(3, 2.5, 2.4)])
+display_x = 4.6
+display_count = 8
+
+[node name="Sections" type="Node3D" parent="."]
+
+[node name="Yarn" type="Node3D" parent="Sections"]
+script = ExtResource("3_section")
+section_id = &"yarn"
+display_name = "Lanas"
+catalog = ExtResource("9_cat_yarn")
+treasure_catalog = ExtResource("13_tr_yarn")
+item_scene = ExtResource("8_ball")
+accent = Color(0.61, 0.75, 0.68, 1)
+sign_subtitle = "ovillos por color"
+sign_position = Vector3(-2.62, 2.35, -4.48)
+bunting_from = Vector3(-4.75, 3, -4)
+bunting_to = Vector3(-0.5, 3, -4)
+
+[node name="ShelfLeft" parent="Sections/Yarn" instance=ExtResource("4_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.7, 0, -4.5)
+
+[node name="ShelfRight" parent="Sections/Yarn" instance=ExtResource("4_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.55, 0, -4.5)
+
+[node name="Buttons" type="Node3D" parent="Sections"]
+script = ExtResource("3_section")
+section_id = &"buttons"
+display_name = "Botones y carretes"
+catalog = ExtResource("10_cat_buttons")
+treasure_catalog = ExtResource("14_tr_buttons")
+accent = Color(0.62, 0.74, 0.86, 1)
+sign_subtitle = "hilos · botones"
+sign_position = Vector3(2.62, 2.35, -4.48)
+bunting_from = Vector3(0.5, 3, -4)
+bunting_to = Vector3(4.75, 3, -4)
+
+[node name="SpoolShelfA" parent="Sections/Buttons" instance=ExtResource("4_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.55, 0, -4.5)
+slots_per_row = 24
+slot_spacing = 0.08
+marker_radius = 0.033
+
+[node name="SpoolShelfB" parent="Sections/Buttons" instance=ExtResource("4_shelf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.7, 0, -4.5)
+slots_per_row = 24
+slot_spacing = 0.08
+marker_radius = 0.033
+
+[node name="TrayA" parent="Sections/Buttons" instance=ExtResource("5_tray")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.76, -1.7)
+
+[node name="TrayB" parent="Sections/Buttons" instance=ExtResource("5_tray")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.8, 0.76, -1.7)
+
+[node name="Fabrics" type="Node3D" parent="Sections"]
+script = ExtResource("3_section")
+section_id = &"fabrics"
+display_name = "Telas y cintas"
+catalog = ExtResource("11_cat_fabrics")
+treasure_catalog = ExtResource("15_tr_fabrics")
+accent = Color(0.84, 0.62, 0.66, 1)
+sign_subtitle = "rollos · estampados · lazos"
+sign_position = Vector3(-3.1, 2.35, 4.48)
+sign_yaw_deg = 180.0
+bunting_from = Vector3(-5.3, 3, 4)
+bunting_to = Vector3(1.25, 3, 4)
+
+[node name="BoltRackA" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -4.2, 0, 4.5)
+depth = 0.5
+marker_radius = 0.05
+
+[node name="BoltRackB" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -2.05, 0, 4.5)
+depth = 0.5
+marker_radius = 0.05
+
+[node name="FoldedRack" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -6, 0, 2.6)
+depth = 0.5
+slots_per_row = 5
+slot_spacing = 0.38
+marker_radius = 0.11
+stack_capacity = 3
+
+[node name="RibbonShelf" parent="Sections/Fabrics" instance=ExtResource("4_shelf")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.15, 0, 4.5)
+slots_per_row = 20
+slot_spacing = 0.085
+marker_radius = 0.034
+
+[node name="Store" type="Node3D" parent="Sections"]
+script = ExtResource("3_section")
+section_id = &"store"
+display_name = "Sastrería"
+catalog = ExtResource("12_cat_store")
+treasure_catalog = ExtResource("16_tr_store")
+accent = Color(0.55, 0.4, 0.3, 1)
+sign_subtitle = "tijeras · metros · dedales"
+sign_position = Vector3(5.975, 2.6, -0.7)
+sign_yaw_deg = -90.0
+bunting_from = Vector3(5.6, 3, -2.9)
+bunting_to = Vector3(5.6, 3, 1.5)
+
+[node name="PegBoard" parent="Sections/Store" instance=ExtResource("6_peg")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 6, 0, -1.9)
+
+[node name="TrayStore" parent="Sections/Store" instance=ExtResource("5_tray")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.76, 1.4)
+
+[node name="StoreShelf" parent="Sections/Store" instance=ExtResource("4_shelf")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 6, 0, 0.5)
+depth = 0.4
+slots_per_row = 5
+slot_spacing = 0.38
+marker_radius = 0.06
+
+[node name="Items" type="Node3D" parent="."]

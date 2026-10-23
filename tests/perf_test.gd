@@ -6,9 +6,11 @@ extends Node
 const SAMPLE_FRAMES := 240
 
 const VIEWS := [
-	{"name": "entrada", "pos": Vector3(0, 0, 1.9), "look": Vector3(0, 1.1, -2.5)},
-	{"name": "estanterías", "pos": Vector3(-0.3, 0, -0.7), "look": Vector3(-1.2, 1.0, -2.3)},
-	{"name": "suelo", "pos": Vector3(0.5, 0, 0.5), "look": Vector3(-1.5, 0.0, 1.2)},
+	{"name": "entrada (toda la sala)", "pos": Vector3(0, 0, 2.9), "look": Vector3(0, 1.0, -4.5)},
+	{"name": "centro hacia el norte", "pos": Vector3(0, 0, 0.3), "look": Vector3(-1.5, 1.0, -4.5)},
+	{"name": "esquina sureste (peor caso)", "pos": Vector3(4.6, 0, 2.6), "look": Vector3(-5.5, 0.6, -3.5)},
+	{"name": "suelo con montones", "pos": Vector3(0.5, 0, 0.5), "look": Vector3(-1.5, 0.0, 1.8)},
+	{"name": "ventana a la calle", "pos": Vector3(-4.0, 0, 0.0), "look": Vector3(-12.0, 1.2, 0.0)},
 ]
 
 
@@ -40,32 +42,17 @@ func _run() -> void:
 		await get_tree().process_frame
 	var player: Player = main.get_node("Player")
 	var shop: Shop = main.get_node("Shop")
-	var objects := 0
-	for r in shop.rooms:
-		objects += r.total_items
-	print("== Rendimiento · %d objetos en %d salas · ventana %s ==" % [objects, shop.rooms.size(), str(get_window().size)])
-	for room in shop.rooms:
-		for v: Dictionary in VIEWS:
-			player.teleport(room.to_global(v["pos"]))
-			player.look_at_point(room.to_global(v["look"]))
-			for i in 25:
-				await get_tree().process_frame
-			await _measure("sala %d · %s" % [room.index + 1, v["name"]])
+	var room := shop.room
+	print("== Rendimiento · %d objetos en una sala · ventana %s ==" % [room.total_items, str(get_window().size)])
+	for v: Dictionary in VIEWS:
+		player.teleport(room.to_global(v["pos"]))
+		player.look_at_point(room.to_global(v["look"]))
+		for i in 25:
+			await get_tree().process_frame
+		await _measure(v["name"])
 
-	# Peor caso: todas las salas visibles a la vez.
-	for r in shop.rooms:
-		r.visible = true
-	shop.set_process(false)
-	player.teleport(shop.rooms[1].to_global(Vector3(-2.6, 0, -0.9)))
-	player.look_at_point(shop.rooms[1].to_global(Vector3(6.0, 1.2, -0.9)))
-	for i in 25:
-		await get_tree().process_frame
-	await _measure("todas visibles (pasillo)")
-
-	# 40 objetos rebotando a la vez en la sala 1.
-	shop.set_process(true)
-	var room := shop.rooms[0]
-	player.teleport(room.to_global(Vector3(0.5, 0, 1.9)))
+	# 40 objetos rebotando a la vez.
+	player.teleport(room.to_global(Vector3(0.5, 0, 2.9)))
 	player.look_at_point(room.to_global(Vector3(0, 0.3, 0.2)))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5

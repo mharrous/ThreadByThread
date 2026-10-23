@@ -4,7 +4,7 @@ extends Node
 ## anterior y, si el principal está corrupto, se recupera la copia.
 ## En pruebas automáticas (--test-mode) usa otros ficheros y empieza sin partida.
 
-const VERSION := 1
+const VERSION := 2   # 2: una sola sala con secciones (los guardados de 4 salas no se cargan)
 const PATH := "user://savegame.json"
 const TEST_PATH := "user://savegame_test.json"
 

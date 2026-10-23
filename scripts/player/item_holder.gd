@@ -274,17 +274,17 @@ func _process_empty() -> void:
 
 ## Ayuda de puntería para los tesoros (el volumen de puntería y el rayo no bastan cuando están en lo
 ## alto de una estantería, tapados por su canto): vale cualquier tesoro (escondido o ya expuesto) de la
-## sala activa que quede dentro de un cono estrecho alrededor de la mirada, a poca distancia y sin nada
+## mercería que quede dentro de un cono estrecho alrededor de la mirada, a poca distancia y sin nada
 ## en medio salvo estanterías. Se elige el que más cerca esté del centro de la mirada.
 func _treasure_in_view() -> PickableItem:
 	var shop := get_tree().get_first_node_in_group(&"shop") as Shop
-	if shop == null or shop.active_room == null:
+	if shop == null or shop.room == null:
 		return null
 	var origin := _camera.global_position
 	var forward := -_camera.global_basis.z
 	var best: PickableItem = null
 	var best_cos := TREASURE_AIM_COS
-	for t in shop.active_room.get_treasure_candidates():
+	for t in shop.room.get_treasure_candidates():
 		var to: Vector3 = t.global_position - origin
 		var dist := to.length()
 		if dist > TREASURE_REACH or dist < 0.05:

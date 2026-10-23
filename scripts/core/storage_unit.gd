@@ -15,8 +15,9 @@ const AIM_META := &"storage"
 @export var stack_capacity := 1
 @export var wrong_row_hint := "Esta fila es de otro tipo"
 
-## Sala a la que pertenece (se busca hacia arriba en el árbol).
+## Sala y sección a las que pertenece (se buscan hacia arriba en el árbol).
 var room: RoomController
+var section: ShopSection
 
 var _row_data: Array[ItemData] = []     # una entrada por fila; null si no está asignada
 var _slots: Array = []                  # [fila][hueco] -> Array[PickableItem] (la pila del hueco)
@@ -30,8 +31,10 @@ func _ready() -> void:
 			row_slots.append([])
 		_slots.append(row_slots)
 	room = _find_room()
+	section = get_parent() as ShopSection
 	_build()
 	Events.collection_completed.connect(_on_collection_completed)
+	Events.section_completed.connect(_on_section_completed)
 	Events.room_completed.connect(_on_room_completed)
 
 
@@ -225,9 +228,17 @@ func _on_collection_completed(sort_key: StringName) -> void:
 		celebrate_row(row)
 
 
+func _on_section_completed(completed: ShopSection) -> void:
+	if completed == section:
+		_celebrate_all()
+
+
 func _on_room_completed(completed_room: RoomController) -> void:
-	if completed_room != room:
-		return
+	if completed_room == room:
+		_celebrate_all()
+
+
+func _celebrate_all() -> void:
 	for r in rows:
 		pulse_row(r, r * 0.1)
 		celebrate_row(r, r * 0.1)
