@@ -154,6 +154,13 @@ func _setup_bus() -> void:
 		var m_idx := AudioServer.bus_count - 1
 		AudioServer.set_bus_name(m_idx, MUSIC_BUS)
 		AudioServer.set_bus_send(m_idx, &"Master")
+		# Sala suave: la música suena "en la tienda" (como una radio al fondo) y no pegada al oído.
+		var m_rev := AudioEffectReverb.new()
+		m_rev.room_size = 0.5
+		m_rev.damping = 0.6
+		m_rev.wet = 0.14
+		m_rev.dry = 0.9
+		AudioServer.add_bus_effect(m_idx, m_rev)
 	if AudioServer.get_bus_index(OUTDOOR_BUS) == -1:
 		AudioServer.add_bus()
 		var out_idx := AudioServer.bus_count - 1
