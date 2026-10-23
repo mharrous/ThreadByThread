@@ -55,9 +55,6 @@ func _run() -> void:
 	await _frames(20)
 	player = main.get_node("Player")
 	holder = player.get_node("ItemHolder")
-	# Todas las salas abiertas para poder pasear por ellas.
-	for i in range(1, shop.rooms.size()):
-		shop.unlock_room(i, false)
 	await _wait_audio()
 
 	for step in _steps:
@@ -101,13 +98,15 @@ func _count(kind: String, detail: String = "") -> void:
 
 
 func _random_room() -> RoomController:
-	return shop.rooms[rng.randi() % shop.rooms.size()]
+	return shop.room
 
 
 ## Mantiene una posiciÃ³n dentro de las paredes de la sala (el juego real nunca coloca al jugador fuera).
 func _inside(room: RoomController, p: Vector3) -> Vector3:
 	var local := room.to_local(p)
-	return room.to_global(Vector3(clampf(local.x, -2.7, 2.7), local.y, clampf(local.z, -2.2, 2.2)))
+	var hw := room.shell.room_w * 0.5 - 0.3
+	var hd := room.shell.room_d * 0.5 - 0.3
+	return room.to_global(Vector3(clampf(local.x, -hw, hw), local.y, clampf(local.z, -hd, hd)))
 
 
 func _random_floor_point(room: RoomController) -> Vector3:
@@ -128,7 +127,7 @@ func _random_action(step: int) -> void:
 		var room := _random_room()
 		player.teleport(_random_floor_point(room))
 		await _frames(2)
-		player.look_at_point(room.global_position + Vector3(rng.randf_range(-2.5, 2.5), rng.randf_range(0.0, 2.2), rng.randf_range(-2.5, 2.5)))
+		player.look_at_point(room.global_position + Vector3(rng.randf_range(-5.5, 5.5), rng.randf_range(0.0, 2.2), rng.randf_range(-4.0, 4.0)))
 		_count("teletransporte", str(player.global_position.snapped(Vector3.ONE * 0.1)))
 	elif r < 0.30:
 		# Mirar a un objeto suelto cercano y recogerlo.
@@ -145,7 +144,7 @@ func _random_action(step: int) -> void:
 			_count("recoger", str(player.global_position.snapped(Vector3.ONE * 0.1)))
 	elif r < 0.46 and holder.state == ItemHolder.State.HOLDING:
 		# Colocar en una estantería o bandeja al azar (el juego rechaza la fila equivocada).
-		var room := shop.active_room if shop.active_room != null else _random_room()
+		var room := _random_room()
 		var units := room.get_units()
 		if not units.is_empty():
 			var unit: StorageUnit = units[rng.randi() % units.size()]
@@ -203,7 +202,7 @@ func _random_action(step: int) -> void:
 
 
 func _random_loose_item() -> PickableItem:
-	var room := shop.active_room if (shop.active_room != null and rng.randf() < 0.7) else _random_room()
+	var room := _random_room()
 	var list := room.get_items()
 	if list.is_empty():
 		return null
@@ -219,18 +218,20 @@ func _check_invariants(step: int) -> void:
 	if holder.state == ItemHolder.State.HOLDING and (held == null or not is_instance_valid(held)):
 		_violation("estado HOLDING sin objeto sostenido")
 	var slots := {}
-	for room in shop.rooms:
+	for room: RoomController in [shop.room]:
+		var hw := room.shell.room_w * 0.5
+		var hd := room.shell.room_d * 0.5
 		var placed := 0
 		for it in room.get_items():
 			var p := it.global_position
 			if not (is_finite(p.x) and is_finite(p.y) and is_finite(p.z)):
 				_violation("posición no finita en %s" % it.data.id)
 				continue
-			# Dentro del edificio (4 salas en fila) con algo de margen; por debajo del suelo es un objeto caído al vacío.
+			# Dentro del edificio con algo de margen; por debajo del suelo es un objeto caído al vacío.
 			var local := room.to_local(p)
 			if p.y < -0.3:
 				_violation("objeto %s por debajo del suelo (y=%.2f)" % [it.data.id, p.y])
-			if absf(local.z) > 3.0 or p.x < -3.6 or p.x > room.global_position.x + 3.6 + 100.0:
+			if absf(local.x) > hw + 0.3 or absf(local.z) > hd + 0.3:
 				_violation("objeto %s fuera del recinto (%s)" % [it.data.id, str(p.snapped(Vector3.ONE * 0.1))])
 			if p.y > 3.2:
 				_violation("objeto %s por encima del techo (y=%.2f)" % [it.data.id, p.y])
@@ -251,12 +252,12 @@ func _check_invariants(step: int) -> void:
 			else:
 				_stuck_since.erase(it)
 		if placed != room.placed_items:
-			_violation("contador de sala %s (%d) distinto de los objetos colocados (%d)" % [room.room_id, room.placed_items, placed])
+			_violation("contador de la sala (%d) distinto de los objetos colocados (%d)" % [room.placed_items, placed])
 	# El jugador no sale del edificio ni cae.
 	var pp := player.global_position
 	if pp.y < -0.5 or pp.y > 1.0:
 		_violation("jugador fuera de altura razonable (y=%.2f)" % pp.y)
-	if pp.x < -3.6 or pp.x > 22.8 or absf(pp.z) > 2.9:
+	if absf(pp.x) > shop.room.shell.room_w * 0.5 + 0.2 or absf(pp.z) > shop.room.shell.room_d * 0.5 + 0.2:
 		_violation("jugador fuera del edificio (%s)" % str(pp.snapped(Vector3.ONE * 0.1)))
 
 
@@ -268,7 +269,7 @@ var _reported_escape: Dictionary = {}
 func _process(_delta: float) -> void:
 	if shop == null:
 		return
-	for room in shop.rooms:
+	for room: RoomController in [shop.room]:
 		for it in room.get_items():
 			if it.state != PickableItem.State.THROWN:
 				_hist.erase(it)
@@ -279,10 +280,10 @@ func _process(_delta: float) -> void:
 				h.pop_front()
 			_hist[it] = h
 			var local := room.to_local(it.global_position)
-			var outside_ns := absf(local.z) > 2.75
+			var outside_ns := absf(local.z) > room.shell.room_d * 0.5 + 0.25 or absf(local.x) > room.shell.room_w * 0.5 + 0.25
 			if outside_ns and not _reported_escape.has(it):
 				_reported_escape[it] = true
 				var snapped: Array = []
 				for p in h:
 					snapped.append((p as Vector3).snapped(Vector3.ONE * 0.01))
-				print("  ESCAPE: %s (sala %s) velocidad=%s últimas posiciones=%s" % [it.data.id, room.room_id, str(it.linear_velocity.snapped(Vector3.ONE * 0.1)), str(snapped)])
+				print("  ESCAPE: %s velocidad=%s últimas posiciones=%s" % [it.data.id, str(it.linear_velocity.snapped(Vector3.ONE * 0.1)), str(snapped)])

@@ -21,13 +21,17 @@ signal item_landed(item)
 ## Carga del lanzamiento, de 0 a 1.
 signal throw_charge_changed(value: float)
 
-## Progreso de la sala activa (la que muestra la interfaz).
+## Progreso de toda la mercería (lo que muestra la interfaz).
 signal progress_changed(placed: int, total: int)
-## Progreso de cualquier sala (guardado, desbloqueos).
 signal room_progress_changed(room, placed: int, total: int)
+## Progreso de una sección (una familia de objetos con sus muebles).
+signal section_progress_changed(section, placed: int, total: int)
 signal collection_completed(sort_key: StringName)
+## Racha de colocaciones seguidas (1 = la primera). La cuenta AudioManager, que la usa para afinar.
+signal streak_changed(count: int)
+signal section_completed(section)
+## Toda la mercería ordenada (final de la demo).
 signal room_completed(room)
-signal room_unlocked(room)
 signal active_room_changed(room)
 signal treasure_found(item)
 signal decor_unlocked(room, id: StringName)

@@ -11,7 +11,7 @@ const BAD := Color("ffb0a0")
 const GOLD := Color("f6c453")
 const PANEL_BG := Color(0.13, 0.09, 0.06, 0.42)
 
-const OBJECTIVE_DONE := "Sala completada"
+const OBJECTIVE_DONE := "¡Mercería ordenada!"
 
 
 class Crosshair extends Control:
@@ -56,6 +56,13 @@ var _percent_label: Label
 var _bar: ProgressBar
 var _objective: Label
 var _treasure_label: Label
+## Con un objeto en la mano: su sección y cuánto le falta (así se sabe a qué pared llevarlo).
+var _section_label: Label
+var _held_section: ShopSection
+## "Racha ×N" bajo la mira cuando se colocan cosas seguidas.
+var _streak_label: Label
+var _streak_tween: Tween
+var _streak_rest_x := 0.0
 var _room: RoomController
 var _toast: Label
 var _banner: PanelContainer
@@ -79,6 +86,12 @@ func _ready() -> void:
 	Events.throw_charge_changed.connect(func(v: float): _crosshair.set_charge(v))
 	Events.room_completed.connect(_on_room_completed)
 	Events.treasure_found.connect(_on_treasure_found)
+	Events.held_item_changed.connect(_on_held_item_changed)
+	Events.section_progress_changed.connect(func(section, _p, _t):
+		if section == _held_section:
+			_update_section_label())
+	Events.section_completed.connect(_on_section_completed)
+	Events.streak_changed.connect(_on_streak_changed)
 	_on_progress_changed(0, 0)
 	_fade_prompt(false)
 
@@ -167,10 +180,29 @@ func _build() -> void:
 	_objective.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	vb.add_child(_objective)
 
+	_section_label = _label("", 16, ACCENT, 0)
+	_section_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_section_label.visible = false
+	vb.add_child(_section_label)
+
 	_treasure_label = _label("", 14, GOLD, 0)
 	_treasure_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_treasure_label.visible = false
 	vb.add_child(_treasure_label)
+
+	# Racha
+	_streak_label = _label("", 26, Color("ffd27a"))
+	_streak_label.modulate.a = 0.0
+	_streak_label.anchor_left = 0.5
+	_streak_label.anchor_right = 0.5
+	_streak_label.anchor_top = 0.42
+	_streak_label.anchor_bottom = 0.42
+	_streak_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_streak_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_streak_label.resized.connect(func():
+		_streak_label.pivot_offset = _streak_label.size * 0.5
+		_streak_rest_x = _streak_label.position.x)
+	_root.add_child(_streak_label)
 
 	# Aviso temporal
 	_toast = _label("", 20, CREAM)
@@ -197,7 +229,7 @@ func _build() -> void:
 	ctw.tween_interval(16.0)
 	ctw.tween_property(_controls, "modulate:a", 0.0, 2.5)
 
-	# Banner de sala completada
+	# Banner del final: toda la mercería ordenada
 	_banner = PanelContainer.new()
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bsb := StyleBoxFlat.new()
@@ -220,9 +252,9 @@ func _build() -> void:
 	var bvb := VBoxContainer.new()
 	bvb.add_theme_constant_override(&"separation", 8)
 	_banner.add_child(bvb)
-	bvb.add_child(_label("¡Habitación organizada!", 46, Color("ffe7b8"), 0))
-	bvb.add_child(_label("Cada ovillo ya tiene su sitio. La tienda vuelve a respirar.", 20, CREAM, 0))
-	bvb.add_child(_label("Pulsa Esc para abrir el menú", 15, SOFT, 0))
+	bvb.add_child(_label("¡La mercería está lista!", 46, Color("ffe7b8"), 0))
+	bvb.add_child(_label("Cada cosa tiene su sitio. La tienda vuelve a abrir sus puertas.", 20, CREAM, 0))
+	bvb.add_child(_label("Fin de la demo · gracias por jugar · Esc abre el libro de colecciones", 15, SOFT, 0))
 	_banner.resized.connect(func(): _banner.pivot_offset = _banner.size * 0.5)
 
 
@@ -289,6 +321,47 @@ func _on_active_room_changed(room: RoomController) -> void:
 	_objective_text = room.objective
 	_objective.text = _objective_text
 	_update_treasure_label()
+
+
+func _on_held_item_changed(item) -> void:
+	_held_section = null
+	if item != null and is_instance_valid(item) and item.data != null and item.room != null and not item.data.treasure:
+		_held_section = item.room.section_for_key(item.data.sort_key)
+	_update_section_label()
+
+
+func _update_section_label() -> void:
+	_section_label.visible = _held_section != null
+	if _held_section != null:
+		_section_label.text = "Va en:  %s   %d / %d" % [_held_section.display_name, _held_section.placed_items, _held_section.total_items]
+
+
+## Desde la tercera colocación seguida: salta, crece un poco con la racha y se apaga si se corta.
+func _on_streak_changed(count: int) -> void:
+	if count < 3:
+		return
+	_streak_label.text = "Racha ×%d" % count
+	if _streak_tween:
+		_streak_tween.kill()
+	var peak := minf(1.0 + count * 0.03, 1.45)
+	_streak_label.scale = Vector2.ONE * (peak + 0.25)
+	# Destello: blanco al saltar y vuelta al dorado.
+	_streak_label.modulate = Color(1.6, 1.6, 1.6, 1.0)
+	_streak_tween = create_tween()
+	_streak_tween.set_parallel(true)
+	_streak_tween.tween_property(_streak_label, "scale", Vector2.ONE * peak, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_streak_tween.tween_property(_streak_label, "modulate", Color.WHITE, 0.3)
+	# Temblor: seno amortiguado en horizontal (más fuerte con la racha) que acaba en reposo.
+	var amp := minf(4.0 + count * 0.8, 12.0)
+	_streak_tween.tween_method(func(t: float):
+		_streak_label.position.x = _streak_rest_x + sin(t * 38.0) * amp * (1.0 - t / 0.3), 0.0, 0.3, 0.3)
+	_streak_tween.chain().tween_interval(4.5)
+	_streak_tween.chain().tween_property(_streak_label, "modulate:a", 0.0, 1.2)
+
+
+func _on_section_completed(section) -> void:
+	_toast.add_theme_color_override(&"font_color", GOLD)
+	_on_hint("¡Sección completa: %s!" % section.display_name, 3.2)
 
 
 func _update_treasure_label() -> void:

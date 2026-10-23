@@ -13,6 +13,9 @@ const LAYER_ITEMS := 2
 const LAYER_PICK := 32
 const MASK_FLIGHT := 1 | 2
 const MAX_FLIGHT_TIME := 12.0
+## Por debajo de este radio el objeto es "pequeño": sin sombra y con distancia de dibujado.
+const SMALL_RADIUS := 0.035
+const SMALL_DRAW_DISTANCE := 11.0
 
 var data: ItemData
 var state: State = State.LOOSE
@@ -39,6 +42,8 @@ var _mesh: MeshInstance3D
 var _base_scale := Vector3.ONE
 var _overlay: StandardMaterial3D
 var _hl_tween: Tween
+var _hovered := false
+var _hinted := false
 var _has_shader_params := false
 
 # Aplastamiento elástico (muelle amortiguado): + aplasta, - estira.
@@ -76,6 +81,13 @@ func setup(item_data: ItemData, size_jitter: float = 1.0, variant: int = 0) -> v
 		_base_scale = Vector3.ONE * (item_data.radius * size_jitter / BASE_RADIUS)
 	_mesh.scale = _base_scale
 	_apply_materials()
+	# Cientos de objetos en una sola sala: las piezas pequeñas no proyectan sombra (no se notaría) y
+	# dejan de dibujarse de lejos, con fundido (a esa distancia ocupan uno o dos píxeles).
+	if radius < SMALL_RADIUS:
+		_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_mesh.visibility_range_end = SMALL_DRAW_DISTANCE
+		_mesh.visibility_range_end_margin = 1.0
+		_mesh.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 
 	_shape.shape = _make_shape(item_data, size_jitter)
 	_shape.rotation_degrees = item_data.shape_rotation_deg
@@ -148,6 +160,15 @@ func is_pickable() -> bool:
 
 
 ## Aparece con un "pop" elástico (decoración desbloqueada, tesoro expuesto).
+## Pulso al colocarlo: crece un poco y vuelve con rebote. `strength` 0..1 (sube con la racha).
+## Va en el nodo Squash (solo visual), así no mueve la física ni el hueco.
+func play_place_pulse(strength: float) -> void:
+	var peak := 1.06 + 0.19 * clampf(strength, 0.0, 1.0)
+	var tw := create_tween()
+	tw.tween_property(_squash, "scale", Vector3.ONE * peak, 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_squash, "scale", Vector3.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
 func play_appear() -> void:
 	_squash.scale = Vector3.ONE * 0.01
 	var tw := create_tween()
@@ -161,6 +182,24 @@ func set_pickable(on: bool) -> void:
 
 
 func set_highlighted(on: bool) -> void:
+	_hovered = on
+	_refresh_glow()
+
+
+## Pista de "el siguiente de este tipo": brillo cálido que respira, más flojo que el de apuntar.
+func set_hinted(on: bool) -> void:
+	if on == _hinted:
+		return
+	_hinted = on
+	_refresh_glow()
+
+
+func is_hinted() -> bool:
+	return _hinted
+
+
+## Apuntar manda sobre la pista; sin ninguna de las dos, el brillo se apaga y se quita el overlay.
+func _refresh_glow() -> void:
 	if _overlay == null:
 		_overlay = StandardMaterial3D.new()
 		_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -170,12 +209,26 @@ func set_highlighted(on: bool) -> void:
 		_overlay.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if _hl_tween:
 		_hl_tween.kill()
-	if on:
-		_mesh.material_overlay = _overlay
+	var a := _overlay.albedo_color.a
 	_hl_tween = create_tween()
-	_hl_tween.tween_method(_apply_highlight, _overlay.albedo_color.a, 0.2 if on else 0.0, 0.12)
-	if not on:
+	if _hovered:
+		_mesh.material_overlay = _overlay
+		_set_glow_color(Color(1.0, 0.96, 0.86))
+		_hl_tween.tween_method(_apply_highlight, a, 0.2, 0.12)
+	elif _hinted:
+		_mesh.material_overlay = _overlay
+		_set_glow_color(Color(1.0, 0.82, 0.5))
+		_apply_highlight(minf(a, 0.04))
+		_hl_tween.tween_method(_apply_highlight, 0.04, 0.13, 0.9).set_trans(Tween.TRANS_SINE)
+		_hl_tween.tween_method(_apply_highlight, 0.13, 0.04, 0.9).set_trans(Tween.TRANS_SINE)
+		_hl_tween.set_loops()
+	else:
+		_hl_tween.tween_method(_apply_highlight, a, 0.0, 0.12)
 		_hl_tween.tween_callback(func(): _mesh.material_overlay = null)
+
+
+func _set_glow_color(c: Color) -> void:
+	_overlay.albedo_color = Color(c.r, c.g, c.b, _overlay.albedo_color.a)
 
 
 ## Aplastamiento elástico (strength 1 = el de colocar en una balda).
@@ -258,12 +311,12 @@ func _settle() -> void:
 	Events.item_landed.emit(self)
 
 
-## ¿Ha salido por una pared (norte/sur o el fondo oeste)? No debería pasar nunca; es la red de seguridad.
+## ¿Ha salido por alguna pared? No debería pasar nunca; es la red de seguridad.
 func _left_the_building(p: Vector3) -> bool:
-	if room == null:
+	if room == null or room.shell == null:
 		return false
 	var local := room.to_local(p)
-	return absf(local.z) > 3.0 or p.x < -3.5
+	return absf(local.x) > room.shell.room_w * 0.5 + 0.3 or absf(local.z) > room.shell.room_d * 0.5 + 0.3
 
 
 ## Red de seguridad: si se cae del mundo vuelve al suelo de la sala.

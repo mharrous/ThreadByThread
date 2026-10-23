@@ -9,8 +9,8 @@ const GOOD := Color("b8f0c0")
 const INK := Color(0.14, 0.09, 0.05, 0.95)
 
 const STEPS := [
-	{"text": "Acércate a un ovillo y pulsa E para cogerlo", "event": "pick"},
-	{"text": "Llévalo a una estantería y apunta a la fila de su mismo color", "event": "aim"},
+	{"text": "Acércate a cualquier cosa del suelo y pulsa E para cogerla", "event": "pick"},
+	{"text": "Busca su sección (mira los carteles de las paredes) y apunta a su fila", "event": "aim"},
 	{"text": "Haz clic izquierdo para colocarlo", "event": "place"},
 	{"text": "Truco: coge otro y pulsa F para lanzarlo (mantén F = más fuerza)", "event": "throw"},
 ]
@@ -114,7 +114,7 @@ func _next() -> void:
 		_show_step(_index + 1)
 		return
 	_step_label.text = "Listo"
-	_text_label.text = "Ya sabes jugar. Ordena toda la sala"
+	_text_label.text = "Ya sabes jugar. ¡Ordena toda la mercería! Hay tesoros escondidos en lo alto"
 	_text_label.add_theme_color_override(&"font_color", GOOD)
 	var tw := create_tween()
 	tw.tween_property(_panel, "modulate:a", 1.0, 0.35)

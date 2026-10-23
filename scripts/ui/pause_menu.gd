@@ -339,14 +339,14 @@ func _build_main() -> Control:
 		AudioManager.play(&"ui_click")
 		_show_book(true))
 	left.add_child(book_btn)
-	# Atajo de desarrollo/pruebas: da la sala actual por ordenada (abre la puerta de la siguiente).
-	var skip_btn := _sewn_button("Saltar sala (completar)", Color("c98a1e"), Color("94620f"))
+	# Atajo de desarrollo/pruebas: da por ordenada la sección en la que estás (la del objeto en la mano o la más cercana).
+	var skip_btn := _sewn_button("Completar esta sección", Color("c98a1e"), Color("94620f"))
 	skip_btn.pressed.connect(func():
 		AudioManager.play(&"ui_click")
 		var shop := get_tree().get_first_node_in_group(&"shop") as Shop
-		close()   # primero se reanuda: los avisos de "sala completada" usan temporizadores que respetan la pausa
+		close()   # primero se reanuda: los avisos de "sección completada" usan temporizadores que respetan la pausa
 		if shop != null:
-			shop.skip_active_room())
+			shop.skip_section())
 	left.add_child(skip_btn)
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -371,6 +371,8 @@ func _build_main() -> Control:
 		func(v: float): GameSettings.master_volume = v))
 	right.add_child(_slider_row("Efectos", 0.0, 1.0, 0.05, GameSettings.sfx_volume,
 		func(v: float): GameSettings.sfx_volume = v))
+	right.add_child(_slider_row("Música", 0.0, 1.0, 0.05, GameSettings.music_volume,
+		func(v: float): GameSettings.music_volume = v))
 	right.add_child(_section("Pantalla"))
 	right.add_child(_check_row("Pantalla completa", GameSettings.fullscreen,
 		func(on: bool): GameSettings.fullscreen = on))
@@ -378,6 +380,8 @@ func _build_main() -> Control:
 		func(on: bool): GameSettings.vsync = on))
 	right.add_child(_check_row("Bordes suaves (MSAA 4x)", GameSettings.msaa,
 		func(on: bool): GameSettings.msaa = on))
+	right.add_child(_check_row("Iluminación avanzada", GameSettings.high_quality,
+		func(on: bool): GameSettings.high_quality = on))
 	return panel
 
 
@@ -437,31 +441,25 @@ func _show_book(on: bool) -> void:
 		_resume.grab_focus()
 
 
-## Rellena el libro con el estado actual: por sala, una cabecera con su dibujo y su barra de progreso,
+## Rellena el libro con el estado actual: por sección, una cabecera con su dibujo y su barra de progreso,
 ## una ficha ilustrada por cada colección y los tesoros (silueta hasta que se encuentran).
 func _fill_book() -> void:
 	for c in _book_content.get_children():
 		c.queue_free()
 	var shop := get_tree().get_first_node_in_group(&"shop") as Shop
-	if shop == null:
+	if shop == null or shop.room == null:
 		return
-	var found_total := 0
-	var treasure_total := 0
-	for room in shop.rooms:
-		found_total += room.treasures_found()
-		treasure_total += room.treasures_total()
-	var summary := _book_label("Tesoros encontrados: %d de %d" % [found_total, treasure_total], 18, GOLD_INK)
+	var room := shop.room
+	var summary := _book_label("Ordenados %d de %d  ·  Tesoros encontrados: %d de %d" % [room.placed_items, room.total_items, room.treasures_found(), room.treasures_total()], 18, GOLD_INK)
 	_book_content.add_child(summary)
-	for room in shop.rooms:
+	for section in room.sections:
 		_book_content.add_child(_thread_line())
-		_book_content.add_child(_room_header(room))
-		if not room.is_unlocked:
-			continue
+		_book_content.add_child(_section_header(section))
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override(&"h_separation", 10)
 		flow.add_theme_constant_override(&"v_separation", 10)
 		flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		for entry in room.collection_status():
+		for entry in section.collection_status():
 			var card := CollectionCard.new()
 			card.data = entry["data"]
 			card.label = entry["label"]
@@ -473,7 +471,7 @@ func _fill_book() -> void:
 		gems.add_theme_constant_override(&"h_separation", 10)
 		gems.add_theme_constant_override(&"v_separation", 10)
 		gems.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		for treasure in room.treasure_status():
+		for treasure in section.treasure_status():
 			var card := CollectionCard.new()
 			card.treasure = true
 			card.found = treasure["found"]
@@ -484,29 +482,22 @@ func _fill_book() -> void:
 		_book_content.add_child(gems)
 
 
-## Cabecera de sala: dibujo de uno de sus objetos, nombre, barra de hilo con el progreso y su estado.
-func _room_header(room: RoomController) -> Control:
+## Cabecera de sección: dibujo de uno de sus objetos, nombre, barra de hilo con el progreso y su estado.
+func _section_header(section: ShopSection) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 12)
-	if not room.is_unlocked:
-		row.add_child(CollectionCard.Padlock.new())
-		var l := _book_label("%s  ·  sala por descubrir: ordena la anterior para abrir su puerta" % room.display_name, 17, INK_SOFT)
-		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(l)
-		return row
-	var first: ItemData = room.catalog.items[0]
+	var first: ItemData = section.catalog.items[0]
 	row.add_child(ItemIcon.new(first, false, 46.0))
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	col.add_theme_constant_override(&"separation", 2)
 	row.add_child(col)
-	col.add_child(_book_label(room.display_name + ("  ·  ¡completada!" if room.is_completed else ""), 19, RED_DARK))
+	col.add_child(_book_label(section.display_name + ("  ·  ¡completada!" if section.is_completed else ""), 19, RED_DARK))
 	var bar := CollectionCard.ThreadBar.new()
-	bar.ratio = 0.0 if room.total_items == 0 else float(room.placed_items) / float(room.total_items)
-	bar.color = TEAL if room.is_completed else RED
-	bar.text = "ordenados %d de %d" % [room.placed_items, room.total_items]
+	bar.ratio = 0.0 if section.total_items == 0 else float(section.placed_items) / float(section.total_items)
+	bar.color = TEAL if section.is_completed else RED
+	bar.text = "ordenados %d de %d" % [section.placed_items, section.total_items]
 	col.add_child(bar)
 	return row
 

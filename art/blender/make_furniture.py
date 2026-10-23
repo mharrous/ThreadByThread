@@ -181,7 +181,10 @@ def make_shelf(depth=0.30):
 # ------------------------------------------------------------------------
 def make_table():
     reset_scene()
-    m = Model("table", seed=5)
+    # Usa el Model de common.py (tiene torno para las patas); el origen queda en el suelo.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from common import Model as TurnedModel
+    m = TurnedModel("table", seed=5)
     m.add_material("wood", (0.8, 0.6, 0.38), 0.6)
     L, D, topy, T = 1.25, 1.1, 0.76, 0.06
     m.box((0, topy - T / 2, 0), (L, T, D), grain="x", bevel=0.009, segments=3)
@@ -192,13 +195,20 @@ def make_table():
     m.box((0, ay, -D / 2 + 0.1), (L - 0.2, ah, 0.025), grain="x", bevel=0.003)
     for sx in (-1, 1):
         m.box((sx * (L / 2 - 0.1), ay, 0), (0.025, ah, D - 0.2), grain="z", bevel=0.003)
-    # Patas cónicas
+    # Cajón en el faldón delantero, con su tirador.
+    m.box((0, ay, D / 2 - 0.085), (0.42, ah - 0.016, 0.012), grain="x", bevel=0.003)
+    m.lathe([(0.0, 0.0), (0.012, 0.0), (0.016, 0.012), (0.012, 0.022), (0.0, 0.024)], 14, axis="z",
+            center=(0, ay, D / 2 - 0.079))
+    # Patas torneadas: dado cuadrado arriba (donde encaja el faldón) y fuste con anillos.
     leg_h = topy - T - 0.002
+    turned = [(0.0, 0.0), (0.022, 0.0), (0.026, 0.02), (0.02, 0.05), (0.024, 0.2), (0.03, 0.34),
+              (0.022, 0.38), (0.032, 0.41), (0.03, 0.44), (0.024, 0.47), (0.03, leg_h - 0.12), (0.0, leg_h - 0.12)]
     for sx in (-1, 1):
         for sz in (-1, 1):
-            m.box((sx * (L / 2 - 0.08), leg_h / 2, sz * (D / 2 - 0.08)), (0.07, leg_h, 0.07),
-                  grain="y", bevel=0.004, taper=0.62)
-    m.export()
+            x, z = sx * (L / 2 - 0.08), sz * (D / 2 - 0.08)
+            m.box((x, leg_h - 0.06, z), (0.07, 0.12, 0.07), grain="y", bevel=0.004)
+            m.lathe(turned, 16, center=(x, 0, z))
+    m.export(center_y=False)
 
 
 # ------------------------------------------------------------------------

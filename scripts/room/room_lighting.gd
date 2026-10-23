@@ -1,15 +1,32 @@
 class_name RoomLighting
 extends Node3D
-## Iluminación global del mundo: sol cálido entrando por la ventana oeste y luz ambiente cálida.
-## (La lámpara y los focos de cada sala los crea su RoomShell.)
+## Iluminación global del mundo: sol cálido entrando por la ventana oeste, luz rebotada (SDFGI) y luz
+## ambiente cálida. (Las lámparas y los focos los crean RoomShell y las secciones.)
+## Con "Iluminación avanzada" desactivada (ajustes) se apagan SDFGI, SSAO, niebla volumétrica y brillo.
 
 @export var sun_direction := Vector3(0.80, -0.53, 0.29)
 @export var volumetric_fog := true
 
 
+var _env: Environment
+
+
 func _ready() -> void:
 	_build_environment()
 	_build_sun()
+	apply_quality()
+	GameSettings.changed.connect(apply_quality)
+
+
+## Ambiente según la calidad elegida. Con SDFGI la luz rebota en suelo y paredes (tonos cálidos en las
+## sombras), así que la luz ambiente plana baja para no lavar la imagen.
+func apply_quality() -> void:
+	var high := GameSettings.high_quality
+	_env.sdfgi_enabled = high
+	_env.ssao_enabled = high
+	_env.glow_enabled = high
+	_env.volumetric_fog_enabled = high and volumetric_fog
+	_env.ambient_light_energy = 0.22 if high else 0.42
 
 
 func _build_environment() -> void:
@@ -23,6 +40,7 @@ func _build_environment() -> void:
 	sky.radiance_size = Sky.RADIANCE_SIZE_128
 
 	var env := Environment.new()
+	_env = env
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -38,6 +56,13 @@ func _build_environment() -> void:
 	env.ssao_enabled = true
 	env.ssao_radius = 0.7
 	env.ssao_intensity = 1.3
+	# Luz rebotada en tiempo real (sin hornear): celdas finas para una sala de interior.
+	env.sdfgi_use_occlusion = true
+	env.sdfgi_read_sky_light = true
+	env.sdfgi_cascades = 4
+	env.sdfgi_min_cell_size = 0.12
+	env.sdfgi_energy = 1.1
+	env.sdfgi_bounce_feedback = 0.45
 	env.adjustment_enabled = true
 	env.adjustment_saturation = 1.08
 	env.adjustment_contrast = 1.04

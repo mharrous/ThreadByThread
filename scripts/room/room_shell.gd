@@ -1,44 +1,53 @@
 class_name RoomShell
 extends Node3D
-## Estructura de una sala de la mercería: suelo de tablas, paredes con aberturas (puertas y
-## ventanas), friso, vigas, lámpara, cartel y utilidades para amueblar. Cada sala hereda
-## de esta clase y rellena `_build_furniture()` con su mobiliario (ver room_shell_*.gd).
-## Los modelos son de Blender; si falta alguno solo se omite la parte visual.
+## Estructura de la mercería: suelo de tablas, paredes con ventanas, friso, vigas, lámparas, cartel,
+## repisa de tesoros y utilidades para amueblar. La subclase rellena `_build_furniture()` con el
+## mobiliario (ver room_shell_shop.gd). Los modelos son de Blender; si falta alguno solo se omite
+## la parte visual.
 
-const ROOM_W := 6.0    # eje X
-const ROOM_D := 5.0    # eje Z
-const ROOM_H := 2.9
 const WALL_T := 0.2
-
-## Puerta corredera: misma posición en todas las salas, para que encajen entre sí.
-const DOOR_Z := -0.9
+## Media anchura del hueco de una ventana (a lo largo de la pared).
+const WINDOW_HALF := 0.9
 
 const C_TRIM := Color("ead2a8")
 const C_CEILING := Color("fbf3e6")
 const C_BEAM := Color("c99a62")
 
+@export var room_w := 12.0    # eje X
+@export var room_d := 9.0     # eje Z
+@export var room_h := 3.1
 @export var wall_color := Color("f5e9d3")
 @export var wainscot_color := Color("9cbfae")
-@export var door_east := false
-@export var door_west := false
-@export var window_west := false
-@export var window_south := false
+## Centros (Z) de las ventanas de la pared oeste, que da a la calle.
+@export var west_windows: Array[float] = [0.0]
+## Centros (X) de las ventanas de la pared sur, que da al jardín.
+@export var south_windows: Array[float] = []
 @export var sign_title := "THREAD BY THREAD"
 @export var sign_subtitle := "mercería · lanas · botones · telas"
+## Centro del cartel principal (X y altura; va en la pared norte).
+@export var sign_x := 0.0
+@export var sign_y := 2.35
 @export var lamp_energy := 0.8
-## Posiciones X de focos que iluminan la pared norte (estanterías).
-@export var spot_xs: Array[float] = [-1.2, 1.2]
+## Lámparas colgantes (posición de la bombilla). Solo las `shadow_lamps` primeras dan sombra.
+@export var lamp_positions: Array[Vector3] = [Vector3(0.0, 2.45, 0.0)]
+@export var shadow_lamps := 2
+## Repisa de los tesoros hallados (pared sur): centro X, altura y número de huecos.
+@export var display_x := 0.0
+@export var display_y := 1.45
+@export var display_count := 2
 
 ## Mesas donde caen objetos desordenados: {rect: Rect2 (x, z, ancho, fondo), top_y: float}.
 var tables: Array[Dictionary] = []
 ## Zonas del suelo ocupadas por mobiliario (x, z, ancho, fondo).
 var blocked_rects: Array[Rect2] = []
-## Zona del suelo donde se reparten montones de objetos.
-var floor_bounds := Rect2(-2.55, -1.15, 5.0, 3.3)
-var east_door: Door
-## Sitios donde se esconden los tesoros de la sala (base del objeto, coordenadas locales).
-## Cada sala los define en _build_furniture(); el tesoro n-ésimo del catálogo va al sitio n-ésimo.
+## Zona del suelo donde se reparten montones de objetos (se calcula con el tamaño de la sala).
+var floor_bounds := Rect2()
+## Sitios donde se esconden los tesoros (base del objeto, coordenadas locales). La subclase los
+## define en _build_furniture(); el tesoro n-ésimo (en el orden de las secciones) va al sitio n-ésimo.
 var treasure_spots: Array[Vector3] = []
+var lamps: Array[OmniLight3D] = []
+## Cartel colgado en el cristal de la puerta de la calle (CERRADO hasta ordenar la mercería).
+var door_sign: Label3D
 
 var _decor: Dictionary = {}
 var _display_slots: Array[Vector3] = []
@@ -50,6 +59,7 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.seed = 2024 + get_index()
+	floor_bounds = Rect2(-room_w * 0.5 + 0.45, -room_d * 0.5 + 0.45, room_w - 0.9, room_d - 0.9)
 	_build_floor()
 	_build_walls()
 	_build_windows()
@@ -58,6 +68,7 @@ func _ready() -> void:
 	_build_sign()
 	_build_display_shelf()
 	_build_decor()
+	_build_atmosphere()
 
 
 ## ¿Está ocupado por mobiliario este punto del suelo (con margen)?
@@ -82,32 +93,27 @@ func register_table(rect: Rect2, top_y: float) -> void:
 
 func _build_floor() -> void:
 	# Capa 1 (mundo) + 16 (superficie donde se pueden dejar objetos).
-	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, -0.1, 0), MaterialLibrary.get_material(&"floor"), true, 17)
+	_box(self, Vector3(room_w + 0.4, 0.2, room_d + 0.4), Vector3(0, -0.1, 0), MaterialLibrary.get_material(&"floor"), true, 17)
 
 
 ## Aberturas de cada pared: {u0, u1, v0, v1} = tramo a lo largo de la pared y altura.
 func _openings_for(wall: StringName) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var half_door := Door.WIDTH * 0.5
+	var centers: Array[float] = []
 	match wall:
-		&"east":
-			if door_east:
-				out.append({"u0": DOOR_Z - half_door, "u1": DOOR_Z + half_door, "v0": 0.0, "v1": Door.HEIGHT})
 		&"west":
-			if door_west:
-				out.append({"u0": DOOR_Z - half_door, "u1": DOOR_Z + half_door, "v0": 0.0, "v1": Door.HEIGHT})
-			if window_west:
-				out.append({"u0": -0.9, "u1": 0.9, "v0": 0.9, "v1": 2.2})
+			centers = west_windows
 		&"south":
-			if window_south:
-				out.append({"u0": -0.9, "u1": 0.9, "v0": 0.9, "v1": 2.2})
+			centers = south_windows
+	for c in centers:
+		out.append({"u0": c - WINDOW_HALF, "u1": c + WINDOW_HALF, "v0": 0.9, "v1": 2.2})
 	out.sort_custom(func(a, b): return a["u0"] < b["u0"])
 	return out
 
 
 func _build_walls() -> void:
-	var hw := ROOM_W * 0.5
-	var hd := ROOM_D * 0.5
+	var hw := room_w * 0.5
+	var hd := room_d * 0.5
 	var wall := MaterialLibrary.get_tinted(&"wall", wall_color)
 	var wains := MaterialLibrary.get_tinted(&"wainscot", wainscot_color)
 	var trim := _mat(C_TRIM, 0.6)
@@ -118,7 +124,7 @@ func _build_walls() -> void:
 	_wall_along(&"z", hw + WALL_T * 0.5, -hd, hd, _openings_for(&"east"), wall)
 	_wall_along(&"z", -hw - WALL_T * 0.5, -hd, hd, _openings_for(&"west"), wall)
 
-	# Friso inferior, moldura y zócalo (visuales), interrumpidos por las puertas.
+	# Friso inferior, moldura y zócalo (visuales).
 	for side: Array in [[&"x", -hd, 1.0, &"north"], [&"x", hd, -1.0, &"south"], [&"z", hw, -1.0, &"east"], [&"z", -hw, 1.0, &"west"]]:
 		var axis: StringName = side[0]
 		var fixed: float = side[1]
@@ -133,28 +139,16 @@ func _build_walls() -> void:
 			_strip(axis, fixed, inward, mid, len, 0.045, 0.045, 0.92, trim)
 			_strip(axis, fixed, inward, mid, len, 0.11, 0.03, 0.055, trim)
 
-	# Marco de las puertas.
-	if door_east:
-		_door_frame(hw, -1.0)
-	if door_west:
-		_door_frame(-hw, 1.0)
-
-	if door_east:
-		east_door = Door.new()
-		east_door.name = "EastDoor"
-		east_door.position = Vector3(hw + WALL_T * 0.5, 0.0, DOOR_Z)
-		add_child(east_door)
-
 
 ## Pared completa con aberturas: tramos macizos entre aberturas y dinteles/antepechos.
 func _wall_along(axis: StringName, fixed: float, lo: float, hi: float, openings: Array[Dictionary], mat: Material) -> void:
 	var cursor := lo
 	for o: Dictionary in openings:
-		_wall_piece(axis, fixed, cursor, o["u0"], 0.0, ROOM_H, mat)
+		_wall_piece(axis, fixed, cursor, o["u0"], 0.0, room_h, mat)
 		_wall_piece(axis, fixed, o["u0"], o["u1"], 0.0, o["v0"], mat)
-		_wall_piece(axis, fixed, o["u0"], o["u1"], o["v1"], ROOM_H, mat)
+		_wall_piece(axis, fixed, o["u0"], o["u1"], o["v1"], room_h, mat)
 		cursor = o["u1"]
-	_wall_piece(axis, fixed, cursor, hi, 0.0, ROOM_H, mat)
+	_wall_piece(axis, fixed, cursor, hi, 0.0, room_h, mat)
 
 
 func _wall_piece(axis: StringName, fixed: float, u0: float, u1: float, v0: float, v1: float, mat: Material) -> void:
@@ -191,26 +185,17 @@ func _strip(axis: StringName, fixed: float, inward: float, mid: float, len: floa
 		_box(self, Vector3(t, h, len), Vector3(fixed + inward * t * 0.5, y, mid), mat, false)
 
 
-## Jambas y dintel de una puerta en la cara interior de un muro lateral (x = ±hw).
-func _door_frame(wall_x: float, inward: float) -> void:
-	var frame := MaterialLibrary.get_tinted(&"shelf", Color(0.82, 0.64, 0.46))
-	var half := Door.WIDTH * 0.5
-	var x := wall_x + inward * 0.03
-	_box(self, Vector3(0.06, Door.HEIGHT + 0.06, 0.08), Vector3(x, (Door.HEIGHT + 0.06) * 0.5, DOOR_Z - half - 0.04), frame, false)
-	_box(self, Vector3(0.06, Door.HEIGHT + 0.06, 0.08), Vector3(x, (Door.HEIGHT + 0.06) * 0.5, DOOR_Z + half + 0.04), frame, false)
-	_box(self, Vector3(0.06, 0.08, Door.WIDTH + 0.16), Vector3(x, Door.HEIGHT + 0.04, DOOR_Z), frame, false)
-
-
 func _build_windows() -> void:
-	if window_west:
-		_window(&"west")
-	if window_south:
-		_window(&"south")
+	for c in west_windows:
+		_window(&"west", c)
+	for c in south_windows:
+		_window(&"south", c)
 
 
-func _window(wall: StringName) -> void:
-	var hw := ROOM_W * 0.5
-	var hd := ROOM_D * 0.5
+## Ventana centrada en `c` (Z en la pared oeste, X en la sur).
+func _window(wall: StringName, c: float) -> void:
+	var hw := room_w * 0.5
+	var hd := room_d * 0.5
 	var frame := _mat(Color("f3e4c8"), 0.55)
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.85, 0.93, 1.0, 0.05)
@@ -218,48 +203,53 @@ func _window(wall: StringName) -> void:
 	glass.roughness = 0.05
 	if wall == &"west":
 		var x := -hw - 0.03
-		_box(self, Vector3(0.1, 0.07, 1.96), Vector3(x, 2.2 + 0.03, 0), frame, false)
-		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, -0.92), frame, false)
-		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, 0.92), frame, false)
-		# Solo montante vertical: un travesaño a 1,55 m quedaría justo a la altura de los ojos y taparía la calle.
-		_box(self, Vector3(0.05, 1.3, 0.03), Vector3(x, 1.55, 0), frame, false)
-		_box(self, Vector3(0.28, 0.045, 2.06), Vector3(-hw + 0.08, 0.915, 0), frame, false)
+		_box(self, Vector3(0.1, 0.07, 1.96), Vector3(x, 2.2 + 0.03, c), frame, false)
+		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, c - 0.92), frame, false)
+		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, c + 0.92), frame, false)
+		# Solo montante vertical: un travesaño a 1,55 m quedaría justo a la altura de los ojos y taparía la vista.
+		_box(self, Vector3(0.05, 1.3, 0.03), Vector3(x, 1.55, c), frame, false)
+		_box(self, Vector3(0.28, 0.045, 2.06), Vector3(-hw + 0.08, 0.915, c), frame, false)
 		# Con colisión: los objetos lanzados rebotan en el cristal en vez de salir volando.
-		_box(self, Vector3(0.04, 1.3, 1.8), Vector3(-hw - 0.1, 1.55, 0), glass, true, 1, false)
+		_box(self, Vector3(0.04, 1.3, 1.8), Vector3(-hw - 0.1, 1.55, c), glass, true, 1, false)
 	else:
 		var z := hd + 0.03
-		_box(self, Vector3(1.96, 0.07, 0.1), Vector3(0, 2.2 + 0.03, z), frame, false)
-		_box(self, Vector3(0.07, 1.3, 0.1), Vector3(-0.92, 1.55, z), frame, false)
-		_box(self, Vector3(0.07, 1.3, 0.1), Vector3(0.92, 1.55, z), frame, false)
-		_box(self, Vector3(0.045, 1.3, 0.05), Vector3(0, 1.55, z), frame, false)
-		_box(self, Vector3(1.8, 0.045, 0.05), Vector3(0, 1.55, z), frame, false)
-		_box(self, Vector3(2.06, 0.045, 0.28), Vector3(0, 0.915, hd - 0.08), frame, false)
-		_box(self, Vector3(1.8, 1.3, 0.04), Vector3(0, 1.55, hd + 0.1), glass, true, 1, false)
+		_box(self, Vector3(1.96, 0.07, 0.1), Vector3(c, 2.2 + 0.03, z), frame, false)
+		_box(self, Vector3(0.07, 1.3, 0.1), Vector3(c - 0.92, 1.55, z), frame, false)
+		_box(self, Vector3(0.07, 1.3, 0.1), Vector3(c + 0.92, 1.55, z), frame, false)
+		# Igual que en la oeste: solo montante vertical, sin travesaño a la altura de los ojos.
+		_box(self, Vector3(0.045, 1.3, 0.05), Vector3(c, 1.55, z), frame, false)
+		_box(self, Vector3(2.06, 0.045, 0.28), Vector3(c, 0.915, hd - 0.08), frame, false)
+		_box(self, Vector3(1.8, 1.3, 0.04), Vector3(c, 1.55, hd + 0.1), glass, true, 1, false)
 
 
 func _build_ceiling() -> void:
-	_box(self, Vector3(ROOM_W + 0.4, 0.2, ROOM_D + 0.4), Vector3(0, ROOM_H + 0.1, 0), _mat(C_CEILING, 1.0), true)
+	_box(self, Vector3(room_w + 0.4, 0.2, room_d + 0.4), Vector3(0, room_h + 0.1, 0), _mat(C_CEILING, 1.0), true)
 	var beam := _mat(C_BEAM, 0.7)
-	for bx in [-1.7, 1.7]:
-		_box(self, Vector3(0.2, 0.17, ROOM_D), Vector3(bx, ROOM_H - 0.085, 0), beam, false)
+	var n_beams := maxi(2, roundi(room_w / 3.0))
+	for i in n_beams:
+		var bx := -room_w * 0.5 + room_w * (i + 0.5) / n_beams
+		_box(self, Vector3(0.2, 0.17, room_d), Vector3(bx, room_h - 0.085, 0), beam, false)
+	for i in lamp_positions.size():
+		_add_lamp(lamp_positions[i], i < shadow_lamps)
 
-	# Lámpara colgante con su luz.
-	var lamp_pos := Vector3(0.0, 2.25, 0.3)
+
+## Lámpara colgante con su luz: el modelo esmaltado de Blender si está; si no, un cono sencillo.
+func _add_lamp(lamp_pos: Vector3, shadows: bool) -> void:
 	var cord := _mat(Color("5a4630"), 0.8)
-	_box(self, Vector3(0.012, ROOM_H - lamp_pos.y - 0.15, 0.012), Vector3(lamp_pos.x, (ROOM_H + lamp_pos.y + 0.15) * 0.5, lamp_pos.z), cord, false, 1, false)
+	var model := _instance_model("res://art/models/pendant_lamp.glb", lamp_pos)
+	var cord_from := lamp_pos.y + (0.27 if model != null else 0.15)
+	_box(self, Vector3(0.012, room_h - cord_from, 0.012), Vector3(lamp_pos.x, (room_h + cord_from) * 0.5, lamp_pos.z), cord, false, 1, false)
+	if model != null:
+		_no_shadows(model)
+		_add_lamp_light(lamp_pos, shadows)
+		return
 	var shade := MeshInstance3D.new()
 	var cone := CylinderMesh.new()
 	cone.top_radius = 0.07
 	cone.bottom_radius = 0.30
 	cone.height = 0.24
 	shade.mesh = cone
-	var shade_mat := StandardMaterial3D.new()
-	shade_mat.albedo_color = Color("f6dcae")
-	shade_mat.roughness = 0.6
-	shade_mat.emission_enabled = true
-	shade_mat.emission = Color("ffd9a0")
-	shade_mat.emission_energy_multiplier = 0.35
-	shade.material_override = shade_mat
+	shade.material_override = _shade_material()
 	shade.position = lamp_pos + Vector3(0, 0.1, 0)
 	shade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(shade)
@@ -268,52 +258,69 @@ func _build_ceiling() -> void:
 	sph.radius = 0.06
 	sph.height = 0.12
 	bulb.mesh = sph
-	var bulb_mat := StandardMaterial3D.new()
-	bulb_mat.albedo_color = Color("fff1cf")
-	bulb_mat.emission_enabled = true
-	bulb_mat.emission = Color("ffe2a8")
-	bulb_mat.emission_energy_multiplier = 3.0
-	bulb.material_override = bulb_mat
+	bulb.material_override = _bulb_material()
 	bulb.position = lamp_pos - Vector3(0, 0.05, 0)
 	bulb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(bulb)
+	_add_lamp_light(lamp_pos, shadows)
 
+
+func _add_lamp_light(lamp_pos: Vector3, shadows: bool) -> void:
 	var lamp := OmniLight3D.new()
 	lamp.name = "PendantLamp"
-	lamp.position = lamp_pos
+	lamp.position = lamp_pos - Vector3(0, 0.08, 0)
 	lamp.light_color = Color("ffd9a6")
 	lamp.light_energy = lamp_energy
-	lamp.omni_range = 9.0
+	lamp.omni_range = 7.5
 	lamp.omni_attenuation = 1.2
-	lamp.shadow_enabled = true
+	lamp.shadow_enabled = shadows
+	# Paraboloide doble: 2 pasadas de sombra en vez de 6 (con cientos de objetos en la sala se nota).
+	lamp.omni_shadow_mode = OmniLight3D.SHADOW_DUAL_PARABOLOID
 	lamp.light_volumetric_fog_energy = 0.4
 	add_child(lamp)
+	lamps.append(lamp)
 
-	# Focos suaves sobre las estanterías para resaltar los colores.
-	for x in spot_xs:
-		var spot := SpotLight3D.new()
-		spot.light_color = Color("ffe2b8")
-		spot.light_energy = 1.0
-		spot.spot_range = 4.2
-		spot.spot_angle = 52.0
-		spot.spot_attenuation = 0.9
-		spot.light_volumetric_fog_energy = 0.0
-		spot.transform = Transform3D(
-			Basis.looking_at(Vector3(0, -0.55, -1.0).normalized(), Vector3.UP),
-			Vector3(x, 2.35, -0.9))
-		add_child(spot)
+
+func _no_shadows(node: Node) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for c in node.get_children():
+		_no_shadows(c)
+
+
+func _shade_material() -> StandardMaterial3D:
+	if not _mats.has("shade"):
+		var m := StandardMaterial3D.new()
+		m.albedo_color = Color("f6dcae")
+		m.roughness = 0.6
+		m.emission_enabled = true
+		m.emission = Color("ffd9a0")
+		m.emission_energy_multiplier = 0.35
+		_mats["shade"] = m
+	return _mats["shade"]
+
+
+func _bulb_material() -> StandardMaterial3D:
+	if not _mats.has("bulb"):
+		var m := StandardMaterial3D.new()
+		m.albedo_color = Color("fff1cf")
+		m.emission_enabled = true
+		m.emission = Color("ffe2a8")
+		m.emission_energy_multiplier = 3.0
+		_mats["bulb"] = m
+	return _mats["bulb"]
 
 
 func _build_sign() -> void:
 	var board := _mat(Color("a8703f"), 0.7)
-	_box(self, Vector3(2.9, 0.46, 0.04), Vector3(0, 2.46, -ROOM_D * 0.5 + 0.02), board, false)
+	_box(self, Vector3(2.9, 0.46, 0.04), Vector3(sign_x, sign_y, -room_d * 0.5 + 0.02), board, false)
 	var label := Label3D.new()
 	label.text = sign_title
 	label.font_size = 96
 	label.pixel_size = 0.0028 if sign_title.length() < 20 else 0.0021
 	label.outline_size = 0
 	label.modulate = Color("fff3dc")
-	label.position = Vector3(0, 2.5, -ROOM_D * 0.5 + 0.045)
+	label.position = Vector3(sign_x, sign_y + 0.04, -room_d * 0.5 + 0.045)
 	add_child(label)
 	var sub := Label3D.new()
 	sub.text = sign_subtitle
@@ -321,7 +328,7 @@ func _build_sign() -> void:
 	sub.pixel_size = 0.0022
 	sub.outline_size = 0
 	sub.modulate = Color("f3d7a8")
-	sub.position = Vector3(0, 2.34, -ROOM_D * 0.5 + 0.045)
+	sub.position = Vector3(sign_x, sign_y - 0.12, -room_d * 0.5 + 0.045)
 	add_child(sub)
 
 
@@ -558,19 +565,22 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material, collide: b
 ## (base del objeto, coordenadas locales). Sirven de pista de que hay algo que buscar.
 func display_slot(i: int) -> Vector3:
 	if _display_slots.is_empty():
-		return Vector3(0.0, 1.5, ROOM_D * 0.5 - 0.1)
+		return Vector3(0.0, 1.5, room_d * 0.5 - 0.1)
 	return _display_slots[i % _display_slots.size()]
 
 
 func _build_display_shelf() -> void:
-	var z := ROOM_D * 0.5 - 0.11
-	var x0 := -1.85
-	var y := 1.45
+	var z := room_d * 0.5 - 0.11
+	var x0 := display_x
+	var y := display_y
+	var pitch := 0.28
+	var width := pitch * display_count + 0.1
 	var wood := MaterialLibrary.get_material(&"shelf")
-	_box(self, Vector3(1.1, 0.035, 0.22), Vector3(x0, y, z), wood, false)
-	for sx in [-0.42, 0.42]:
+	_box(self, Vector3(width, 0.035, 0.22), Vector3(x0, y, z), wood, false)
+	for sx in [-width * 0.5 + 0.1, width * 0.5 - 0.1]:
 		_box(self, Vector3(0.04, 0.12, 0.2), Vector3(x0 + sx, y - 0.075, z), wood, false)
-	for sx in [-0.26, 0.26]:
+	for i in display_count:
+		var sx := (i - (display_count - 1) * 0.5) * pitch
 		var felt := StandardMaterial3D.new()
 		felt.albedo_color = Color("2f5f58")
 		felt.roughness = 0.95
@@ -590,7 +600,7 @@ func _build_display_shelf() -> void:
 		_display_slots.append(Vector3(x0 + sx, y + 0.0175 + 0.006, z))
 		# Placa con el nombre del tesoro en el canto de la repisa (mira hacia el interior de la sala, -Z).
 		var plate := Label3D.new()
-		plate.font_size = 34
+		plate.font_size = 26   # huecos a 28 cm: nombres más pequeños para que no se monten
 		plate.pixel_size = 0.0007
 		plate.outline_size = 0
 		plate.modulate = Color("3a2a1c")
@@ -600,7 +610,7 @@ func _build_display_shelf() -> void:
 		_display_plates.append(plate)
 		# Y el mismo nombre tumbado sobre la tabla, delante de la pastilla, para leerlo desde arriba.
 		var top := Label3D.new()
-		top.font_size = 30
+		top.font_size = 24
 		top.pixel_size = 0.0007
 		top.outline_size = 0
 		top.modulate = Color("3a2a1c")
@@ -645,76 +655,125 @@ func unlock_decor(id: StringName, animate: bool = true) -> void:
 
 
 ## Decoración de la sala; las subclases pueden añadir más con add_decor().
+## "bunting": guirnaldas de pared a pared; "open_sign": cartel de ABIERTO bajo el principal.
+## Las dos son el premio por ordenar la mercería entera.
 func _build_decor() -> void:
-	add_decor(&"bunting", _make_bunting())
-
-
-## Guirnalda de banderines entre las dos paredes laterales: premio por ordenar la sala entera.
-func _make_bunting() -> Node3D:
 	var root := Node3D.new()
 	root.name = "Bunting"
-	root.position = Vector3(0.0, ROOM_H - 0.28, 0.0)
+	root.position = Vector3(0.0, room_h - 0.12, 0.0)
 	var palette: Array[Color] = [wainscot_color, Color("e8a0b0"), Color("f2c14e"), Color("8ec5e8"), Color("c9a2e0"), Color("f5f0e6"), wall_color.darkened(0.12)]
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 77 + get_index()
+	var half := room_w * 0.5 - 0.04
+	var i := 0
+	for z in [-room_d * 0.18, room_d * 0.2]:
+		root.add_child(Bunting.build(Vector3(-half, 0.0, z), Vector3(half, 0.0, z), 0.42, palette, 77 + i, _mat(Color("5a4630"), 0.8)))
+		i += 1
+	add_decor(&"bunting", root)
+	add_decor(&"open_sign", _make_open_sign())
 
-	var tri := ArrayMesh.new()
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3(-0.075, 0.0, 0.0), Vector3(0.075, 0.0, 0.0), Vector3(0.0, -0.2, 0.0)])
-	arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.BACK, Vector3.BACK, Vector3.BACK])
-	tri.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var flag_mat := StandardMaterial3D.new()
-	flag_mat.vertex_color_use_as_albedo = true
-	flag_mat.vertex_color_is_srgb = true
-	flag_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	flag_mat.roughness = 0.85
 
-	var rows: Array[Dictionary] = [{"z": -0.6, "sag": 0.28}, {"z": 1.2, "sag": 0.22}]
-	var segs := 24
-	var half := ROOM_W * 0.5 - 0.04
-	var flag_t: Array[Transform3D] = []
-	var flag_c: Array[Color] = []
-	var seg_t: Array[Transform3D] = []
-	for row in rows:
-		var pts: Array[Vector3] = []
-		for i in segs + 1:
-			var x := lerpf(-half, half, float(i) / segs)
-			pts.append(Vector3(x, -float(row["sag"]) * (1.0 - pow(x / half, 2.0)), float(row["z"])))
-		for i in segs:
-			var a := pts[i]
-			var b := pts[i + 1]
-			var dir := b - a
-			seg_t.append(Transform3D(Basis.looking_at(dir.normalized(), Vector3.UP) * Basis.from_scale(Vector3(1, 1, dir.length())), (a + b) * 0.5))
-		for i in range(2, segs - 1, 2):
-			flag_t.append(Transform3D(Basis(Vector3.RIGHT, rng.randf_range(-0.12, 0.12)), pts[i]))
-			flag_c.append(palette[rng.randi() % palette.size()])
-
-	var flags := MultiMesh.new()
-	flags.transform_format = MultiMesh.TRANSFORM_3D
-	flags.use_colors = true
-	flags.mesh = tri
-	flags.instance_count = flag_t.size()
-	for i in flag_t.size():
-		flags.set_instance_transform(i, flag_t[i])
-		flags.set_instance_color(i, flag_c[i])
-	var fm := MultiMeshInstance3D.new()
-	fm.multimesh = flags
-	fm.material_override = flag_mat
-	fm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(fm)
-
-	var strings := MultiMesh.new()
-	strings.transform_format = MultiMesh.TRANSFORM_3D
-	var sm := BoxMesh.new()
-	sm.size = Vector3(0.006, 0.006, 1.0)
-	strings.mesh = sm
-	strings.instance_count = seg_t.size()
-	for i in seg_t.size():
-		strings.set_instance_transform(i, seg_t[i])
-	var st := MultiMeshInstance3D.new()
-	st.multimesh = strings
-	st.material_override = _mat(Color("5a4630"), 0.8)
-	st.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(st)
+func _make_open_sign() -> Node3D:
+	var root := Node3D.new()
+	root.name = "OpenSign"
+	root.position = Vector3(sign_x, sign_y - 0.42, -room_d * 0.5 + 0.03)
+	var board := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(1.1, 0.24, 0.03)
+	board.mesh = bm
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color("2f5f58")
+	m.emission_enabled = true
+	m.emission = Color("2f5f58")
+	m.emission_energy_multiplier = 0.25
+	board.material_override = m
+	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(board)
+	var label := Label3D.new()
+	label.text = "¡ABIERTO!"
+	label.font_size = 72
+	label.pixel_size = 0.0024
+	label.outline_size = 0
+	label.modulate = Color("ffe08a")
+	label.position = Vector3(0, 0, 0.018)
+	root.add_child(label)
 	return root
+
+
+## Final: las lámparas suben un poco (la tienda "se enciende") y el cartel de la puerta pasa a ABIERTO.
+## Sin `animate`, de golpe.
+func open_shop(animate: bool) -> void:
+	if door_sign != null:
+		door_sign.text = "ABIERTO"
+		door_sign.modulate = Color("2f7a4a")
+	for lamp in lamps:
+		var target := lamp_energy * 1.3
+		if animate:
+			lamp.create_tween().tween_property(lamp, "light_energy", target, 2.0).set_trans(Tween.TRANS_SINE)
+		else:
+			lamp.light_energy = target
+
+
+# --- Ambiente -----------------------------------------------------------------
+
+## Sonda de reflejos que cubre toda la sala (barniz, metales y cristal reflejan la sala y no el cielo) y
+## motas de polvo flotando en la luz que entra por la ventana oeste.
+func _build_atmosphere() -> void:
+	var probe := ReflectionProbe.new()
+	probe.name = "RoomReflections"
+	probe.size = Vector3(room_w, room_h, room_d)
+	probe.position = Vector3(0.0, room_h * 0.5, 0.0)
+	probe.origin_offset = Vector3(0.0, 1.6 - room_h * 0.5, 0.0)
+	probe.box_projection = true
+	probe.interior = true
+	probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	probe.ambient_mode = ReflectionProbe.AMBIENT_DISABLED
+	add_child(probe)
+	for c in west_windows:
+		add_child(_make_dust(Vector3(-room_w * 0.5 + 2.2, 1.55, c), Vector3(2.0, 0.75, 1.1)))
+
+
+## Motas finas, lentas y casi transparentes: solo se notan a contraluz.
+func _make_dust(center: Vector3, extents: Vector3) -> GPUParticles3D:
+	var dust := GPUParticles3D.new()
+	dust.name = "Dust"
+	dust.position = center
+	dust.amount = 90
+	dust.lifetime = 14.0
+	dust.preprocess = 14.0
+	dust.visibility_aabb = AABB(-extents - Vector3.ONE * 0.5, (extents + Vector3.ONE * 0.5) * 2.0)
+	dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = extents
+	pm.gravity = Vector3(0.0, -0.004, 0.0)
+	pm.direction = Vector3(1.0, 0.2, 0.0)
+	pm.spread = 180.0
+	pm.initial_velocity_min = 0.005
+	pm.initial_velocity_max = 0.03
+	pm.turbulence_enabled = true
+	pm.turbulence_noise_strength = 0.4
+	pm.turbulence_noise_speed_random = 0.2
+	pm.turbulence_influence_min = 0.02
+	pm.turbulence_influence_max = 0.06
+	pm.scale_min = 0.6
+	pm.scale_max = 1.4
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 0))
+	fade.add_point(0.2, Color(1, 1, 1, 1))
+	fade.add_point(0.8, Color(1, 1, 1, 1))
+	fade.set_color(fade.get_point_count() - 1, Color(1, 1, 1, 0))
+	var ramp := GradientTexture1D.new()
+	ramp.gradient = fade
+	pm.color_ramp = ramp
+	dust.process_material = pm
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.006, 0.006)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = Color(1.0, 0.93, 0.78, 0.18)
+	quad.material = m
+	dust.draw_pass_1 = quad
+	return dust

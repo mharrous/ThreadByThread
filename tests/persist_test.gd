@@ -47,7 +47,7 @@ func _run() -> void:
 			(r as RoomController).count_override = COUNT
 	add_child(main)
 	await _frames(20)
-	room = shop.rooms[0]
+	room = shop.room
 	if phase == "write":
 		await _write()
 	else:
@@ -75,14 +75,25 @@ func _write() -> void:
 		Events.item_placed.emit(it, unit)
 		expect["slots"].append({"i": i, "u": room.get_units().find(unit), "r": row, "k": slot})
 	_check(room.placed_items == PLACED, "colocados %d objetos" % PLACED)
+	# Una sección entera completada (con el atajo): su premio debe seguir tras reiniciar.
+	var last := room.sections.back() as ShopSection
+	room.solve_instantly(last)
+	await _frames(2)
+	_check(last.is_completed and last.placed_items == last.total_items, "sección %s completada" % last.display_name)
+	expect["placed"] = room.placed_items
+	expect["section"] = String(last.section_id)
 
 	# Un objeto suelto en un sitio reconocible.
-	var loose := items[PLACED + 2]
+	# El primero sin colocar a partir de PLACED + 2 (la sección completada ya ha colocado los suyos).
+	var loose_i := PLACED + 2
+	while items[loose_i].state == PickableItem.State.PLACED:
+		loose_i += 1
+	var loose := items[loose_i]
 	var target := room.to_global(Vector3(-1.0, loose.half_height, 1.4))
 	loose.global_position = target
 	Events.item_set_down.emit(loose)
 	var lp := room.to_local(loose.global_position)
-	expect["loose"] = {"i": PLACED + 2, "x": lp.x, "y": lp.y, "z": lp.z}
+	expect["loose"] = {"i": loose_i, "x": lp.x, "y": lp.y, "z": lp.z}
 
 	# Un tesoro, recogido como lo hace el jugador.
 	var holder: ItemHolder = main.get_node("Player/ItemHolder")
@@ -108,7 +119,12 @@ func _read() -> void:
 	var expect: Dictionary = JSON.parse_string(f.get_as_text())
 	f.close()
 	var items := room.get_items()
-	_check(room.placed_items == PLACED, "tras reiniciar hay %d objetos colocados (%d)" % [PLACED, room.placed_items])
+	_check(room.placed_items == int(expect["placed"]), "tras reiniciar hay %d objetos colocados (%d)" % [int(expect["placed"]), room.placed_items])
+	var done := room.section_by_id(StringName(expect["section"]))
+	_check(done != null and done.is_completed and done.is_bunting_visible(), "la sección completada conserva su premio")
+	for s in room.sections:
+		if s != done:
+			_check(not s.is_completed and not s.is_bunting_visible(), "la sección %s sigue sin completar" % s.display_name)
 	for s: Dictionary in expect["slots"]:
 		var it := items[int(s["i"])]
 		var unit_i := room.get_units().find(it.container) if it.container != null else -1

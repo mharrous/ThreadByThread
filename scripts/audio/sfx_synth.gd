@@ -48,7 +48,37 @@ static func build_banks() -> Dictionary:
 		&"bike_bell": [bike_bell(3), bike_bell(8)],
 		&"dog_bark": [dog_bark(2, 330.0), dog_bark(5, 480.0), dog_bark(7, 650.0)],
 		&"ui_click": [ui_click()],
+		&"sparkle": [sparkle(NOTE_E5)],
+		&"aim_ok": [aim_tick()],
+		&"shop_bell": [shop_bell()],
 	}
+
+
+## Destello de una racha: dos campanillas agudas (octava y dos octavas) con un brillo que se apaga.
+static func sparkle(note: float) -> AudioStreamWAV:
+	var b := _buf(1.2)
+	_add_bell(b, 0.0, note * 2.0, 0.35, 0.22)
+	_add_bell(b, 0.045, note * 4.0, 0.18, 0.16)
+	_add_partials(b, 0.0, note * 3.0, 0.08, 0.3, [1.0, 1.5], [1.0, 0.5], [1.0, 0.6])
+	return _to_stream(b, 0.45)
+
+
+## Campanilla de la puerta de la tienda: dos golpes de badajo sobre una campana de latón, claros y con
+## cola larga, el segundo un poco más flojo (la puerta rebota).
+static func shop_bell() -> AudioStreamWAV:
+	var b := _buf(2.4)
+	for hit: Array in [[0.0, 1.0], [0.16, 0.6], [0.31, 0.3]]:
+		_add_partials(b, hit[0], 1568.0, 0.5 * float(hit[1]), 0.55, [1.0, 2.0, 2.76, 4.07], [1.0, 0.45, 0.3, 0.12], [1.0, 0.6, 0.45, 0.25])
+	return _to_stream(b, 0.7)
+
+
+## Tic de "aquí sí": clic muy corto y agudo, casi un pestañeo.
+static func aim_tick() -> AudioStreamWAV:
+	var b := _buf(0.08)
+	for i in b.size():
+		var t := float(i) / RATE
+		b[i] = sin(TAU * 1760.0 * t) * _ad(t, 0.001, 0.012) + sin(TAU * 2640.0 * t) * 0.4 * _ad(t, 0.001, 0.008)
+	return _to_stream(b, 0.3)
 
 
 ## Recoger: roce suave de lana + pequeño "whup" ascendente.

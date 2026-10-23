@@ -1,6 +1,7 @@
 class_name PlacementFx
 extends Node3D
-## Efectos visuales de colocación: ráfaga de chispas suaves y onda circular.
+## Efectos visuales de colocación: ráfaga de chispas suaves, onda circular y pulso del objeto. Todo
+## crece con la racha (Events.streak_changed, que AudioManager emite justo antes de item_placed).
 ## Escucha Events.item_placed; el gameplay no lo llama directamente.
 
 const POOL_SIZE := 4
@@ -11,6 +12,9 @@ var _rings: Array[MeshInstance3D] = []
 var _dust: Array[CPUParticles3D] = []
 var _next := 0
 var _next_dust := 0
+var _streak := 1
+## Color que se mezcla en las chispas de una racha larga.
+const STREAK_GOLD := Color("ffd27a")
 
 
 func _ready() -> void:
@@ -106,6 +110,7 @@ func _ready() -> void:
 		add_child(d)
 		_dust.append(d)
 
+	Events.streak_changed.connect(func(count: int): _streak = count)
 	Events.item_placed.connect(_on_item_placed)
 	Events.item_bounced.connect(_on_item_bounced)
 
@@ -123,13 +128,20 @@ func _on_item_bounced(item: PickableItem, speed: float, pos: Vector3, _sound: St
 
 
 func _on_item_placed(item: PickableItem, _unit: StorageUnit) -> void:
+	# 0 sin racha, 1 a partir de ×10.
+	var k := clampf((_streak - 1) / 9.0, 0.0, 1.0)
 	var color := item.data.color.lightened(0.35)
+	if _streak >= 3:
+		color = color.lerp(STREAK_GOLD, 0.35 + 0.4 * k)
 	var pos := item.global_position
 	var idx := _next
 	_next = (_next + 1) % POOL_SIZE
+	item.play_place_pulse(k)
 
 	var p := _bursts[idx]
 	p.global_position = pos + Vector3(0, item.radius * 0.6, 0.02)
+	p.amount = 14 + int(22.0 * k)
+	p.initial_velocity_max = 0.7 + 0.8 * k
 	p.color = color
 	p.restart()
 	p.emitting = true
@@ -141,6 +153,7 @@ func _on_item_placed(item: PickableItem, _unit: StorageUnit) -> void:
 	mat.albedo_color = Color(color.r, color.g, color.b, 0.55)
 	ring.visible = true
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(ring, "scale", Vector3(1.9, 1.0, 1.9), 0.45).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	var reach := 1.9 + 1.6 * k
+	tw.tween_property(ring, "scale", Vector3(reach, 1.0, reach), 0.45 + 0.15 * k).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tw.tween_property(mat, "albedo_color:a", 0.0, 0.45).set_ease(Tween.EASE_IN)
 	tw.chain().tween_callback(func(): ring.visible = false)
