@@ -11,6 +11,9 @@ extends Node3D
 @export var item_scene: PackedScene
 ## > 0: cada tipo genera exactamente este número de objetos (pruebas). 0 = el `spawn_count` de cada tipo.
 @export var count_override := 0
+## Escala de las cantidades de cada tipo (`spawn_count`) para ajustar la duración de la demo sin tocar
+## los datos. Cada tipo genera al menos 2.
+@export_range(0.1, 1.0, 0.05) var spawn_scale := 1.0
 @export var rng_seed := 4242
 
 var total_items := 0
@@ -161,7 +164,7 @@ func _block_unit_fronts() -> void:
 
 
 func _count_for(data: ItemData) -> int:
-	return count_override if count_override > 0 else data.spawn_count
+	return count_override if count_override > 0 else maxi(2, roundi(data.spawn_count * spawn_scale))
 
 
 func _spawn_items() -> void:

@@ -10,6 +10,7 @@ const TEST_PATH := "user://settings_test.cfg"
 var mouse_sensitivity := 1.0
 var master_volume := 0.8
 var sfx_volume := 1.0
+var music_volume := 0.5
 var fullscreen := false
 var vsync := true
 var msaa := true
@@ -36,6 +37,7 @@ func load_settings() -> void:
 	mouse_sensitivity = clampf(float(cf.get_value("controls", "mouse_sensitivity", 1.0)), 0.2, 3.0)
 	master_volume = clampf(float(cf.get_value("audio", "master", 0.8)), 0.0, 1.0)
 	sfx_volume = clampf(float(cf.get_value("audio", "sfx", 1.0)), 0.0, 1.0)
+	music_volume = clampf(float(cf.get_value("audio", "music", 0.5)), 0.0, 1.0)
 	fullscreen = bool(cf.get_value("graphics", "fullscreen", false))
 	vsync = bool(cf.get_value("graphics", "vsync", true))
 	msaa = bool(cf.get_value("graphics", "msaa", true))
@@ -54,6 +56,7 @@ func save_settings() -> void:
 	cf.set_value("controls", "mouse_sensitivity", mouse_sensitivity)
 	cf.set_value("audio", "master", master_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
+	cf.set_value("audio", "music", music_volume)
 	cf.set_value("graphics", "fullscreen", fullscreen)
 	cf.set_value("graphics", "vsync", vsync)
 	cf.set_value("graphics", "msaa", msaa)

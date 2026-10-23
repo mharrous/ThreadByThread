@@ -20,6 +20,7 @@
 [node name="ShopFloor" type="Node3D"]
 script = ExtResource("1_room")
 item_scene = ExtResource("7_item")
+spawn_scale = 0.45
 
 [node name="Shell" type="Node3D" parent="."]
 script = ExtResource("2_shell")

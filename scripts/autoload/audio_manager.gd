@@ -4,6 +4,9 @@ extends Node
 ## Los sonidos se sintetizan en un hilo al arrancar (ver SfxSynth).
 
 const SFX_BUS := &"SFX"
+const MUSIC_BUS := &"Music"
+## Música de la tienda (bucle original, generado con tools/make_music.gd).
+const MUSIC_PATH := "res://art/audio/music/shop_loop.wav"
 ## Sonidos de la calle: pasan por un filtro que simula el cristal de la ventana.
 const OUTDOOR_BUS := &"Outdoor"
 const POOL_OUT := 8
@@ -42,6 +45,7 @@ var _rng := RandomNumberGenerator.new()
 var _combo := -1
 var _last_place_ms := -100000
 var _aiming_ok := false
+var _music: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -65,6 +69,9 @@ func _ready() -> void:
 		p2.bus = SFX_BUS
 		add_child(p2)
 		_pool_2d.append(p2)
+	_music = AudioStreamPlayer.new()
+	_music.bus = MUSIC_BUS
+	add_child(_music)
 	GameSettings.changed.connect(_apply_volumes)
 	_apply_volumes()
 	_connect_events()
@@ -142,6 +149,11 @@ func _setup_bus() -> void:
 		var idx := AudioServer.bus_count - 1
 		AudioServer.set_bus_name(idx, SFX_BUS)
 		AudioServer.set_bus_send(idx, &"Master")
+	if AudioServer.get_bus_index(MUSIC_BUS) == -1:
+		AudioServer.add_bus()
+		var m_idx := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(m_idx, MUSIC_BUS)
+		AudioServer.set_bus_send(m_idx, &"Master")
 	if AudioServer.get_bus_index(OUTDOOR_BUS) == -1:
 		AudioServer.add_bus()
 		var out_idx := AudioServer.bus_count - 1
@@ -163,6 +175,9 @@ func _apply_volumes() -> void:
 	var sfx := AudioServer.get_bus_index(SFX_BUS)
 	if sfx != -1:
 		AudioServer.set_bus_volume_db(sfx, linear_to_db(maxf(GameSettings.sfx_volume, 0.0001)))
+	var music := AudioServer.get_bus_index(MUSIC_BUS)
+	if music != -1:
+		AudioServer.set_bus_volume_db(music, linear_to_db(maxf(GameSettings.music_volume, 0.0001)))
 
 
 func _connect_events() -> void:
@@ -196,6 +211,7 @@ func _on_item_placed(item, _shelf) -> void:
 	var now := Time.get_ticks_msec()
 	_combo = _combo + 1 if now - _last_place_ms < COMBO_WINDOW_MS else 0
 	_last_place_ms = now
+	Events.streak_changed.emit(_combo + 1)
 	var top := COMBO_SCALE.size() - 1
 	# Arriba del todo alterna las dos últimas notas en vez de seguir subiendo.
 	var step := _combo if _combo <= top else top - (_combo - top) % 2
@@ -226,6 +242,22 @@ func _publish_banks(banks: Dictionary) -> void:
 	_apply_overrides(banks)
 	_banks = banks
 	ready_to_play = true
+	_start_music()
+
+
+## La música entra despacio un poco después de arrancar (no compite con el primer vistazo a la sala).
+func _start_music() -> void:
+	if not ResourceLoader.exists(MUSIC_PATH):
+		return
+	var stream := load(MUSIC_PATH) as AudioStreamWAV
+	if stream == null:
+		return
+	_music.stream = stream   # el bucle viene del .import (loop_mode = adelante)
+	_music.volume_db = -40.0
+	_music.play()
+	var tw := create_tween()
+	tw.tween_interval(2.0)
+	tw.tween_property(_music, "volume_db", -6.0, 6.0).set_trans(Tween.TRANS_SINE)
 
 
 ## Si existe art/audio/sfx/<sonido>_<n>.wav (editado en Audacity u otro programa),

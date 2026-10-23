@@ -12,6 +12,44 @@
 | 4 · Demo comercial (15–25 min, ejecutable de Windows) | **En curso**: sala única hecha (ver abajo) |
 | 5 · Pruebas y expansión | No empezada |
 
+## Fase 4 — Mejoras de ambiente, arte, sonido y demo (2026-10-23, segunda parte)
+
+**Luz**:
+- Luz rebotada en tiempo real (SDFGI).
+- Sonda de reflejos que cubre la sala.
+- Motas de polvo en la luz de la ventana.
+- Ajuste "Iluminación avanzada" para equipos modestos: apaga SDFGI, SSAO, niebla y brillo.
+
+**Arte (Blender, `art/blender/make_props.py`)**:
+- Lámpara colgante esmaltada, que sustituye al cono.
+- Maniquí de costura (rincón suroeste).
+- Máquina de coser antigua (mesa de corte).
+- Caja registradora de latón (mesa de lanas).
+- Puerta de la calle con campanilla (pared este). Su cartel dice CERRADO y pasa a ABIERTO al terminar.
+- Mesas con patas torneadas y cajón.
+- Las estanterías y el panel se separan 6 cm de la pared: antes el friso y la moldura las atravesaban.
+
+**Sonido**:
+- Coches, furgonetas, motos y bocinas, 10 dB más bajos.
+- Racha musical: cada colocación seguida (menos de 6 s entre una y otra) sube una nota de la pentatónica.
+- Desde la tercera colocación seguida se suma un destello de campanillas que crece con la racha. El HUD muestra "Racha ×N".
+- Tic suave al apuntar a un hueco correcto.
+- Arpegio en el 25, 50 y 75 % de cada sección.
+- Música original en bucle (`tools/make_music.gd`) con su propio volumen.
+
+**Demo**:
+- Pantalla de título: Jugar o Continuar, Nueva partida y Salir.
+- 215 objetos (`spawn_scale` = 0.45), pensados para 15–25 min. La duración no está medida jugando.
+
+**Rendimiento con 215 objetos** (1080p, sin VSync, todo activado):
+
+| Vista | FPS |
+|---|---|
+| Peor caso | 434 |
+| Entrada | 460 |
+
+Hubo un pico aislado de 49 ms al girar (probablemente compilación de un shader).
+
 ## Fase 4 — Una sola sala (2026-10-23)
 
 Las cuatro salas con puertas se sustituyen por **una sola sala de 12 × 9 m**. Los 450 objetos empiezan

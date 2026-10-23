@@ -59,6 +59,9 @@ var _treasure_label: Label
 ## Con un objeto en la mano: su sección y cuánto le falta (así se sabe a qué pared llevarlo).
 var _section_label: Label
 var _held_section: ShopSection
+## "Racha ×N" bajo la mira cuando se colocan cosas seguidas.
+var _streak_label: Label
+var _streak_tween: Tween
 var _room: RoomController
 var _toast: Label
 var _banner: PanelContainer
@@ -87,6 +90,7 @@ func _ready() -> void:
 		if section == _held_section:
 			_update_section_label())
 	Events.section_completed.connect(_on_section_completed)
+	Events.streak_changed.connect(_on_streak_changed)
 	_on_progress_changed(0, 0)
 	_fade_prompt(false)
 
@@ -184,6 +188,18 @@ func _build() -> void:
 	_treasure_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_treasure_label.visible = false
 	vb.add_child(_treasure_label)
+
+	# Racha
+	_streak_label = _label("", 26, Color("ffd27a"))
+	_streak_label.modulate.a = 0.0
+	_streak_label.anchor_left = 0.5
+	_streak_label.anchor_right = 0.5
+	_streak_label.anchor_top = 0.42
+	_streak_label.anchor_bottom = 0.42
+	_streak_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_streak_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_streak_label.resized.connect(func(): _streak_label.pivot_offset = _streak_label.size * 0.5)
+	_root.add_child(_streak_label)
 
 	# Aviso temporal
 	_toast = _label("", 20, CREAM)
@@ -315,6 +331,22 @@ func _update_section_label() -> void:
 	_section_label.visible = _held_section != null
 	if _held_section != null:
 		_section_label.text = "Va en:  %s   %d / %d" % [_held_section.display_name, _held_section.placed_items, _held_section.total_items]
+
+
+## Desde la tercera colocación seguida: salta, crece un poco con la racha y se apaga si se corta.
+func _on_streak_changed(count: int) -> void:
+	if count < 3:
+		return
+	_streak_label.text = "Racha ×%d" % count
+	if _streak_tween:
+		_streak_tween.kill()
+	var peak := minf(1.0 + count * 0.03, 1.45)
+	_streak_label.scale = Vector2.ONE * (peak + 0.25)
+	_streak_label.modulate.a = 1.0
+	_streak_tween = create_tween()
+	_streak_tween.tween_property(_streak_label, "scale", Vector2.ONE * peak, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_streak_tween.tween_interval(4.5)
+	_streak_tween.tween_property(_streak_label, "modulate:a", 0.0, 1.2)
 
 
 func _on_section_completed(section) -> void:

@@ -382,7 +382,7 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	for section in room.sections:
 		var section_expected := 0
 		for data in section.catalog.items:
-			section_expected += room.count_override if room.count_override > 0 else data.spawn_count
+			section_expected += room._count_for(data)
 			types += 1
 		_check(section.total_items == section_expected and section.placed_items == 0, "la sección %s espera %d objetos" % [section.display_name, section_expected])
 		expected += section_expected

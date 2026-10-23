@@ -3,7 +3,7 @@
 Simulador 3D cozy de organización de una mercería. Godot 4.7, GDScript, PC Windows.
 Recoger → identificar → clasificar → colocar → recibir recompensa.
 
-Una sola sala grande (12 × 9 m). Los 450 objetos están tirados por el suelo y las mesas, mezclados, y las
+Una sola sala grande (12 × 9 m). Unos 215 objetos (demo de 15–25 min) están tirados por el suelo y las mesas, mezclados, y las
 estanterías de las paredes están vacías. Cada pared es una sección con su cartel: lanas y carretes/botones
 (norte), sastrería (este), telas y cintas (sur). La ventana oeste da a la calle.
 
@@ -66,7 +66,7 @@ Dime qué sientes raro: fuerza del lanzamiento, sonidos (nada de audio se ha esc
 # Prueba de humo sin ventana (código de salida 0 = todo correcto)
 powershell -File tests\run_smoke.ps1 -Count 1               # 1 objeto por tipo, rápido
 powershell -File tests\run_smoke.ps1 -Count 1 -Sections 1   # ordena a mano solo la 1.ª sección; el resto, con el atajo
-powershell -File tests\run_smoke.ps1 -Count 0            # cantidades del juego completo (450 objetos), varios minutos
+powershell -File tests\run_smoke.ps1 -Count 0            # cantidades del juego completo (215 objetos), varios minutos
 
 # Guardado y carga entre dos procesos distintos
 powershell -File tests\run_persist.ps1
@@ -78,7 +78,7 @@ powershell -File tests\run_fuzz.ps1 -Steps 1200 -Seed 5 -Count 3
 powershell -File tests\run_shots.ps1          # vistas de la sala -> captures\
 powershell -File tests\run_street_shots.ps1   # ventana y sucesos de la calle -> captures_street\
 
-# FPS con 450 objetos a 1080p sin VSync
+# FPS con todos los objetos a 1080p sin VSync
 powershell -File tests\run_perf.ps1
 ```
 
@@ -127,7 +127,10 @@ Eso regenera `data/items/*.tres` y los catálogos. Cada fila de estantería/celd
 # Ovillo
 "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --factory-startup --python art/blender/make_yarn_ball.py -- art/models/yarn_ball.glb
 
-# Mobiliario (estantería, mesa, cajón, caja de cartón, planta, bandeja)
+# Atrezo (lámpara colgante, maniquí, máquina de coser, caja registradora, puerta de la calle)
+"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --factory-startup --python art/blender/make_props.py -- art/models
+
+# Mobiliario (estantería, mesa con patas torneadas, cajón, caja de cartón, planta, bandeja)
 "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --factory-startup --python art/blender/make_furniture.py -- art/models
 
 # Objetos de las familias (botones, carretes, telas, cintas, accesorios)
@@ -141,6 +144,20 @@ Eso regenera `data/items/*.tres` y los catálogos. Cada fila de estantería/celd
 ```
 
 Las texturas son PNG normales: puedes retocarlas en Krita o GIMP y Godot las reimporta solo. Las texturas de la calle (asfalto, acera, hierba, tejas) deben importarse con mipmaps y compresión VRAM; las de relieve, como mapa de normales (ya está configurado en sus `.import`).
+
+## Música
+
+`art/audio/music/shop_loop.wav` es un bucle original de 53 s (piano eléctrico, bajo, melodía pentatónica, shaker). Se compone y sintetiza con
+
+```
+"%LOCALAPPDATA%\Programs\Godot\Godot_v4.7.2-stable_win64.exe" --headless --path . --script res://tools/make_music.gd
+```
+
+El bucle sale del `.import` (`edit/loop_mode=2`). Tiene su propio bus ("Music") y volumen en los ajustes.
+
+## Duración de la demo
+
+`spawn_scale` del nodo `ShopFloor` (`scenes/rooms/shop_floor.tscn`) escala el `spawn_count` de cada tipo (mínimo 2). Con 0.45 salen 215 objetos; con 1.0, los 450 completos.
 
 ## Sonidos: Audacity
 

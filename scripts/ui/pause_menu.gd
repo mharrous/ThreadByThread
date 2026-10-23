@@ -371,6 +371,8 @@ func _build_main() -> Control:
 		func(v: float): GameSettings.master_volume = v))
 	right.add_child(_slider_row("Efectos", 0.0, 1.0, 0.05, GameSettings.sfx_volume,
 		func(v: float): GameSettings.sfx_volume = v))
+	right.add_child(_slider_row("Música", 0.0, 1.0, 0.05, GameSettings.music_volume,
+		func(v: float): GameSettings.music_volume = v))
 	right.add_child(_section("Pantalla"))
 	right.add_child(_check_row("Pantalla completa", GameSettings.fullscreen,
 		func(on: bool): GameSettings.fullscreen = on))
