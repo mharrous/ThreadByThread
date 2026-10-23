@@ -247,6 +247,12 @@ La prueba con las cantidades completas encontró un fallo real que la de 1 objet
 - Si la calle te parece demasiado tranquila o demasiado animada: `StreetLife.min_gap` / `max_gap` (hoy 14 y 40 s) en `scripts/room/street_life.gd`.
 - Estética de personas, coches y árboles: es estilo "low-poly" cálido hecho con Blender; si quieres más realismo hay que decidir cuánto presupuesto de arte dedicarle.
 
+## Ejecutable final de la demo (2026-10-24)
+
+- `build/ThreadByThread.exe`, versión 0.4.0: icono propio (`icon.ico`, generado desde `icon.svg` con `tools/make_icon.gd`), nombre, descripción y copyright en las propiedades del archivo. Sin ventana de consola. El icono también sale en la barra de título (`config/windows_native_icon`).
+- `export_presets.cfg` está en `.gitignore`: los cambios del preset (icono, versión, `modify_resources`) solo viven en este equipo.
+- Precarga de shaders: bajo el velo negro de la pantalla de título la cámara da una vuelta completa en 16 frames, así lo que aún no se ha visto se compila antes de jugar. Godot además guarda la caché en disco, así que el tirón de 49 ms solo podía darse en la primera partida. No se puede medir de forma fiable en este equipo (la caché ya está caliente).
+
 ## Problemas conocidos
 
 - Un ovillo lanzado dentro de una estantería queda sobre la balda como objeto suelto (se puede recoger); no cuenta como colocado.
@@ -259,7 +265,7 @@ La prueba con las cantidades completas encontró un fallo real que la de 1 objet
 
 1. Tu prueba manual de la sala única: recorrido, orientación entre secciones, ritmo y duración real.
 2. Ajustar cantidades para 15–25 min si hace falta.
-3. Resto de la Fase 4: pantalla de título, ajustes mínimos, pulido de audio, ejecutable final y prueba en gama media.
+3. Resto de la Fase 4: prueba en gama media (lo demás está hecho).
 4. Ideas pendientes del documento inicial, sin construir (el prompt las marca como propuestas): pedidos opcionales de materiales, secretos extra, mejoras de organización, más decoración desbloqueable, niveles 5 y 6.
 
 ## Cómo probar

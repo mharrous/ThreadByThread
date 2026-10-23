@@ -12,6 +12,8 @@ const BROWN := Color("8a6a4a")
 
 ## Tras "Nueva partida" la escena se recarga: esta vez se entra directamente al juego.
 static var _skip_next := false
+## Frames de la vuelta de cámara bajo el velo (ver _warm_up).
+const WARM_STEPS := 16
 
 ## Dibujos decorativos de la tarjeta (los mismos del libro de colecciones).
 const ICON_ITEMS := ["res://data/items/yarn_red.tres", "res://data/items/spool_blue.tres", "res://data/items/btn_wood_light.tres"]
@@ -42,6 +44,24 @@ func _ready() -> void:
 	tw.tween_property(_veil, "color:a", 0.0, 1.0).set_trans(Tween.TRANS_SINE)
 	tw.parallel().tween_property(_card, "modulate:a", 1.0, 0.6).set_delay(0.5)
 	tw.parallel().tween_property(_card, "scale", Vector2.ONE, 0.7).set_delay(0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_warm_up()
+
+
+## Bajo el velo negro, la cámara da una vuelta completa en pocos frames: así se compilan antes los
+## shaders de lo que aún no se ha visto y no hay tirón la primera vez que se gira jugando.
+func _warm_up() -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var rest := cam.transform
+	for i in WARM_STEPS:
+		var yaw := TAU * i / WARM_STEPS
+		var pitch := -0.5 if i % 2 == 0 else 0.15
+		cam.global_basis = Basis.from_euler(Vector3(pitch, yaw, 0.0))
+		await get_tree().process_frame
+		if not is_instance_valid(cam):
+			return
+	cam.transform = rest
 
 
 ## Esc no abre el menú de pausa mientras está el título.
