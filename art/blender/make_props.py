@@ -26,6 +26,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import bmesh  # noqa: E402
+from mathutils import Vector  # noqa: E402
+
 from common import Model, OUT_DIR, reset_scene  # noqa: E402
 
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -331,23 +334,183 @@ def make_tea_set():
 
 
 # ---------------------------------------------------------------- barrido: escoba
+def vcol_material(m, name, roughness):
+    """Material cuyo color sale de los vértices (atributo "Col"): el exportador glTF lo lleva como COLOR_0.
+    En Godot hay que activar vertex_color_use_as_albedo y vertex_color_is_srgb (lo hace ShopSweep)."""
+    m.add_material(name, (1.0, 1.0, 1.0), roughness)
+    nt = m.materials[-1].node_tree
+    attr = nt.nodes.new("ShaderNodeVertexColor")
+    attr.layer_name = "Col"
+    nt.links.new(attr.outputs["Color"], nt.nodes.get("Principled BSDF").inputs["Base Color"])
+
+
 def make_broom():
+    """Escoba de paja: mango de madera algo cónico con la veta pintada en los vértices, la paja recogida
+    alrededor del mango con un cordel enrollado y un abanico denso de mechones algo curvados, cosido con
+    dos pasadas de cordel. Origen = punta de la paja en el suelo; el abanico queda en el plano XY."""
+    import random
     reset_scene()
     m = Model("broom", 110)
-    m.add_material("wood", (0.62, 0.42, 0.24), 0.6)                      # 0 mango
-    m.add_material("straw", (0.86, 0.70, 0.38), 0.9)                     # 1 paja
+    vcol_material(m, "wood", 0.55)                                       # 0 mango (veta en los vértices)
+    vcol_material(m, "straw", 0.9)                                       # 1 paja (tono de cada mechón)
     m.add_material("band", (0.70, 0.20, 0.18), 0.6)                      # 2 cordel rojo
-    # Abanico de paja: estrecho arriba (atado al mango) y ancho abajo.
-    m.box((0, 0.15, 0), (0.13, 0.30, 0.03), grain="y", bevel=0.006, taper=2.25, mat=1)
-    for k in range(7):
-        x = -0.12 + k * 0.04
-        m.box((x, 0.012, 0), (0.026, 0.03, 0.05), grain="y", bevel=0.004, mat=1,
-              rotate=("Z", (k - 3) * 3.0, (x, 0.03, 0)))
-    for y in (0.24, 0.275):
-        m.box((0, y, 0), (0.15, 0.014, 0.042), bevel=0.004, mat=2)
-    m.cylinder((0, 0.80, 0), 0.0135, 1.0, segments=12, mat=0, round_edge=0.004)
-    m.sphere((0, 1.31, 0), 0.02, segments=10, rings=6, mat=0)
-    m.export(center_y=False)
+    col = m.bm.verts.layers.float_color.new("Col")
+    rng = random.Random(110)
+
+    def paint(build, color):
+        """Construye una pieza y pinta sus vértices nuevos con color(p) (p en ejes de Godot, color lineal)."""
+        n0 = len(m.bm.verts)
+        build()
+        m.bm.verts.ensure_lookup_table()
+        for i in range(n0, len(m.bm.verts)):
+            v = m.bm.verts[i]
+            v[col] = (*color((v.co.x, v.co.z, -v.co.y)), 1.0)
+
+    def mix(a, b, t):
+        return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+    # -- mango: algo más grueso abajo, remate redondeado. Veta: vetas largas que serpentean.
+    WOOD_LIGHT = (0.70, 0.45, 0.24)
+    WOOD_DARK = (0.22, 0.11, 0.04)
+
+    def wood(p):
+        a = math.atan2(p[2], p[0])
+        y = p[1]
+        # Fondo con aguas suaves y, encima, vetas oscuras finas (umbral) como pinceladas.
+        tone = 0.5 + 0.5 * math.sin(a * 2.0 + 1.5 * math.sin(y * 3.0) + y * 1.5)
+        streak = 0.5 + 0.5 * math.sin(a * 7.0 + 2.5 * math.sin(y * 3.0 + a * 2.0) + y * 4.0)
+        lines = max(0.0, min(1.0, (streak - 0.5) / 0.25))
+        knot = math.exp(-((y - 0.78) ** 2) / 0.0012) * max(0.0, math.cos(a - 1.0)) ** 2
+        t = 0.25 * tone + 0.8 * lines + 0.8 * knot
+        return mix(WOOD_LIGHT, WOOD_DARK, min(t, 1.0))
+
+    prof = []
+    y = 0.26
+    while y < 1.30:
+        prof.append((0.0148 - 0.0026 * (y - 0.26) / 1.05, y))
+        y += 0.06
+    prof += [(0.0122, 1.31), (0.0112, 1.322), (0.0078, 1.330), (0.0, 1.334)]
+    paint(lambda: m.lathe([(0.0, 0.26)] + prof, 20, mat=0), wood)
+
+    # -- abanico: media anchura y medio grosor a cada altura (estrecho arriba, se abre abajo).
+    TOP = 0.285
+
+    def half_w(yy):
+        return 0.045 + 0.10 * max(0.0, 1.0 - yy / TOP) ** 0.8
+
+    def half_t(yy):
+        return 0.014 + 0.009 * min(1.0, yy / TOP)
+
+    STRAW = [(0.92, 0.77, 0.43), (0.86, 0.72, 0.38), (0.95, 0.83, 0.50), (0.82, 0.75, 0.38), (0.90, 0.69, 0.36)]
+
+    def straw_tone():
+        base = STRAW[rng.randrange(len(STRAW))]
+        k = 0.85 + rng.random() * 0.22
+        return tuple(c * k for c in base)
+
+    def straw_shade(tone):
+        # Más oscura dentro del atado y un poco tostada en las puntas que barren.
+        def f(p):
+            t = p[1] / TOP
+            dark = 0.8 + 0.2 * min(1.0, t * 5.0) - 0.18 * max(0.0, t - 0.75) / 0.25
+            return tuple(c * dark for c in tone)
+        return f
+
+    # Relleno: una lámina cónica que tapa los huecos entre mechones.
+    paint(lambda: m.box((0, 0.15, 0), (0.09, 0.25, 0.007), bevel=0.0, taper=2.5, mat=1),
+          straw_shade((0.66, 0.52, 0.27)))
+
+    def clump(x_top, x_bot, z, tip_y, bow, rx, rz):
+        part = bmesh.new()
+        rings = []
+        n = 4
+        for i in range(n + 1):
+            t = i / n                                   # 0 arriba, 1 en la punta
+            yy = TOP + 0.01 - (TOP + 0.01 - tip_y) * t
+            spread = 1.0 - (1.0 - t) ** 1.6             # se abre sobre todo en la mitad de abajo
+            cx = x_top + (x_bot - x_top) * spread
+            cz = z * (0.7 + 0.5 * t) + bow * math.sin(math.pi * t * 0.9)
+            k = 1.0 - 0.45 * t ** 3
+            ring = []
+            for s in range(5):
+                a = math.tau * s / 5 + 0.3
+                ring.append(part.verts.new(Vector((cx + math.cos(a) * rx * k, yy, cz + math.sin(a) * rz * k))))
+            rings.append(ring)
+        for i in range(n):
+            for s in range(5):
+                s2 = (s + 1) % 5
+                part.faces.new((rings[i][s], rings[i][s2], rings[i + 1][s2], rings[i + 1][s]))
+        tip = part.verts.new(Vector((sum(v.co.x for v in rings[-1]) / 5, tip_y - 0.003,
+                                     sum(v.co.z for v in rings[-1]) / 5)))
+        for s in range(5):
+            part.faces.new((rings[-1][s], rings[-1][(s + 1) % 5], tip))
+        m._finish(part, "y", 1, None)
+
+    # Cuatro filas de mechones al tresbolillo, con las puntas desiguales.
+    N = 14
+    for row, z in enumerate((-0.0115, -0.0045, 0.0045, 0.0115)):
+        for i in range(N):
+            u = (i + 0.5 + (0.5 if row % 2 else 0.0) - 0.25 + rng.uniform(-0.18, 0.18)) / N * 2.0 - 1.0
+            u = max(-0.985, min(0.985, u))
+            tip_y = 0.003 + rng.random() * 0.012 + 0.006 * u * u
+            x_bot = u * (half_w(0.0) - 0.006)
+            x_top = u * (half_w(TOP) - 0.012)
+            bow = rng.uniform(-0.004, 0.006)
+            tone = straw_tone()
+            paint(lambda: clump(x_top, x_bot, z, tip_y, bow, 0.0115, 0.0036), straw_shade(tone))
+
+    # -- paja recogida alrededor del mango (achatada como el abanico) y cordel enrollado en espiral.
+    SQ = 0.45
+    shoulder = [(0.0, 0.225), (0.056, 0.23), (0.054, 0.27), (0.044, 0.30), (0.03, 0.33), (0.0195, 0.355), (0.0165, 0.39), (0.0, 0.39)]
+
+    def shoulder_r(yy):
+        for (r0, y0), (r1, y1) in zip(shoulder, shoulder[1:]):
+            if y0 <= yy <= y1 and y1 > y0:
+                return r0 + (r1 - r0) * (yy - y0) / (y1 - y0)
+        return shoulder[-2][0]
+
+    def gathered(p):
+        a = math.atan2(p[2], p[0])
+        k = int(round((a + math.pi) / math.tau * 24.0))
+        tone = STRAW[(k * 3) % len(STRAW)]
+        return tuple(c * (0.8 + 0.08 * (k % 3)) for c in tone)
+
+    def build_shoulder():
+        # Achatada, pero sin hundirse en el mango: el grosor nunca baja del radio del mango.
+        n0 = len(m.bm.verts)
+        m.lathe(shoulder, 24, mat=1, scale=(1.0, 1.0, SQ))
+        m.bm.verts.ensure_lookup_table()
+        for i in range(n0, len(m.bm.verts)):
+            v = m.bm.verts[i]
+            r = math.hypot(v.co.x, v.co.y / SQ)
+            if r > 1e-6:
+                v.co.y = v.co.y / (SQ * r) * max(r * SQ, 0.0158)
+
+    paint(build_shoulder, gathered)
+    helix = []
+    turns, y0, y1 = 3.5, 0.338, 0.382
+    steps = int(turns * 11)
+    for k in range(steps + 1):
+        t = k / steps
+        yy = y0 + (y1 - y0) * t
+        a = math.tau * turns * t
+        r = shoulder_r(yy) + 0.0022
+        helix.append((math.cos(a) * r, yy, math.sin(a) * max(r * SQ, 0.018)))
+    paint(lambda: m.tube(helix, 0.0024, 5, mat=2), lambda p: (1.0, 1.0, 1.0))
+
+    # -- dos pasadas de cosido a lo ancho del abanico, con las puntadas que asoman por las dos caras.
+    for yy in (0.233, 0.168):
+        w = half_w(yy) + 0.004
+        th = max(half_t(yy) + 0.0015, 0.027 if yy > 0.2 else 0.0)
+        paint(lambda: m.box((0, yy, 0), (w * 2.0, 0.007, th * 2.0), bevel=0.0015, segments=1, mat=2),
+              lambda p: (1.0, 1.0, 1.0))
+        nst = int(w * 2.0 / 0.024)
+        for j in range(nst):
+            x = -w + (j + 0.5) * (w * 2.0 / nst)
+            for sz in (-1, 1):
+                paint(lambda: m.box((x, yy, sz * (th + 0.0008)), (0.004, 0.016, 0.002), bevel=0.0, mat=2,
+                                    rotate=("Z", 12.0, (x, yy, 0))), lambda p: (1.0, 1.0, 1.0))
+    m.export(shade_angle=75.0, center_y=False)
 
 
 # ---------------------------------------------------------------- barrido: recogedor

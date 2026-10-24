@@ -55,6 +55,7 @@ func _ready() -> void:
 	waste_bin = _model(WASTE_BIN, "WasteBin")
 	waste_bin.position = BIN_AT
 	broom = _model(BROOM, "Broom")
+	_use_vertex_colors(broom)
 	dustpan = _model(DUSTPAN, "Dustpan")
 	_build_pan_load()
 	_build_rack()
@@ -274,6 +275,22 @@ func _model(path: String, node_name: String) -> Node3D:
 	else:
 		push_warning("Falta %s (ejecuta art/blender/make_props.py)" % path)
 	return root
+
+
+## La escoba lleva el color en los vértices (veta del mango, tono de cada mechón de paja): sus superficies
+## "wood" y "straw" lo usan como albedo. make_props.py escribe colores lineales en un atributo de coma
+## flotante y llegan tal cual (vertex_color_is_srgb = false); el gato, con bytes en sRGB, usa true.
+func _use_vertex_colors(model: Node3D) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := (mi as MeshInstance3D).mesh
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i) as StandardMaterial3D
+			if mat != null and mat.resource_name in ["wood", "straw"]:
+				var painted := mat.duplicate() as StandardMaterial3D
+				painted.vertex_color_use_as_albedo = true
+				painted.vertex_color_is_srgb = false
+				painted.albedo_color = Color.WHITE
+				(mi as MeshInstance3D).set_surface_override_material(i, painted)
 
 
 ## Volumen para apuntar a la escoba y el recogedor apoyados (capa de "coger" del ItemHolder).
