@@ -289,7 +289,8 @@ func _build_card() -> void:
 	_root.add_child(_card)
 	var stitch := PauseMenu.Stitch.new()
 	stitch.color = Color(UiStyle.THREAD, 0.55)
-	stitch.inset = -12.0
+	stitch.cover_parent = true
+	stitch.inset = 7.0
 	stitch.radius = 10.0
 	stitch.dash = 6.0
 	stitch.gap = 4.0
@@ -393,6 +394,7 @@ func _build_streak() -> void:
 	_streak_label.add_child(_streak_text)
 	var stitch := PauseMenu.Stitch.new()
 	stitch.color = Color(1, 0.92, 0.8, 0.6)
+	stitch.cover_parent = true
 	stitch.inset = 5.0
 	stitch.radius = 17.0
 	_streak_label.add_child(stitch)
@@ -473,7 +475,8 @@ func _build_banner() -> void:
 	_root.add_child(_banner)
 	var stitch := PauseMenu.Stitch.new()
 	stitch.color = UiStyle.THREAD
-	stitch.inset = -16.0
+	stitch.cover_parent = true
+	stitch.inset = 10.0
 	stitch.radius = 14.0
 	_banner.add_child(stitch)
 	var bvb := VBoxContainer.new()

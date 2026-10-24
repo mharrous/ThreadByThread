@@ -45,15 +45,25 @@ class Stitch extends Control:
 	var gap := 5.0
 	var width := 2.0
 	var line_only := false
+	## Dentro de un PanelContainer el hijo se ajusta al contenido (sin los márgenes del panel): con esto
+	## la puntada sigue el borde del panel entero.
+	var cover_parent := false
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_PARENTED and cover_parent and get_parent() is Control:
+			(get_parent() as Control).resized.connect(queue_redraw)
 
 	func _draw() -> void:
 		if line_only:
 			PauseMenu.draw_dashed(self, PackedVector2Array([Vector2(0.0, size.y * 0.5), Vector2(size.x, size.y * 0.5)]), color, width, dash, gap)
 		else:
 			var r := Rect2(Vector2.ONE * inset, size - Vector2.ONE * inset * 2.0)
+			var parent := get_parent() as Control
+			if cover_parent and parent != null:
+				r = Rect2(-position + Vector2.ONE * inset, parent.size - Vector2.ONE * inset * 2.0)
 			PauseMenu.draw_dashed(self, PauseMenu.rounded_rect(r, radius), color, width, dash, gap)
 
 
