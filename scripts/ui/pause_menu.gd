@@ -381,8 +381,8 @@ func _build_main() -> Control:
 		AudioManager.play(&"ui_click")
 		_show_book(true))
 	left.add_child(book_btn)
-	# Atajo de desarrollo/pruebas: da por ordenada la sección en la que estás (la del objeto en la mano o la más cercana).
-	# Solo en el editor y en pruebas: en el ejecutable para jugadores no sale.
+	# Atajo de pruebas: da por ordenada la sección en la que estás (la del objeto en la mano o la más cercana).
+	# Solo con --test-mode (pruebas automáticas y capturas): jugando, también desde el editor, no sale.
 	var skip_btn := _sewn_button("Completar esta sección", Color("c98a1e"), Color("94620f"))
 	skip_btn.pressed.connect(func():
 		AudioManager.play(&"ui_click")
@@ -390,7 +390,7 @@ func _build_main() -> Control:
 		close()   # primero se reanuda: los avisos de "sección completada" usan temporizadores que respetan la pausa
 		if shop != null:
 			shop.skip_section())
-	if OS.is_debug_build() or OS.get_cmdline_user_args().has("--test-mode"):
+	if OS.get_cmdline_user_args().has("--test-mode"):
 		left.add_child(skip_btn)
 	else:
 		skip_btn.queue_free()
