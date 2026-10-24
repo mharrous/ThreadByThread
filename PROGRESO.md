@@ -12,6 +12,120 @@
 | 4 · Demo comercial (15–25 min, ejecutable de Windows) | **En curso**: sala única hecha (ver abajo) |
 | 5 · Pruebas y expansión | No empezada |
 
+## Fase 4 — Trece arreglos: cajas, física, escoba, té, tesoros, carteles, sastrería y calle (2026-10-24, quinta parte)
+
+### Cajas de cartón de los rincones (recogibles)
+
+- Las pilas de los rincones noroeste y sureste ya no son decorado: son cajas de `ShopBoxes` como las demás. Hay **10** en total: 5 por el suelo, 2+1 en el noroeste y 2 en el sureste.
+- Las de los rincones empiezan donde estaban, la de arriba encima de la de abajo. La de arriba tapa a la de abajo, así que se coge primero. Si se aplana la de abajo con otra encima, la de arriba baja a su sitio (`drop_boxes_on`).
+  - Al cargar una partida, una caja que estaba encima de otra que ya no está queda en el suelo.
+- Los tesoros que hay encima de las pilas siguen ahí. Al aplanar la caja, el tesoro cae, como cualquier objeto encima de una caja.
+- La caja pequeña del noroeste se ha movido un poco hacia el sur (-5.25, -2.6), porque en su sitio no se podía apuntar desde ningún lado.
+- **Las 10 son obligatorias para abrir la tienda.** Antes eran 5.
+
+### Física de las cajas
+
+- Perfil nuevo `data/motion/box.tres`: masa 0,6, rebote 0,06, fricción 0,95, frenado lineal 0,9 y de giro 4,5.
+- Lo usan la caja de costura, la lata, la plancha, la caja de botones, la caja de agujas y la bobina industrial. Antes la caja de costura era de madera (20 g y rebote 0,42) y salía despedida.
+- Nueva prueba "Cajas pesadas": se sueltan 4 a la vez, dos encima de las otras y empujadas de lado. Recorren como mucho 0,21 m, no saltan y se paran en 1,1 s.
+
+### Escoba (`make_broom`, `ShopSweep`)
+
+- Mango torneado algo cónico, con la veta pintada en los colores de los vértices.
+- La paja se recoge alrededor del mango con un cordel rojo en espiral.
+- El abanico son 56 mechones algo curvados en cuatro filas al tresbolillo, con las puntas desiguales y un tono distinto cada uno, cosidos con dos pasadas de cordel.
+- Unos 4.500 triángulos (antes 1.324). Mismo tamaño, origen y punto de agarre: el barrido sigue cuadrando.
+- `ShopSweep` hace que "wood" y "straw" usen el color de los vértices (`vertex_color_is_srgb = false`, porque son colores lineales en coma flotante).
+
+### Juego de té en el alféizar
+
+- El modelo pone tetera y tazas en fila (`make_tea_set`), con unos 3 cm entre pieza y pieza. Antes las tazas iban delante y una sobresalía del alféizar.
+- Va centrado en el alféizar sur (z 4,39), con la caja de colisión dentro del tablero.
+- Los alféizares tienen colisión y se puede dejar cosas encima. La colisión acaba en la cara de la pared.
+- Una lámina invisible en la cara de la pared tapa el hueco de la ventana, para que lo lanzado no se quede metido entre la pared y el cristal.
+
+### Tesoros que no se encontraban
+
+- Cinta real, lazo de seda y tijeras de nácar (y también el botón de zafiro) estaban encima de muebles altos (1,92 m).
+  - El juego los detectaba (la prueba los apuntaba), pero desde el suelo no se veían: los ojos quedan por debajo del tablero y un objeto plano no asoma por encima del remate.
+- Nuevos sitios, a la vista:
+  - botón de zafiro, encima de la caja registradora;
+  - cinta real, encima de la máquina de coser;
+  - lazo de seda, en el alféizar de la ventana de la calle;
+  - tijeras de nácar, en el alféizar del jardín, junto al té.
+- El cajón del rincón noreste se ha corrido hacia el oeste, y su tesoro con él.
+- La prueba de humo coge los 8.
+
+### Etiquetas de las bandejas
+
+- `TrayUnit._fit_label`: el nombre ya traducido se mide; si no cabe, primero se baja la letra y luego se parte en dos líneas. Con dos líneas, la placa crece hacia arriba.
+- Se vuelve a ajustar al cambiar de idioma.
+- Probado con "Estuche de agujas", "Cinta métrica", "Bastidor de bordado" y uno muy largo. Comprobado en capturas en inglés.
+
+### Objetos en las bandejas
+
+- Medido en la prueba de humo: el centro de cada objeto queda donde toca y el fondo de su malla a menos de 0,5 mm del fondo de la bandeja.
+- Lo que se veía "flotando" era el saltito de celebración al completar una fila o la sala, que dura unas décimas.
+- No había un desfase que corregir y no se ha tocado el ajuste. Los botones con argolla meten la argolla en el fondo, que no se ve.
+
+### Sastrería: más piezas grandes
+
+- Cinco tipos nuevos en `tools/make_item_data.gd`, con sus modelos en `make_items.py`:
+  - caja de botones grande;
+  - rollo de entretela;
+  - bolsa de relleno;
+  - caja de agujas surtidas;
+  - bobina industrial.
+- Van 3 de cada tipo, con su traducción al inglés.
+- Como cada tipo ocupa una fila de estantería, hay una **segunda estantería** (`StoreShelfB`, 1,45 m de ancho, 3 huecos por fila) en la pared este, junto al rincón noreste. Su modelo es `shelf_5x145x40.glb`; `make_shelf` admite ahora el ancho.
+
+### Alfombra
+
+- La alfombra tiene colisión fina y se puede dejar cosas encima (capas 1 y 16).
+- Los objetos que aparecen encima salen a su altura. El gato y su ovillo ya se apoyaban en ella (cuarta parte).
+
+### Carteles modelados (`art/blender/make_signs.py`, `ShopSign`, `DoorSign`)
+
+- **Texto:** sigue siendo Label3D, que se traduce y se encoge solo para caber en español y en inglés.
+- **Secciones:** tabla de roble con la moldura del color de la sección y un icono pirograbado (ovillo, botón, telas con lazo o tijeras).
+- **Cartel principal:** de nogal con moldura dorada, un carrete de hilo rojo y la hebra que corre hasta una aguja.
+- **Puerta de la calle:** placa esmaltada crema colgada de un gancho, con CERRADO en granate por un lado y ABIERTO en verde por el otro. Al abrir la tienda da media vuelta.
+- **Premio de ¡ABIERTO!:** cuelga con dos cordeles bajo el cartel principal.
+- **Montón de cartón:** tablilla con una caja desmontada pirograbada y el texto de siempre ("Cartón para tirar").
+- **Capturas:** `--signs`.
+- **Pendiente:** no hay fuente con remates (serif), así que el principal usa Fredoka.
+
+### Peatones y perro de la calle, al estilo de la clienta
+
+- Los dos peatones están rehechos como la clienta: malla low-poly con esqueleto (`common.Rig`), paso a 12 fps y las mismas superficies y paleta.
+  - El peatón es un chico alto con parka oliva, bufanda mostaza y pelo rizado.
+  - El que pasea al perro es un señor mayor con abrigo camello, gorra y bufanda granates y bigote canoso.
+- El perro también es nuevo: orejas caídas, hocico y patitas claros, collar rojo y trote en diagonal.
+- La correa une la mano y el collar en cada fotograma.
+- Los ciclistas y los de la moto siguen con el modelo antiguo.
+
+### Cómo se ha hecho
+
+- La escoba, los carteles y los peatones los han hecho tres agentes en paralelo, cada uno en su rama. Se han integrado sin conflictos.
+- Las pruebas de humo de varias copias del proyecto a la vez se pisan: comparten el log de `run_smoke.ps1` y el guardado `user://savegame_test.json`. Eso dio fallos falsos mientras trabajaban a la vez. Por separado, todo pasa.
+
+### Pruebas (2026-10-24, quinta parte)
+
+- `run_smoke.ps1 -Count 1`, `run_persist.ps1` y `run_end_screen.ps1`: **pasan** sobre `main` con todo integrado.
+- Nuevas comprobaciones de humo:
+  - cajas pesadas;
+  - lo de las bandejas toca el fondo;
+  - etiquetas largas;
+  - el objeto dejado reposa en el suelo o en la alfombra.
+- Capturas revisadas: `--treasures`, `--filled` (con dos vistas nuevas de las bandejas), `--signs`, `--street` y `--sweep`.
+
+Problemas conocidos y sin comprobar a mano:
+- En una de varias pasadas de la prueba de humo el gato no encontró camino desde un rincón apretado ("anda por la sala (0.00 m)"). Al repetirla pasó dos veces seguidas: parece raro, no sistemático.
+- Con 10 cajas obligatorias, abrir la tienda lleva más rato. Si sobran, se pueden quitar de `ShopBoxes.SPOTS`.
+- Las animaciones nuevas (giro del cartel, peatones, perro) solo se han visto en fotogramas sueltos.
+- Los tablones de roble se ven algo anaranjados con la luz cálida.
+- El tráiler sigue con el gato, los carteles y la escoba antiguos.
+
 ## Fase 4 — Gato nuevo y puntadas del HUD (2026-10-24, cuarta parte)
 
 ### El gato, rehecho
