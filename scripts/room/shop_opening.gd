@@ -1,14 +1,16 @@
 class_name ShopOpening
 extends Node
-## Escena de apertura: con todo colocado y el suelo barrido (el jugador barre con la escoba y el
-## recogedor, ShopSweep; da igual qué termine antes), la mercería abre por primera vez.
+## Escena de apertura: con todo colocado, el suelo barrido (el jugador barre con la escoba y el
+## recogedor, ShopSweep) y las cajas de cartón aplanadas en el montón de junto a la puerta (ShopBoxes),
+## da igual en qué orden, la mercería abre por primera vez.
 ##   música a silencio · tres campanadas · se abre la puerta · entra la primera clienta (Customer),
 ##   mira las estanterías, espera y se va · las luces suben, el cartel pasa a ABIERTO, cae confeti y la
 ##   música vuelve · fundido a negro y pantalla final (scenes/ui/end_screen.tscn).
 ## El jugador no se mueve ni coge nada mientras dura; la cámara sigue al cliente. Solo se ve una vez:
 ## al terminar se guarda `shop_opened` y, al cargar esa partida, se va directo a la tienda abierta.
-## Con --test-mode, la tecla T la lanza en cualquier momento (y barre el suelo de golpe si hace falta).
+## Con --test-mode, la tecla T la lanza en cualquier momento (y barre el suelo y apila las cajas de golpe).
 const SWEEP_HINT := "Solo falta barrer el suelo: la escoba está junto a la ventana sur"
+const BOXES_HINT := "Solo faltan las cajas de cartón: aplánalas y déjalas junto a la puerta"
 
 const END_SCREEN := preload("res://scenes/ui/end_screen.tscn")
 const OPEN_TEXT := "La mercería está abierta"
@@ -43,6 +45,7 @@ func _ready() -> void:
 	_test_mode = OS.get_cmdline_user_args().has("--test-mode")
 	Events.room_completed.connect(_on_room_completed)
 	Events.floor_cleaned.connect(_on_floor_cleaned)
+	Events.boxes_done.connect(_on_boxes_done)
 	set_process(false)
 	_resume_pending.call_deferred()
 
@@ -67,18 +70,34 @@ func _on_room_completed(_room) -> void:
 		return
 	# Antes, el cartel de mercería ordenada y las guirnaldas (RoomController._announce_completion).
 	await _wait(3.4)
-	if _floor_clean():
-		play()
-	else:
-		Events.hint_requested.emit(SWEEP_HINT)
+	_open_or_hint()
 
 
-## El último recogedor a la papelera con todo ya colocado: abre.
+## El último recogedor a la papelera: abre si ya está todo lo demás (o dice qué falta).
 func _on_floor_cleaned() -> void:
 	if not _find() or _shop.shop_opened or playing or not _shop.room.is_completed:
 		return
 	await _wait(2.0)
+	_open_or_hint()
+
+
+## El último cartón en el montón (ya atado): abre si ya está todo lo demás.
+func _on_boxes_done() -> void:
+	if not _find() or _shop.shop_opened or playing or not _shop.room.is_completed or not _floor_clean():
+		return
+	await _wait(2.0)
 	play()
+
+
+func _open_or_hint() -> void:
+	if playing:
+		return
+	if not _floor_clean():
+		Events.hint_requested.emit(SWEEP_HINT)
+	elif not _boxes_done():
+		Events.hint_requested.emit(BOXES_HINT)
+	else:
+		play()
 
 
 func _floor_clean() -> bool:
@@ -86,11 +105,16 @@ func _floor_clean() -> bool:
 	return sweep == null or sweep.is_clean()
 
 
+func _boxes_done() -> bool:
+	var boxes := _shop.cardboard()
+	return boxes == null or boxes.is_done()
+
+
 ## Partida guardada con la tienda ordenada pero sin haber visto la apertura (se cerró a medias): se ve ahora.
 func _resume_pending() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if not _find() or _shop.shop_opened or not _shop.room.is_completed or playing or not _floor_clean():
+	if not _find() or _shop.shop_opened or not _shop.room.is_completed or playing or not _floor_clean() or not _boxes_done():
 		return
 	await _wait(1.5)
 	play()
@@ -116,10 +140,13 @@ func play() -> void:
 	_look_goal = room.to_global(Vector3(hw, 1.45, dz))
 	set_process(true)
 
-	# Atajo de pruebas (T) con papelitos aún en el suelo: se barre de golpe.
+	# Atajo de pruebas (T) con papelitos aún en el suelo o cajas sin apilar: se termina de golpe.
 	var sweep := _shop.floor_sweep()
 	if sweep != null and not sweep.is_clean():
 		sweep.finish_instantly()
+	var boxes := _shop.cardboard()
+	if boxes != null and not boxes.is_done():
+		boxes.finish_instantly()
 
 	# 2. La música se apaga.
 	step = &"silence"

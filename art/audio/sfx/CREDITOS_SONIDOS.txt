@@ -1,0 +1,40 @@
+CRÉDITOS DE SONIDOS (art/audio/sfx)
+===================================
+
+Grabaciones reales de terceros usadas en el juego. Licencias verificadas en la
+página de cada archivo en Wikimedia Commons (2026-10-24).
+
+------------------------------------------------------------------------------
+cat_purr_1.wav
+------------------------------------------------------------------------------
+Título original : "Purr (10 sec loopable).ogg" — "Ten second loopable recording
+                  of a 13 year old female cat purring."
+Autor           : Insanejeff (usuario de la Wikipedia en inglés)
+Fuente          : https://commons.wikimedia.org/wiki/File:Purr_(10_sec_loopable).ogg
+Archivo original: https://upload.wikimedia.org/wikipedia/commons/4/4c/Purr_%2810_sec_loopable%29.ogg
+Licencia        : Dominio público (plantilla {{PD-user-en|Insanejeff}}: el autor
+                  liberó la obra al dominio público). No requiere atribución;
+                  se acredita por cortesía.
+                  https://commons.wikimedia.org/wiki/Template:PD-user-en
+Ediciones       : convertido a mono 44,1 kHz 16 bit PCM; fragmento 0,5 s–5,5 s
+                  (5,0 s); paso alto 60 Hz; bucle sin cortes mediante fundido
+                  cruzado de potencia constante de 0,3 s (la cola 5,5–5,8 s se
+                  funde sobre el inicio); normalizado a -3 dBFS de pico.
+
+------------------------------------------------------------------------------
+cat_purr_2.wav
+------------------------------------------------------------------------------
+Título original : "Purring cat.oga" — "A purring cat."
+Autor           : Mysid (usuario de Wikimedia Commons)
+Fuente          : https://commons.wikimedia.org/wiki/File:Purring_cat.oga
+Archivo original: https://upload.wikimedia.org/wikipedia/commons/d/db/Purring_cat.oga
+Licencia        : Dominio público (plantilla {{PD-self}}: grabación propia del
+                  autor liberada al dominio público). No requiere atribución;
+                  se acredita por cortesía.
+                  https://commons.wikimedia.org/wiki/Template:PD-self
+Ediciones       : mezcla estéreo a mono y remuestreo de 22,05 kHz a 44,1 kHz,
+                  16 bit PCM; fragmento 2,3 s–6,5 s (4,2 s); paso alto 60 Hz;
+                  reducción de ruido suave (afftdn, 6 dB); bucle sin cortes con
+                  fundido cruzado de 0,3 s (cola 6,5–6,8 s sobre el inicio);
+                  limitador suave (-6 dB sobre picos puntuales de respiración);
+                  normalizado a -3 dBFS de pico.

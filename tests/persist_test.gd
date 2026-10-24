@@ -115,6 +115,16 @@ func _write() -> void:
 	expect["floor"] = {"left": sweep.scraps_left(), "pan": sweep.pan_count(), "loads": sweep.loads_done}
 	_check(sweep.scraps_left() < sweep.scraps_total() and sweep.pan_count() > 0 and sweep.loads_done == 1, "medio suelo barrido (%d papelitos, %d en el recogedor)" % [sweep.scraps_left(), sweep.pan_count()])
 
+	# Cajas de cartón: dos en el montón y una aplanada y soltada en el suelo.
+	var boxes := shop.cardboard()
+	for k in [3, 1]:
+		boxes.boxes[k].flatten_instantly()
+		await boxes.stack(boxes.boxes[k])
+	boxes.boxes[0].flatten_instantly()
+	boxes.boxes[0].lay_flat(Vector3(0.5, 0.0, 2.6), 0.7)
+	expect["boxes"] = {"stacked": [3, 1], "flat": [0.5, 2.6]}
+	_check(boxes.stacked_count() == 2, "dos cajas en el montón y una aplanada en el suelo")
+
 	var f := FileAccess.open(EXPECT_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(expect))
 	f.close()
@@ -158,5 +168,15 @@ func _read() -> void:
 	var sweep := shop.floor_sweep()
 	_check(sweep.scraps_left() == int(fl["left"]) and sweep.pan_count() == int(fl["pan"]) and sweep.loads_done == int(fl["loads"]),
 		"el suelo sigue medio barrido (%d papelitos, %d en el recogedor)" % [sweep.scraps_left(), sweep.pan_count()])
+	var bx: Dictionary = expect["boxes"]
+	var boxes := shop.cardboard()
+	var in_pile := true
+	for k in bx["stacked"]:
+		in_pile = in_pile and boxes.boxes[int(k)].state == CardboardBox.State.STACKED
+	_check(boxes.stacked_count() == 2 and in_pile, "las dos cajas siguen en el montón")
+	var flat := boxes.boxes[0]
+	_check(flat.state == CardboardBox.State.FLAT and Vector2(flat.position.x - float(bx["flat"][0]), flat.position.z - float(bx["flat"][1])).length() < 0.02,
+		"el cartón aplanado sigue en el suelo donde se soltó")
+	_check(boxes.boxes[2].state == CardboardBox.State.LOOSE and boxes.boxes[4].state == CardboardBox.State.LOOSE, "las demás cajas siguen montadas")
 	SaveGame.delete_save()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(EXPECT_PATH))

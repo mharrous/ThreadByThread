@@ -299,6 +299,10 @@ func _hearts() -> void:
 		tw.chain().tween_callback(h.queue_free)
 
 
+## Volumen de cada ronroneo, igualados por su nivel medido (el segundo tiene unos 6 dB menos de RMS).
+const PURR_DB := [-5.0, 0.0]
+
+
 func _start_purr() -> void:
 	if _purr == null:
 		_purr = AudioStreamPlayer3D.new()
@@ -308,14 +312,16 @@ func _start_purr() -> void:
 		_purr.max_distance = 8.0
 		_purr.position = Vector3(0.0, 0.3, 0.1)
 		add_child(_purr)
-	var stream := AudioManager.get_stream(&"cat_purr")
+	# Ronroneos grabados de gatos de verdad (art/audio/sfx/cat_purr_*.wav); el segundo es algo más flojo.
+	var v := randi() % maxi(AudioManager.variant_count(&"cat_purr"), 1)
+	var stream := AudioManager.get_stream(&"cat_purr", v)
 	if stream == null:
 		return
 	_purr.stream = stream
 	_purr.volume_db = -30.0
-	_purr.play()
+	_purr.play(randf() * 1.5)
 	var tw := create_tween()
-	tw.tween_property(_purr, "volume_db", -6.0, 0.5).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_purr, "volume_db", PURR_DB[mini(v, PURR_DB.size() - 1)], 0.5).set_trans(Tween.TRANS_SINE)
 
 
 func _stop_purr() -> void:

@@ -668,7 +668,12 @@ func _test_opening(room: RoomController, hud: Node) -> void:
 	_check(not opening.playing, "con el suelo sin barrer la tienda no abre")
 	_check(hud._objective.text == hud.OBJECTIVE_SWEEP, "el objetivo pasa a barrer el suelo (%s)" % hud._objective.text)
 	await _test_sweep(room, hud)
-	_check(await _wait_until(func(): return opening.playing, 8.0), "con el suelo barrido empieza la escena de apertura")
+	await get_tree().create_timer(3.0).timeout
+	_check(not opening.playing, "barrido pero con las cajas de cartón por el suelo no abre")
+	_check(hud._objective.text == hud.OBJECTIVE_BOXES, "el objetivo pasa a las cajas (%s)" % hud._objective.text)
+	_check(hud._boxes_label.visible, "el HUD enseña las cajas al montón al terminar de barrer")
+	await _test_boxes(room, hud)
+	_check(await _wait_until(func(): return opening.playing, 8.0), "con todo hecho empieza la escena de apertura")
 	_check(not holder.sweeper.active, "la escoba vuelve a la pared al empezar la escena")
 	_check(player.input_locked, "el jugador no se mueve ni coge nada durante la escena")
 	await _wait_until(func(): return hud.is_cinematic(), 2.0)
@@ -892,6 +897,64 @@ func _test_sweep(room: RoomController, hud: Node) -> void:
 	await _frames(3)
 	var floor_state: Dictionary = SaveGame.read().get("floor", {})
 	_check((floor_state.get("swept", []) as Array).size() == total, "el guardado tiene el suelo barrido")
+
+
+## Cajas de cartón: aplanar cada una con E, llevar el cartón al montón de junto a la puerta y dejarlo
+## con un clic; una se suelta en el suelo con E y se vuelve a coger.
+func _test_boxes(room: RoomController, hud: Node) -> void:
+	print("-- Cajas de cartón")
+	var boxes := shop.cardboard()
+	_check(boxes != null and boxes.total() == ShopBoxes.SPOTS.size(), "hay %d cajas de cartón tiradas" % ShopBoxes.SPOTS.size())
+	if boxes == null:
+		return
+	for b in boxes.boxes:
+		_check(b.state == CardboardBox.State.LOOSE, "caja %d montada en el suelo" % b.index)
+	# Viene de barrer: deja la escoba (E apuntando a la pared, sin nada delante).
+	if holder.sweeper.active:
+		holder.sweeper.put_back()
+		await get_tree().create_timer(1.5).timeout
+	var first := true
+	for b in boxes.boxes:
+		for k in 12:
+			var spot := b.position + Vector3.BACK.rotated(Vector3.UP, TAU * k / 12.0) * 1.3
+			if room.shell.is_blocked(Vector2(spot.x, spot.z), 0.25) or not room.shell.floor_bounds.has_point(Vector2(spot.x, spot.z)):
+				continue
+			player.teleport(room.to_global(spot))
+			await _settle()
+			player.look_at_point(b.global_position + Vector3.UP * 0.15)
+			await _frames(3)
+			if holder.hover_target == b:
+				break
+		if holder.hover_target != b:
+			print("    (diagnóstico) caja %d en %s: se apunta a %s desde %s" % [b.index, b.position, holder.hover_target, room.to_local(player.global_position).snapped(Vector3.ONE * 0.01)])
+		_check(holder.hover_target == b, "al apuntar a la caja %d sale «%s»" % [b.index, b.interact_info()["action"]])
+		await _press(&"interact")
+		_check(await _wait_until(func(): return holder.carrier.active and holder.carrier._take_t >= 1.0, 2.5), "E aplana la caja %d y el cartón viene a la mano" % b.index)
+		_check(not b._squash.visible and b._sheet.visible, "la caja %d está aplanada" % b.index)
+		if first:
+			first = false
+			await _press(&"interact")
+			_check(not holder.carrier.active and b.state == CardboardBox.State.FLAT, "E suelta el cartón en el suelo")
+			await _frames(3)
+			player.look_at_point(b.global_position)
+			await _frames(3)
+			_check(holder.hover_target == b, "el cartón del suelo se apunta («Coger cartón»)")
+			await _press(&"interact")
+			_check(await _wait_until(func(): return holder.carrier.active and holder.carrier._take_t >= 1.0, 1.5), "E vuelve a coger el cartón")
+		var before := boxes.stacked_count()
+		player.teleport(room.to_global(ShopBoxes.PILE_AT + Vector3(-1.6, 0.0, -0.4)))
+		await _settle()
+		player.look_at_point(boxes.pile_target())
+		await _frames(3)
+		_check(holder.carrier._at_pile(), "apunta al montón de junto a la puerta")
+		await _press(&"place")
+		_check(await _wait_until(func(): return boxes.stacked_count() == before + 1, 2.0), "clic deja el cartón %d en el montón (%d / %d)" % [b.index, before + 1, boxes.total()])
+	await get_tree().create_timer(1.2).timeout
+	_check(boxes.is_done() and boxes._twine.visible, "todas en el montón y atadas con el cordel")
+	_check(hud._boxes_label.text == "Cajas al montón  5 / 5", "el HUD lo cuenta (%s)" % hud._boxes_label.text)
+	await _frames(3)
+	var st: Dictionary = SaveGame.read().get("boxes", {})
+	_check((st.get("stacked", []) as Array).size() == boxes.total(), "el guardado tiene las cajas en el montón")
 
 
 ## Se pone a 1 m del papelito, mirándolo en el suelo, desde un sitio libre.

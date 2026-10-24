@@ -36,7 +36,8 @@ func _build_furniture() -> void:
 	_add_shop_door(Vector3(hw, 0.0, 2.2))
 	# Rincones: cajas de cartón (noroeste y sureste), cajón (noreste) y planta en el centro de la pared norte.
 	_add_cardboard_boxes(Vector3(-5.45, 0.0, -3.3))
-	_add_cardboard_boxes(Vector3(5.4, 0.0, 3.85))
+	# Sin la caja pequeña: a su lado, junto a la puerta, va el montón de cartón para tirar (ShopBoxes).
+	_add_cardboard_boxes(Vector3(5.4, 0.0, 3.85), false)
 	_add_crate(Vector3(5.45, 0, -4.0), 0.1)
 	_add_plant(Vector3(0.0, 0, -4.05))
 	_add_picture(-hw, -2.3, 2.0, 0.34, 0.46, Color("f3b6c8"), Color("e58f9f"), Color("f7e6c4"))
@@ -58,11 +59,16 @@ func _build_furniture() -> void:
 	blocked_rects.append(Rect2(ShopSweep.BIN_AT.x - 0.25, ShopSweep.BIN_AT.z - 0.25, 0.5, 0.5))
 	blocked_rects.append(Rect2(ShopSweep.PAN_REST.x - 0.25, ShopSweep.PAN_REST.z - 0.3, 0.75, 0.6))
 	blocked_rects.append(Rect2(ShopSweep.BIN_AT.x - 0.25, ShopSweep.BIN_AT.z - 0.3, 0.85, 0.6))
+	# Cajas de cartón vacías tiradas por el suelo y su montón para tirar: sin papelitos ni objetos debajo.
+	blocked_rects.append_array(ShopBoxes.blocked_rects())
 	_scatter_scraps(110)
 	var sweep := ShopSweep.new()
 	sweep.name = "ShopSweep"
 	add_child(sweep)
 	sweep.bind_scraps(get_node_or_null("FabricScraps") as MultiMeshInstance3D, scrap_transforms, scrap_colors)
+	var boxes := ShopBoxes.new()
+	boxes.name = "ShopBoxes"
+	add_child(boxes)
 
 
 ## El gato de la tienda: empieza sentado junto al maniquí y luego va por toda la sala (ShopCat).

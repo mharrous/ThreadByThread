@@ -45,6 +45,9 @@ signal floor_cleaned
 ## Flecha del borde de la pantalla hacia algo que no es la estantería del objeto en la mano
 ## (con la escoba: el papelito más cercano o la papelera). `active` false la apaga.
 signal guide_target_changed(active: bool, position: Vector3)
+## Cajas de cartón aplanadas en el montón de junto a la puerta; y todas atadas.
+signal boxes_progress_changed(stacked: int, total: int)
+signal boxes_done
 ## Caricia al gato de la tienda.
 signal cat_petted
 

@@ -31,6 +31,8 @@ func _ready() -> void:
 	Events.treasure_found.connect(func(_i): save_game())
 	Events.floor_progress_changed.connect(func(_s, _t): _dirty = true)
 	Events.floor_cleaned.connect(func(): save_game.call_deferred())
+	Events.boxes_progress_changed.connect(func(_s, _t): _dirty = true)
+	Events.boxes_done.connect(func(): save_game.call_deferred())
 	Events.pause_toggled.connect(func(paused: bool):
 		if paused:
 			save_game())
@@ -56,6 +58,9 @@ func _start() -> void:
 		var sweep := floor_sweep()
 		if sweep != null:
 			sweep.emit_progress()
+		var boxes := cardboard()
+		if boxes != null:
+			boxes.emit_progress()
 
 
 func _notification(what: int) -> void:
@@ -101,6 +106,9 @@ func save_game() -> bool:
 	var sweep := floor_sweep()
 	if sweep != null:
 		data["floor"] = sweep.capture_state()
+	var boxes := cardboard()
+	if boxes != null:
+		data["boxes"] = boxes.capture_state()
 	var ok := SaveGame.write(data)
 	if ok:
 		_dirty = false
@@ -126,7 +134,21 @@ func load_game() -> bool:
 			sweep.finish_instantly()
 		elif fl is Dictionary:
 			sweep.apply_state(fl)
+	var boxes := cardboard()
+	if boxes != null:
+		var bx: Variant = data.get("boxes")
+		if shop_opened:
+			boxes.finish_instantly()
+		elif bx is Dictionary:
+			boxes.apply_state(bx)
 	return true
+
+
+## Las cajas de cartón tiradas y su montón para tirar.
+func cardboard() -> ShopBoxes:
+	if room == null or room.shell == null:
+		return null
+	return room.shell.get_node_or_null("ShopBoxes") as ShopBoxes
 
 
 ## El suelo y sus herramientas (escoba, recogedor y papelera).

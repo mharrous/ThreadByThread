@@ -30,11 +30,13 @@ const TREASURE_REACH := 3.6
 var state: State = State.EMPTY
 var held: PickableItem = null
 var hover_item: PickableItem = null
-## Lo que se puede usar con E sin cogerlo (la escoba y el recogedor, el gato): un nodo con
+## Lo que se puede usar con E sin cogerlo (la escoba y el recogedor, el gato, las cajas de cartón): un nodo con
 ## interact_info() -> Dictionary e interact(holder), padre de un Area3D en la capa de coger.
 var hover_target: Node = null
 ## Barrer: mientras tiene la escoba y el recogedor, el ItemHolder le pasa la entrada y el fotograma.
 var sweeper: Sweeper
+## Llevar un cartón aplanado al montón de junto a la puerta (igual que la escoba).
+var carrier: BoxCarrier
 ## Estado de la puntería sobre contenedores mientras se sostiene un objeto.
 var aim_status: StorageUnit.SlotStatus = StorageUnit.SlotStatus.NONE
 
@@ -71,18 +73,30 @@ func _ready() -> void:
 	sweeper = Sweeper.new()
 	sweeper.name = "Sweeper"
 	add_child(sweeper)
+	carrier = BoxCarrier.new()
+	carrier.name = "BoxCarrier"
+	add_child(carrier)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _player.input_locked:
 		return
 	if sweeper.active:
-		# Con la escoba: E la devuelve a la pared (y coge lo que haya delante, si hay algo).
+		# Con la escoba: E la devuelve a la pared (y coge o usa lo que haya delante, si hay algo).
 		if event.is_action_pressed(&"interact"):
 			sweeper.put_back()
 			_process_empty()
-			if hover_item != null:
-				try_pick()
+			if not try_pick() and hover_target != null and is_instance_valid(hover_target) and not hover_target is ShopSweep:
+				hover_target.interact(self)
+			get_viewport().set_input_as_handled()
+		return
+	if carrier.active:
+		# Con un cartón: clic lo deja en el montón, E lo suelta en el suelo.
+		if event.is_action_pressed(&"interact"):
+			carrier.drop()
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed(&"place"):
+			carrier.click()
 			get_viewport().set_input_as_handled()
 		return
 	if event.is_action_released(&"throw") and _charging:
@@ -112,6 +126,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if sweeper.active:
 		sweeper.tick(delta)
+		return
+	if carrier.active:
+		carrier.tick(delta)
 		return
 	if _player.input_locked and state == State.EMPTY:
 		_set_hover(null)
@@ -185,6 +202,7 @@ func _collect_treasure(item: PickableItem) -> void:
 func release_held() -> void:
 	_cancel_charge()
 	sweeper.put_back()
+	carrier.release()
 	if held != null and is_instance_valid(held):
 		held.set_pickable(true)
 		held.state = PickableItem.State.LOOSE
@@ -289,8 +307,8 @@ func _process_empty() -> void:
 			item = proxy.get_parent() as PickableItem
 			if item == null and proxy.get_parent().has_method(&"interact"):
 				target = proxy.get_parent()
-				# Un objeto justo detrás (el gato sentado al lado de un ovillo): manda el objeto.
-				var behind := _raycast(MASK_WORLD | MASK_PICK, true, [proxy.get_rid()])
+				# Un objeto justo detrás del gato (sentado al lado de un ovillo): manda el objeto.
+				var behind := _raycast(MASK_WORLD | MASK_PICK, true, [proxy.get_rid()]) if target is ShopCat else {}
 				if not behind.is_empty() and behind["collider"] is Area3D:
 					var other := (behind["collider"] as Area3D).get_parent() as PickableItem
 					if other != null and (behind["position"] as Vector3).distance_to(hit["position"]) < 0.5:

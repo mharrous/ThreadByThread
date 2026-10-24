@@ -12,6 +12,8 @@ const PANEL_BG := Color(0.13, 0.09, 0.06, 0.42)
 const OBJECTIVE_DONE := "¡Mercería ordenada!"
 ## Todo colocado pero quedan papelitos en el suelo (o en el recogedor).
 const OBJECTIVE_SWEEP := "Objetivo: barrer el suelo (escoba junto a la ventana sur)"
+## Ordenado y barrido, pero quedan cajas de cartón por aplanar y llevar al montón.
+const OBJECTIVE_BOXES := "Objetivo: aplanar las cajas de cartón y dejarlas junto a la puerta"
 
 
 class Crosshair extends Control:
@@ -78,6 +80,10 @@ var _treasure_label: Label
 ## "Suelo barrido N %": los papelitos fuera del suelo.
 var _floor_label: Label
 var _floor_clean := true
+## "Cajas al montón N / M": cartones aplanados junto a la puerta.
+var _boxes_label: Label
+var _boxes_done := true
+var _boxes_started := false
 var _all_placed := false
 ## Con un objeto en la mano: su sección y cuánto le falta (así se sabe a qué pared llevarlo).
 var _section_label: Label
@@ -122,6 +128,7 @@ func _ready() -> void:
 	Events.floor_cleaned.connect(func():
 		_floor_clean = true
 		_update_objective())
+	Events.boxes_progress_changed.connect(_on_boxes_progress_changed)
 	_on_progress_changed(0, 0)
 	_fade_prompt(false)
 
@@ -228,6 +235,11 @@ func _build() -> void:
 	_floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_floor_label.visible = false
 	vb.add_child(_floor_label)
+
+	_boxes_label = _label("", 14, SOFT, 0)
+	_boxes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_boxes_label.visible = false
+	vb.add_child(_boxes_label)
 
 	# Racha: arriba a la derecha, lejos de la mira, de los letreros del centro y del tutorial (arriba al centro).
 	_streak_label = _label("", 28, Color("ffd27a"))
@@ -361,7 +373,9 @@ func _update_objective() -> void:
 	if not _all_placed:
 		_objective.text = _objective_text
 	else:
-		_objective.text = OBJECTIVE_DONE if _floor_clean else OBJECTIVE_SWEEP
+		_objective.text = OBJECTIVE_SWEEP if not _floor_clean else (OBJECTIVE_BOXES if not _boxes_done else OBJECTIVE_DONE)
+	# La línea de las cajas sale al terminar de barrer (o en cuanto se ha llevado alguna al montón).
+	_boxes_label.visible = _boxes_label.text != "" and (_floor_clean or _boxes_started)
 
 
 func _on_floor_progress_changed(swept: int, total: int) -> void:
@@ -370,6 +384,14 @@ func _on_floor_progress_changed(swept: int, total: int) -> void:
 	var pct := 100 if total == 0 else floori(100.0 * swept / total)
 	_floor_label.text = "Suelo barrido  %d %%" % pct
 	_floor_label.add_theme_color_override(&"font_color", GOLD if swept >= total else SOFT)
+	_update_objective()
+
+
+func _on_boxes_progress_changed(stacked: int, total: int) -> void:
+	_boxes_done = stacked >= total
+	_boxes_started = stacked > 0
+	_boxes_label.text = "Cajas al montón  %d / %d" % [stacked, total] if total > 0 else ""
+	_boxes_label.add_theme_color_override(&"font_color", GOLD if _boxes_done else SOFT)
 	_update_objective()
 
 

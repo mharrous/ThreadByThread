@@ -55,6 +55,8 @@ static func build_banks() -> Dictionary:
 		&"dust_dump": [dust_dump(5), dust_dump(13)],
 		&"cat_purr": [cat_purr(7)],
 		&"cat_mrrp": [cat_mrrp(3), cat_mrrp(9)],
+		&"cardboard_fold": [cardboard_fold(4), cardboard_fold(10)],
+		&"cardboard_drop": [cardboard_drop(6), cardboard_drop(15)],
 	}
 
 
@@ -337,6 +339,46 @@ static func cat_mrrp(seed_value: int) -> AudioStreamWAV:
 		lp += (voice - lp) * 0.35
 		b[i] = lp * env
 	return _to_stream(b, 0.35)
+
+
+## Aplanar una caja de cartón: crujido de las solapas al doblarse, el cartón que cede y un golpe sordo
+## al quedar plana contra el suelo.
+static func cardboard_fold(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.62)
+	var lp := 0.0
+	var crack := 0.0
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.45
+		# Crujidos sueltos mientras se dobla (los primeros 0,35 s), cada vez más seguidos.
+		if t < 0.36 and rng.randf() < 0.0012 + 0.004 * t:
+			crack = rng.randf_range(0.5, 1.0)
+		crack *= 0.985
+		var bend := lp * crack * 0.9 + lp * 0.12 * _ad(t, 0.05, 0.18)
+		# El golpe final: cartón plano contra la madera.
+		var hit_t := t - 0.38
+		var thump := 0.0
+		if hit_t > 0.0:
+			ph += TAU * (95.0 - 35.0 * minf(hit_t / 0.06, 1.0)) / RATE
+			thump = sin(ph) * _ad(hit_t, 0.002, 0.05) + lp * 0.5 * _ad(hit_t, 0.001, 0.03)
+		b[i] = bend + thump
+	return _to_stream(b, 0.34)
+
+
+## Dejar el cartón aplanado en el montón: palmada plana y un roce.
+static func cardboard_drop(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.32)
+	var lp := 0.0
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.35
+		ph += TAU * (140.0 - 50.0 * minf(t / 0.05, 1.0)) / RATE
+		b[i] = sin(ph) * 0.7 * _ad(t, 0.002, 0.04) + lp * (0.8 * _ad(t, 0.001, 0.025) + 0.15 * _ad(t, 0.02, 0.12))
+	return _to_stream(b, 0.3)
 
 
 ## Lanzamiento: soplo de aire corto.

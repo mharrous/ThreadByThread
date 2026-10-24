@@ -31,6 +31,8 @@ var _customer := false  # --customer: la clienta de la apertura (quieta, andando
 var _cat := false       # --cat: el gato en cada pose (de lado y de frente), el zarpazo y la caricia
 var _sweep := false     # --sweep: barrer en primera persona (coger, barrer, recogedor lleno, vaciar)
 var _access := false    # --access: menú de pausa y HUD con el texto a ×1,5 y colores para daltonismo
+var _boxes := false     # --boxes: cajas de cartón (tiradas, aplanar, llevar, montón y atadas)
+var _top := false       # --top: planta de la sala desde arriba (cámara ortográfica) para colocar cosas
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
 
@@ -58,6 +60,10 @@ func _ready() -> void:
 			_access = true
 		elif arg == "--hud":
 			_hud = true
+		elif arg == "--top":
+			_top = true
+		elif arg == "--boxes":
+			_boxes = true
 	if _out_dir == "":
 		_out_dir = ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -277,6 +283,40 @@ func _run_sweep(shop: Shop, player: Player) -> void:
 	await _shot("barrer_7_devuelta")
 
 
+## Cajas de cartón: una tirada, aplanándose, el cartón en la mano, el montón y todas atadas.
+func _run_boxes(shop: Shop, player: Player) -> void:
+	var room := shop.room
+	var boxes := shop.cardboard()
+	var holder := player.get_node("ItemHolder") as ItemHolder
+	var b := boxes.boxes[0]
+	await _look_from(player, room, b.position + Vector3(0.3, 0.0, 1.6), b.position + Vector3(0, 0.2, 0))
+	await _shot("cajas_1_tirada")
+	var b4 := boxes.boxes[4]
+	await _look_from(player, room, b4.position + Vector3(-1.4, 0.0, -0.6), b4.position + Vector3(0, 0.2, 0))
+	await _shot("cajas_1b_tumbada")
+	await _look_from(player, room, b.position + Vector3(0.3, 0.0, 1.6), b.position + Vector3(0, 0.2, 0))
+	holder.carrier.take(b)
+	await get_tree().create_timer(0.22).timeout
+	await _shot("cajas_2_aplastando")
+	await get_tree().create_timer(1.0).timeout
+	await _shot("cajas_3_en_mano")
+	await _look_from(player, room, ShopBoxes.PILE_AT + Vector3(-1.9, 0.0, -0.3), ShopBoxes.PILE_AT + Vector3(0, 0.4, 0))
+	await get_tree().create_timer(0.4).timeout
+	await _shot("cajas_4_al_monton")
+	holder.carrier.click()
+	await get_tree().create_timer(0.8).timeout
+	await _shot("cajas_5_primera")
+	for i in range(1, boxes.boxes.size()):
+		boxes.boxes[i].flatten_instantly()
+		boxes.boxes[i].set_stacked()
+		boxes.boxes[i].transform = boxes.pile_slot(i, boxes.boxes[i])
+	boxes._tie(true)
+	await get_tree().create_timer(0.8).timeout
+	await _shot("cajas_6_atadas")
+	await _look_from(player, room, ShopBoxes.PILE_AT + Vector3(-1.2, 0.0, 0.9), ShopBoxes.PILE_AT + Vector3(0, 0.35, 0))
+	await _shot("cajas_7_lado")
+
+
 func _run_opening(main: Node, shop: Shop, player: Player) -> void:
 	var opening := main.get_node("ShopOpening") as ShopOpening
 	player.teleport(shop.room.to_global(Vector3(1.6, 0.0, -0.6)))
@@ -304,6 +344,24 @@ func _run() -> void:
 		await get_tree().process_frame
 	var shop: Shop = main.get_node("Shop")
 	var player: Player = main.get_node("Player")
+	if _boxes:
+		await _run_boxes(shop, player)
+		get_tree().quit()
+		return
+	if _top:
+		var cam := Camera3D.new()
+		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+		cam.size = 9.6
+		cam.near = 0.05
+		shop.room.add_child(cam)
+		cam.position = Vector3(0.0, 2.35, 0.0)
+		cam.rotation = Vector3(-PI * 0.5, 0.0, 0.0)
+		cam.make_current()
+		for i in 20:
+			await get_tree().process_frame
+		await _shot("planta")
+		get_tree().quit()
+		return
 	if _street:
 		await _run_street(main, player)
 		get_tree().quit()

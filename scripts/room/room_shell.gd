@@ -423,13 +423,17 @@ func _add_plant(pos: Vector3) -> void:
 	blocked_rects.append(Rect2(pos.x - 0.3, pos.z - 0.3, 0.6, 0.6))
 
 
-func _add_cardboard_boxes(base: Vector3) -> void:
+## Pila de cajas de cartón (dos, una encima de otra) y, si `small`, una tercera al lado (hacia -z).
+func _add_cardboard_boxes(base: Vector3, small: bool = true) -> void:
 	var card := MaterialLibrary.get_material(&"cardboard")
 	var path := "res://art/models/cardboard_box.glb"
 	_instance_model(path, base, 0.12, 1.0, card)
 	_static_box(Vector3(0.62, 0.42, 0.5), base + Vector3(0, 0.21, 0), 0.12)
 	_instance_model(path, base + Vector3(0.02, 0.42, 0.02), -0.3, 0.8, card)
 	_static_box(Vector3(0.5, 0.34, 0.4), base + Vector3(0.02, 0.59, 0.02), -0.3)
+	if not small:
+		blocked_rects.append(Rect2(base.x - 0.45, base.z - 0.35, 0.95, 0.85))
+		return
 	_instance_model(path, base + Vector3(0.1, 0.0, -0.65), 0.5, 0.72, card)
 	_static_box(Vector3(0.45, 0.3, 0.36), base + Vector3(0.1, 0.15, -0.65), 0.5)
 	blocked_rects.append(Rect2(base.x - 0.45, base.z - 1.0, 0.95, 1.5))

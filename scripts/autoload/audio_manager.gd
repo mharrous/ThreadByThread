@@ -62,6 +62,10 @@ var _music_held := false
 var _progress := 0.0
 
 
+## Sonidos que suenan en bucle: sus versiones editadas (art/audio/sfx) también se repiten.
+const LOOPED: Array[StringName] = [&"wind", &"cat_purr"]
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_rng.randomize()
@@ -145,10 +149,19 @@ func play(sound: StringName, pos: Variant = null, volume_db: float = 0.0, pitch_
 
 
 ## Devuelve el primer stream de un banco (para sonidos en bucle que gestiona otro nodo).
-func get_stream(sound: StringName) -> AudioStream:
+## Una variante del sonido (la primera si no se dice cuál; -1 = al azar).
+func get_stream(sound: StringName, variant: int = 0) -> AudioStream:
 	if not _banks.has(sound):
 		return null
-	return (_banks[sound] as Array)[0]
+	var variants := _banks[sound] as Array
+	if variant < 0:
+		variant = randi() % variants.size()
+	return variants[clampi(variant, 0, variants.size() - 1)]
+
+
+## Cuántas variantes tiene el sonido.
+func variant_count(sound: StringName) -> int:
+	return (_banks[sound] as Array).size() if _banks.has(sound) else 0
 
 
 ## Reproductor posicional de largo alcance para sonidos de la calle (bucles de motor, etc.).
@@ -369,7 +382,7 @@ func _apply_overrides(banks: Dictionary) -> void:
 			if ResourceLoader.exists(path):
 				var stream := load(path) as AudioStreamWAV
 				if stream != null:
-					if sound == &"wind":
+					if sound in LOOPED:
 						stream = _looped(stream)
 					if i <= variants.size():
 						variants[i - 1] = stream
