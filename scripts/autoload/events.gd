@@ -35,7 +35,18 @@ signal room_completed(room)
 signal active_room_changed(room)
 signal treasure_found(item)
 signal decor_unlocked(room, id: StringName)
+## Escena de apertura de la tienda (al ordenarla entera): empieza y termina (pantalla final a la vista).
+signal shop_opening_started
+signal shop_opening_finished
 signal game_saved
+## Papelitos fuera del suelo (barridos) de los que había; y suelo limpio con el recogedor vacío.
+signal floor_progress_changed(swept: int, total: int)
+signal floor_cleaned
+## Flecha del borde de la pantalla hacia algo que no es la estantería del objeto en la mano
+## (con la escoba: el papelito más cercano o la papelera). `active` false la apaga.
+signal guide_target_changed(active: bool, position: Vector3)
+## Caricia al gato de la tienda.
+signal cat_petted
 
 signal hint_requested(text: String)
 signal pause_toggled(paused: bool)

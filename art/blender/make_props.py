@@ -8,12 +8,17 @@ Modelos:
   dress_form       maniquí de costura sobre trípode (origen = suelo)
   sewing_machine   máquina de coser antigua, negra con filetes dorados (origen = base)
   cash_register    caja registradora de latón (origen = base)
-  shop_door        puerta de entrada con cristal, placa y tirador (origen = suelo, cara hacia +Z)
+  shop_door        marco de la puerta de entrada con la campanilla (origen = suelo, cara hacia +Z)
+  shop_door_leaf   hoja de la puerta, con cristal, placa y pomo (origen = bisagra, a la izquierda)
   Premios de sección (aparecen al completarla; origen = base, frente hacia +Z):
   cat_basket       gato canela dormido, enroscado en una cesta de mimbre (lanas)
   radio            radio de válvulas de madera con dial iluminado (botones y carretes)
   flower_vase      jarrón de cerámica con margaritas y lavanda (telas y cintas)
   tea_set          tetera esmaltada con dos tazas (sastrería)
+  Barrido del final (scripts/room/shop_sweep.gd):
+  broom            escoba de paja con mango de madera (origen = punta de la paja en el suelo, mango hacia +Y)
+  dustpan          recogedor esmaltado de mango largo (origen = borde delantero en el suelo; la pala va hacia -Z)
+  waste_bin        papelera de mimbre junto a la puerta (origen = suelo)
 Se modela en ejes de Godot (Y arriba, Z hacia delante). Los materiales viajan en el GLB.
 """
 import math
@@ -150,38 +155,51 @@ def make_cash_register():
 
 # ---------------------------------------------------------------- puerta de la tienda
 def make_shop_door():
+    """Dos modelos: el marco fijo con la campanilla (shop_door) y la hoja (shop_door_leaf), que se abre.
+    La hoja tiene el origen en la bisagra (su canto izquierdo), así se gira sin más en Godot."""
+    W, H, T = 1.0, 2.15, 0.05
+
+    def materials(m):
+        m.add_material("paint", (0.20, 0.38, 0.33), 0.45)                # 0 verde de la casa
+        m.add_material("frame", (0.93, 0.88, 0.78), 0.55)                # 1 marco crema
+        m.add_material("glass", (0.85, 0.95, 1.0), 0.05)                 # 2
+        m.add_material("brass", BRASS, 0.3, metallic=1.0)                # 3
+
     reset_scene()
     m = Model("shop_door", 105)
-    m.add_material("paint", (0.20, 0.38, 0.33), 0.45)                    # 0 verde de la casa
-    m.add_material("frame", (0.93, 0.88, 0.78), 0.55)                    # 1 marco crema
-    m.add_material("glass", (0.85, 0.95, 1.0), 0.05)                     # 2
-    m.add_material("brass", BRASS, 0.3, metallic=1.0)                    # 3
-    W, H, T = 1.0, 2.15, 0.05
+    materials(m)
     # Marco: jambas y dintel salientes de la pared.
     for sx in (-1, 1):
         m.box((sx * (W / 2 + 0.05), (H + 0.1) / 2, 0.03), (0.1, H + 0.1, 0.06), bevel=0.008, segments=2, mat=1)
     m.box((0, H + 0.075, 0.03), (W + 0.2, 0.15, 0.06), grain="x", bevel=0.01, segments=2, mat=1)
-    # Hoja: paneles inferiores, cristal arriba con travesaño y cuarterones.
-    z = 0.012
-    m.box((-W / 2 + 0.04, H / 2, z), (0.08, H, T), bevel=0.006, segments=2, mat=0)
-    m.box((W / 2 - 0.04, H / 2, z), (0.08, H, T), bevel=0.006, segments=2, mat=0)
-    m.box((0, 0.06, z), (W, 0.12, T), grain="x", bevel=0.006, segments=2, mat=0)
-    m.box((0, 0.9, z), (W, 0.12, T), grain="x", bevel=0.006, segments=2, mat=0)
-    m.box((0, H - 0.05, z), (W, 0.1, T), grain="x", bevel=0.006, segments=2, mat=0)
-    m.box((0, 0.48, z - 0.005), (W - 0.16, 0.72, T * 0.6), bevel=0.0, mat=0)
-    for sx in (-1, 1):
-        m.box((sx * 0.21, 0.48, z + 0.012), (0.3, 0.6, 0.012), bevel=0.012, segments=3, mat=0)
-    m.box((0, (0.96 + H - 0.1) / 2, z), (W - 0.16, H - 0.1 - 0.96, 0.008), bevel=0.0, mat=2)
-    m.box((0, (0.96 + H - 0.1) / 2, z + 0.006), (0.03, H - 0.1 - 0.96, 0.02), bevel=0.003, segments=1, mat=0)
-    # Placa de empuje, pomo y buzón.
-    m.box((0.36, 1.05, z + 0.03), (0.06, 0.22, 0.004), bevel=0.002, segments=1, mat=3)
-    m.sphere((0.36, 1.0, z + 0.06), 0.028, mat=3)
-    m.cylinder((0.36, 1.0, z + 0.04), 0.008, 0.04, axis="z", mat=3, segments=10)
-    m.box((0, 0.62, z + 0.03), (0.26, 0.05, 0.006), grain="x", bevel=0.003, segments=1, mat=3)
     # Campanilla sobre la puerta, colgada de un brazo de latón.
     m.tube([(0.3, H + 0.12, 0.06), (0.3, H + 0.12, 0.16)], 0.006, 6, mat=3, cap=False)
     m.lathe([(0.0, H + 0.11), (0.025, H + 0.1), (0.045, H + 0.03), (0.05, H + 0.015), (0.0, H + 0.015)], 18,
             center=(0.3, -H - 0.01 + H, 0.16), mat=3)
+    m.export(center_y=False)
+
+    # Hoja: paneles inferiores, cristal arriba con travesaño y cuarterones. x0 desplaza la bisagra al origen.
+    reset_scene()
+    m = Model("shop_door_leaf", 110)
+    materials(m)
+    x0 = W / 2
+    z = 0.012
+    m.box((x0 - W / 2 + 0.04, H / 2, z), (0.08, H, T), bevel=0.006, segments=2, mat=0)
+    m.box((x0 + W / 2 - 0.04, H / 2, z), (0.08, H, T), bevel=0.006, segments=2, mat=0)
+    m.box((x0, 0.06, z), (W, 0.12, T), grain="x", bevel=0.006, segments=2, mat=0)
+    m.box((x0, 0.9, z), (W, 0.12, T), grain="x", bevel=0.006, segments=2, mat=0)
+    m.box((x0, H - 0.05, z), (W, 0.1, T), grain="x", bevel=0.006, segments=2, mat=0)
+    m.box((x0, 0.48, z - 0.005), (W - 0.16, 0.72, T * 0.6), bevel=0.0, mat=0)
+    for sx in (-1, 1):
+        m.box((x0 + sx * 0.21, 0.48, z + 0.012), (0.3, 0.6, 0.012), bevel=0.012, segments=3, mat=0)
+    m.box((x0, (0.96 + H - 0.1) / 2, z), (W - 0.16, H - 0.1 - 0.96, 0.008), bevel=0.0, mat=2)
+    m.box((x0, (0.96 + H - 0.1) / 2, z + 0.006), (0.03, H - 0.1 - 0.96, 0.02), bevel=0.003, segments=1, mat=0)
+    # Placa de empuje, pomo (por las dos caras) y buzón.
+    m.box((x0 + 0.36, 1.05, z + 0.03), (0.06, 0.22, 0.004), bevel=0.002, segments=1, mat=3)
+    for side in (1, -1):
+        m.sphere((x0 + 0.36, 1.0, z + side * 0.06), 0.028, mat=3)
+        m.cylinder((x0 + 0.36, 1.0, z + side * 0.04), 0.008, 0.04, axis="z", mat=3, segments=10)
+    m.box((x0, 0.62, z + 0.03), (0.26, 0.05, 0.006), grain="x", bevel=0.003, segments=1, mat=3)
     m.export(center_y=False)
 
 
@@ -311,7 +329,64 @@ def make_tea_set():
     m.export(center_y=False)
 
 
+# ---------------------------------------------------------------- barrido: escoba
+def make_broom():
+    reset_scene()
+    m = Model("broom", 110)
+    m.add_material("wood", (0.62, 0.42, 0.24), 0.6)                      # 0 mango
+    m.add_material("straw", (0.86, 0.70, 0.38), 0.9)                     # 1 paja
+    m.add_material("band", (0.70, 0.20, 0.18), 0.6)                      # 2 cordel rojo
+    # Abanico de paja: estrecho arriba (atado al mango) y ancho abajo.
+    m.box((0, 0.15, 0), (0.13, 0.30, 0.03), grain="y", bevel=0.006, taper=2.25, mat=1)
+    for k in range(7):
+        x = -0.12 + k * 0.04
+        m.box((x, 0.012, 0), (0.026, 0.03, 0.05), grain="y", bevel=0.004, mat=1,
+              rotate=("Z", (k - 3) * 3.0, (x, 0.03, 0)))
+    for y in (0.24, 0.275):
+        m.box((0, y, 0), (0.15, 0.014, 0.042), bevel=0.004, mat=2)
+    m.cylinder((0, 0.80, 0), 0.0135, 1.0, segments=12, mat=0, round_edge=0.004)
+    m.sphere((0, 1.31, 0), 0.02, segments=10, rings=6, mat=0)
+    m.export(center_y=False)
+
+
+# ---------------------------------------------------------------- barrido: recogedor
+def make_dustpan():
+    reset_scene()
+    m = Model("dustpan", 111)
+    m.add_material("enamel", (0.27, 0.52, 0.47), 0.35, double_sided=True)   # 0 chapa esmaltada
+    m.add_material("wood", (0.62, 0.42, 0.24), 0.6)                         # 1 mango
+    m.add_material("rim", (0.85, 0.80, 0.68), 0.3)                          # 2 filo claro
+    # Pala: suelo inclinado hacia el borde, laterales y respaldo.
+    m.box((0, 0.008, -0.11), (0.28, 0.01, 0.22), bevel=0.002, mat=0, rotate=("X", -3.0, (0, 0, 0)))
+    m.box((0, 0.05, -0.218), (0.28, 0.09, 0.01), bevel=0.002, mat=0)
+    for sx in (-1, 1):
+        m.box((sx * 0.138, 0.032, -0.115), (0.01, 0.05, 0.21), bevel=0.002, taper=1.0, mat=0,
+              rotate=("X", 8.0, (sx * 0.138, 0.0, -0.22)))
+    m.box((0, 0.004, 0.0), (0.28, 0.006, 0.014), bevel=0.002, mat=2)
+    # Mango largo (se usa de pie) con su pomo.
+    m.tube([(0, 0.08, -0.225), (0, 0.45, -0.24), (0, 0.84, -0.255)], 0.012, sides=10, mat=1)
+    m.sphere((0, 0.86, -0.256), 0.018, segments=10, rings=6, mat=1)
+    m.export(center_y=False)
+
+
+# ---------------------------------------------------------------- barrido: papelera
+def make_waste_bin():
+    reset_scene()
+    m = Model("waste_bin", 112)
+    m.add_material("wicker", (0.70, 0.51, 0.29), 0.85, double_sided=True)  # 0 mimbre
+    m.add_material("rim", (0.52, 0.34, 0.18), 0.8)                         # 1 borde trenzado
+    # Cuerpo abierto (pared con grosor) que se abre hacia arriba, aros trenzados y borde.
+    m.lathe([(0.0, 0.0), (0.125, 0.0), (0.135, 0.01), (0.165, 0.34), (0.152, 0.34), (0.124, 0.03), (0.0, 0.03)],
+            28, mat=0)
+    for k in range(4):
+        y = 0.06 + k * 0.075
+        m.torus((0, y, 0), 0.131 + y * 0.09, 0.006, major_seg=28, minor_seg=5, mat=0)
+    m.torus((0, 0.342, 0), 0.159, 0.014, major_seg=28, minor_seg=6, mat=1)
+    m.torus((0, 0.012, 0), 0.128, 0.01, major_seg=28, minor_seg=5, mat=1)
+    m.export(center_y=False)
+
+
 if __name__ == "__main__":
     for fn in (make_pendant_lamp, make_dress_form, make_sewing_machine, make_cash_register, make_shop_door,
-               make_cat_basket, make_radio, make_flower_vase, make_tea_set):
+               make_cat_basket, make_radio, make_flower_vase, make_tea_set, make_broom, make_dustpan, make_waste_bin):
         fn()

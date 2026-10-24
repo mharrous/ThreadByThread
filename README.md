@@ -56,7 +56,9 @@ Usa los mismos guardados y ajustes que el juego abierto desde el editor. (`expor
 7. **Mira por la ventana oeste** y espera un par de minutos: pasan coches, alguna bicicleta (con timbre), una moto, gente paseando y perros (que a veces ladran). Debe ser tranquilo y no repetitivo. La ventana sur mira a un jardín trasero.
 8. **Tesoros**: ocho objetos de lujo, dos por sección (encima de estanterías altas, del cajón y de las pilas de cajas). Se ven destellos dorados muy leves de cerca; el panel de arriba a la izquierda dice cuántos hay. Al cogerlos se enseñan un momento y aparecen en la repisa de la pared sur (sus pastillas llevan el color y el nombre del tesoro). Los de lo alto de una estantería se apuntan con una ayuda de puntería: basta mirar hacia ellos desde 1–3 m. Los ya expuestos se pueden **examinar** con E (vienen a la mano, giran y vuelven).
 9. Esc → **Libro de colecciones**: un capítulo por sección con su barra de progreso, el dibujo de cada colección, escarapela al completarla y los tesoros (silueta con "?" hasta encontrarlos). **Completar esta sección** es un atajo de pruebas: ordena de golpe la sección del objeto que llevas o la de los muebles más cercanos.
-10. Cierra el juego a medias y vuelve a abrirlo: todo debe seguir donde lo dejaste. Los guardados de la versión de cuatro salas no se cargan: se empieza de cero.
+10. **Barrer**: la escoba y el recogedor están en la pared sur, junto a la papelera (bajo la ventana). E para cogerlos, mantén el clic mirando al suelo para barrer, y clic apuntando a la papelera para vaciar el recogedor (le caben 30 papelitos). E los devuelve. La tienda abre con todo colocado **y** el suelo barrido.
+11. **El gato** anda por toda la tienda: juega con su ovillo, se lava, se echa la siesta. Apúntale con las manos vacías y pulsa E para acariciarlo.
+12. Cierra el juego a medias y vuelve a abrirlo: todo debe seguir donde lo dejaste. Los guardados de la versión de cuatro salas no se cargan: se empieza de cero.
 
 Dime qué sientes raro: fuerza del lanzamiento, sonidos (nada de audio se ha escuchado aún), frecuencia de la calle, sensibilidad, dificultad de encontrar los tesoros.
 

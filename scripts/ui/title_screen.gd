@@ -23,12 +23,15 @@ var _card: PanelContainer
 var _veil: ColorRect
 var _confirm_new := false
 var _new_btn: Button
+var _play_btn: Button
 
 
 func _ready() -> void:
 	layer = 20
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	if OS.get_cmdline_user_args().has("--test-mode") or _skip_next:
+	var args := OS.get_cmdline_user_args()
+	# En pruebas no sale, salvo con --show-title (prueba de la pantalla final y la vuelta al menú).
+	if (args.has("--test-mode") and not args.has("--show-title")) or _skip_next:
 		_skip_next = false
 		queue_free()
 		return
@@ -42,7 +45,7 @@ func _ready() -> void:
 	_veil.color.a = 1.0
 	var tw := create_tween()
 	tw.tween_property(_veil, "color:a", 0.0, 1.0).set_trans(Tween.TRANS_SINE)
-	tw.parallel().tween_property(_card, "modulate:a", 1.0, 0.6).set_delay(0.5)
+	tw.parallel().tween_property(_card, "modulate:a", 1.0, 0.6).set_delay(0.5).set_trans(Tween.TRANS_SINE)
 	tw.parallel().tween_property(_card, "scale", Vector2.ONE, 0.7).set_delay(0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_warm_up()
 
@@ -118,6 +121,7 @@ func _build() -> void:
 	var has_save := SaveGame.has_save()
 	var play := _button("Continuar" if has_save else "Jugar", RED)
 	play.pressed.connect(_start)
+	_play_btn = play
 	col.add_child(play)
 	if has_save:
 		_new_btn = _button("Nueva partida", TEAL)
@@ -144,8 +148,8 @@ func _start() -> void:
 	AudioManager.play(&"shop_bell", null, 0.0, 0.0)
 	set_process_input(false)
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_card, "modulate:a", 0.0, 0.35)
-	tw.tween_property(_root, "modulate:a", 0.0, 0.5)
+	tw.tween_property(_card, "modulate:a", 0.0, 0.35).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_root, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_SINE)
 	tw.chain().tween_callback(func():
 		get_tree().paused = false
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

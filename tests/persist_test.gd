@@ -103,6 +103,18 @@ func _write() -> void:
 	await _frames(3)
 	_check(room.treasures_found() == 1, "un tesoro encontrado")
 
+	# Medio suelo barrido: unos papelitos en la papelera y otros en el recogedor.
+	var sweep := shop.floor_sweep()
+	for k in 2:
+		var at: Vector3 = sweep._home[sweep._gone.find(0)].origin
+		sweep.sweep_at(at, at)
+		if k == 0:
+			sweep.dump()
+			await get_tree().create_timer(2.0).timeout
+	await get_tree().create_timer(0.4).timeout
+	expect["floor"] = {"left": sweep.scraps_left(), "pan": sweep.pan_count(), "loads": sweep.loads_done}
+	_check(sweep.scraps_left() < sweep.scraps_total() and sweep.pan_count() > 0 and sweep.loads_done == 1, "medio suelo barrido (%d papelitos, %d en el recogedor)" % [sweep.scraps_left(), sweep.pan_count()])
+
 	var f := FileAccess.open(EXPECT_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(expect))
 	f.close()
@@ -142,5 +154,9 @@ func _read() -> void:
 	_check(not still_hidden, "el tesoro hallado ya no está en su escondite")
 	_check(room._displays.has(StringName(expect["treasure"])), "el tesoro hallado está en la repisa")
 	_check(room.shell.is_decor_unlocked(&"bunting") == room.is_completed, "la decoración coincide con el estado de la sala")
+	var fl: Dictionary = expect["floor"]
+	var sweep := shop.floor_sweep()
+	_check(sweep.scraps_left() == int(fl["left"]) and sweep.pan_count() == int(fl["pan"]) and sweep.loads_done == int(fl["loads"]),
+		"el suelo sigue medio barrido (%d papelitos, %d en el recogedor)" % [sweep.scraps_left(), sweep.pan_count()])
 	SaveGame.delete_save()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(EXPECT_PATH))

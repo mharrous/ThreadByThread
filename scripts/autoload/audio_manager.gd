@@ -35,6 +35,9 @@ const SFX_DIR := "res://art/audio/sfx/"
 const POOL_3D := 10
 const POOL_2D := 6
 
+## Los sonidos ya están sintetizados (ready_to_play pasa a true).
+signal sounds_ready
+
 var ready_to_play := false
 ## Bancos cuyo sonido viene de un fichero editado en vez de la síntesis.
 var overridden: Array[StringName] = []
@@ -55,6 +58,7 @@ var _aiming_ok := false
 var _music: Array[AudioStreamPlayer] = []
 var _music_on: Array[bool] = []
 var _music_tweens: Array[Tween] = []
+var _music_held := false
 var _progress := 0.0
 
 
@@ -224,7 +228,12 @@ func _connect_events() -> void:
 	Events.collection_completed.connect(func(_key): play(&"collection", null, -2.0, 0.0))
 	Events.section_completed.connect(func(_section): play(&"room_complete", null, -1.0, 0.0))
 	# El final de la mercería: la misma melodía, más grave y solemne.
-	Events.room_completed.connect(func(_room): play(&"room_complete", null, 0.0, 0.0, 0.84))
+	Events.room_completed.connect(func(_room):
+		play(&"room_complete", null, 0.0, 0.0, 0.84)
+		# Y una cascada de campanillas que sube (do-mi-sol-do): se distingue del final de una sección.
+		for i in 4:
+			get_tree().create_timer(0.55 + i * 0.16).timeout.connect(
+				play.bind(&"sparkle", null, -6.0 + i, 0.0, pow(2.0, [0, 4, 7, 12][i] / 12.0))))
 	Events.treasure_found.connect(func(_item): play(&"treasure", null, -2.0, 0.0))
 	Events.decor_unlocked.connect(func(_room, id):
 		play(&"decor_unlock", null, -3.0, 0.0)
@@ -272,6 +281,7 @@ func _publish_banks(banks: Dictionary) -> void:
 	_apply_overrides(banks)
 	_banks = banks
 	ready_to_play = true
+	sounds_ready.emit()
 	_start_music()
 
 
@@ -288,7 +298,47 @@ func _start_music() -> void:
 	_update_music_layers()
 
 
+## Silencia la música (escena de apertura). Mientras está retenida, el progreso no cambia las capas.
+func fade_music_out(seconds: float) -> void:
+	_music_held = true
+	for i in _music.size():
+		_music_on[i] = false
+		_tween_layer(i, MUSIC_SILENT_DB, seconds, 0.0)
+
+
+## Vuelve a subir la música: solo la capa `layer` o, con -1, todas las que tocan por el progreso.
+func fade_music_in(seconds: float, layer: int = -1, delay: float = 0.0) -> void:
+	for i in _music.size():
+		if layer >= 0 and i != layer:
+			continue
+		if layer < 0 and _progress < float(MUSIC_LAYERS[i]["from"]):
+			continue
+		_music_on[i] = true
+		_tween_layer(i, MUSIC_LAYERS[i]["db"], seconds, delay)
+	if layer < 0:
+		_music_held = false
+
+
+func is_music_silent() -> bool:
+	for mp in _music:
+		if mp.volume_db > MUSIC_SILENT_DB + 1.0:
+			return false
+	return true
+
+
+func _tween_layer(i: int, db: float, seconds: float, delay: float) -> void:
+	if _music_tweens[i] != null:
+		_music_tweens[i].kill()
+	var tw := create_tween()
+	if delay > 0.0:
+		tw.tween_interval(delay)
+	tw.tween_property(_music[i], "volume_db", db, seconds).set_trans(Tween.TRANS_SINE)
+	_music_tweens[i] = tw
+
+
 func _update_music_layers() -> void:
+	if _music_held:
+		return
 	for i in _music.size():
 		if _music[i].stream == null:
 			return

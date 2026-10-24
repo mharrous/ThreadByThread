@@ -6,12 +6,12 @@ const CREAM := Color("fff4e0")
 const INK := Color(0.14, 0.09, 0.05, 0.95)
 const SOFT := Color("e9d3b0")
 const ACCENT := Color("f2a65a")
-const GOOD := Color("b8f0c0")
-const BAD := Color("ffb0a0")
 const GOLD := Color("f6c453")
 const PANEL_BG := Color(0.13, 0.09, 0.06, 0.42)
 
 const OBJECTIVE_DONE := "¡Mercería ordenada!"
+## Todo colocado pero quedan papelitos en el suelo (o en el recogedor).
+const OBJECTIVE_SWEEP := "Objetivo: barrer el suelo (escoba junto a la ventana sur)"
 
 
 class Crosshair extends Control:
@@ -26,6 +26,19 @@ class Crosshair extends Control:
 		active = lerpf(active, target, 1.0 - exp(-14.0 * delta))
 		if absf(active - prev) > 0.001:
 			queue_redraw()
+		else:
+			# Quieto: no se recalcula hasta que cambie lo que se apunta.
+			active = target
+			queue_redraw()
+			set_process(false)
+
+	func aim(value: float, is_deny: bool) -> void:
+		if is_equal_approx(value, target) and is_deny == deny:
+			return
+		target = value
+		deny = is_deny
+		set_process(true)
+		queue_redraw()
 
 	func set_charge(value: float) -> void:
 		if not is_equal_approx(value, charge):
@@ -37,8 +50,13 @@ class Crosshair extends Control:
 		draw_circle(c, 3.0, Color(0, 0, 0, 0.30))
 		draw_circle(c, 2.0, Color(1, 1, 1, 0.85))
 		if active > 0.01:
-			var col := Color(1.0, 0.62, 0.55, 0.9 * active) if deny else Color(1, 1, 1, 0.9 * active)
+			var col := Color(GameSettings.aim_deny_color(), 0.9 * active) if deny else Color(1, 1, 1, 0.9 * active)
 			draw_arc(c, lerpf(5.0, 10.0, active), 0.0, TAU, 32, col, 1.6, true)
+			if deny:
+				# "Aquí no": además del color, una X dentro del aro.
+				var k := 4.0 * active
+				draw_line(c + Vector2(-k, -k), c + Vector2(k, k), col, 1.8, true)
+				draw_line(c + Vector2(-k, k), c + Vector2(k, -k), col, 1.8, true)
 		if charge > 0.01:
 			draw_arc(c, 16.0, -PI * 0.5, -PI * 0.5 + TAU * charge, 48, Color(0, 0, 0, 0.35), 5.0, true)
 			draw_arc(c, 16.0, -PI * 0.5, -PI * 0.5 + TAU * charge, 48, Color("f2a65a"), 3.0, true)
@@ -57,6 +75,10 @@ var _percent_label: Label
 var _bar: ProgressBar
 var _objective: Label
 var _treasure_label: Label
+## "Suelo barrido N %": los papelitos fuera del suelo.
+var _floor_label: Label
+var _floor_clean := true
+var _all_placed := false
 ## Con un objeto en la mano: su sección y cuánto le falta (así se sabe a qué pared llevarlo).
 var _section_label: Label
 var _held_section: ShopSection
@@ -74,6 +96,9 @@ var _bar_tween: Tween
 var _prompt_visible := false
 var _title_label: Label
 var _objective_text := ""
+## Letrero grande de la escena de apertura (fuera de _root: sigue visible con la interfaz apagada).
+var _title_card: Label
+var _cinematic_tween: Tween
 
 
 func _ready() -> void:
@@ -93,6 +118,10 @@ func _ready() -> void:
 			_update_section_label())
 	Events.section_completed.connect(_on_section_completed)
 	Events.streak_changed.connect(_on_streak_changed)
+	Events.floor_progress_changed.connect(_on_floor_progress_changed)
+	Events.floor_cleaned.connect(func():
+		_floor_clean = true
+		_update_objective())
 	_on_progress_changed(0, 0)
 	_fade_prompt(false)
 
@@ -195,17 +224,26 @@ func _build() -> void:
 	_treasure_label.visible = false
 	vb.add_child(_treasure_label)
 
-	# Racha
-	_streak_label = _label("", 26, Color("ffd27a"))
+	_floor_label = _label("", 14, SOFT, 0)
+	_floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_floor_label.visible = false
+	vb.add_child(_floor_label)
+
+	# Racha: arriba a la derecha, lejos de la mira, de los letreros del centro y del tutorial (arriba al centro).
+	_streak_label = _label("", 28, Color("ffd27a"))
 	_streak_label.modulate.a = 0.0
-	_streak_label.anchor_left = 0.5
-	_streak_label.anchor_right = 0.5
-	_streak_label.anchor_top = 0.42
-	_streak_label.anchor_bottom = 0.42
-	_streak_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_streak_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_streak_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_streak_label.anchor_left = 1.0
+	_streak_label.anchor_right = 1.0
+	_streak_label.anchor_top = 0.0
+	_streak_label.anchor_bottom = 0.0
+	_streak_label.offset_right = -36
+	_streak_label.offset_top = 30
+	_streak_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_streak_label.grow_vertical = Control.GROW_DIRECTION_END
 	_streak_label.resized.connect(func():
-		_streak_label.pivot_offset = _streak_label.size * 0.5
+		# Crece hacia la izquierda al saltar: nunca se sale por el borde.
+		_streak_label.pivot_offset = Vector2(_streak_label.size.x, _streak_label.size.y * 0.5)
 		_streak_rest_x = _streak_label.position.x)
 	_root.add_child(_streak_label)
 
@@ -221,7 +259,7 @@ func _build() -> void:
 	_root.add_child(_toast)
 
 	# Controles (desaparecen solos)
-	_controls = _label("WASD mover  ·  Shift correr  ·  Ctrl agacharse  ·  E recoger  ·  Clic colocar  ·  R girar  ·  F lanzar  ·  Esc pausa", 15, SOFT, 4)
+	_controls = _label("WASD mover  ·  Shift correr  ·  Ctrl agacharse  ·  E recoger / dejar  ·  Clic izq. colocar  ·  R girar  ·  F lanzar  ·  Esc pausa", 15, SOFT, 4)
 	_controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_controls.anchor_top = 1.0
 	_controls.anchor_bottom = 1.0
@@ -232,7 +270,7 @@ func _build() -> void:
 	_root.add_child(_controls)
 	var ctw := create_tween()
 	ctw.tween_interval(16.0)
-	ctw.tween_property(_controls, "modulate:a", 0.0, 2.5)
+	ctw.tween_property(_controls, "modulate:a", 0.0, 2.5).set_trans(Tween.TRANS_SINE)
 
 	# Banner del final: toda la mercería ordenada
 	_banner = PanelContainer.new()
@@ -259,7 +297,6 @@ func _build() -> void:
 	_banner.add_child(bvb)
 	bvb.add_child(_label("¡La mercería está lista!", 46, Color("ffe7b8"), 0))
 	bvb.add_child(_label("Cada cosa tiene su sitio. La tienda vuelve a abrir sus puertas.", 20, CREAM, 0))
-	bvb.add_child(_label("Fin de la demo · gracias por jugar · Esc abre el libro de colecciones", 15, SOFT, 0))
 	_banner.resized.connect(func(): _banner.pivot_offset = _banner.size * 0.5)
 
 
@@ -279,8 +316,7 @@ func _label(text: String, font_size: int, color: Color, outline: int = 5) -> Lab
 
 func _on_target_changed(info: Dictionary) -> void:
 	if info.is_empty():
-		_crosshair.target = 0.0
-		_crosshair.deny = false
+		_crosshair.aim(0.0, false)
 		_fade_prompt(false)
 		return
 	var key: String = info.get("key", "")
@@ -290,18 +326,18 @@ func _on_target_changed(info: Dictionary) -> void:
 	_prompt_action.visible = action != ""
 	match kind:
 		"place":
-			_prompt_action.add_theme_color_override(&"font_color", GOOD)
+			_prompt_action.add_theme_color_override(&"font_color", GameSettings.aim_ok_color().lerp(Color.WHITE, 0.35))
 		"deny":
-			_prompt_action.add_theme_color_override(&"font_color", BAD)
+			_prompt_action.add_theme_color_override(&"font_color", GameSettings.aim_deny_color().lerp(Color.WHITE, 0.35))
 		_:
 			_prompt_action.add_theme_color_override(&"font_color", CREAM)
 	_prompt_title.text = info.get("title", "")
+	_prompt_title.visible = _prompt_title.text != ""
 	_prompt_detail.text = info.get("detail", "")
 	_prompt_detail.visible = _prompt_detail.text != ""
 	_prompt_hint.text = info.get("hint", "")
 	_prompt_hint.visible = _prompt_hint.text != ""
-	_crosshair.deny = kind == "deny"
-	_crosshair.target = 1.0 if kind in ["pick", "place", "deny"] else 0.0
+	_crosshair.aim(1.0 if kind in ["pick", "place", "deny"] else 0.0, kind == "deny")
 	_fade_prompt(true)
 
 
@@ -315,9 +351,26 @@ func _on_progress_changed(placed: int, total: int) -> void:
 	_bar_tween.tween_property(_bar, "value", ratio, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_count_label.pivot_offset = Vector2(0, _count_label.size.y * 0.5)
 	var pop := create_tween()
-	pop.tween_property(_count_label, "scale", Vector2(1.08, 1.08), 0.09)
+	pop.tween_property(_count_label, "scale", Vector2(1.08, 1.08), 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	pop.tween_property(_count_label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_objective.text = OBJECTIVE_DONE if (total > 0 and placed == total) else _objective_text
+	_all_placed = total > 0 and placed == total
+	_update_objective()
+
+
+func _update_objective() -> void:
+	if not _all_placed:
+		_objective.text = _objective_text
+	else:
+		_objective.text = OBJECTIVE_DONE if _floor_clean else OBJECTIVE_SWEEP
+
+
+func _on_floor_progress_changed(swept: int, total: int) -> void:
+	_floor_label.visible = total > 0
+	_floor_clean = swept >= total
+	var pct := 100 if total == 0 else floori(100.0 * swept / total)
+	_floor_label.text = "Suelo barrido  %d %%" % pct
+	_floor_label.add_theme_color_override(&"font_color", GOLD if swept >= total else SOFT)
+	_update_objective()
 
 
 func _on_active_room_changed(room: RoomController) -> void:
@@ -343,8 +396,10 @@ func _update_section_label() -> void:
 
 ## Desde la tercera colocación seguida: salta, crece un poco con la racha y se apaga si se corta.
 func _on_streak_changed(count: int) -> void:
-	if count < 3:
+	# Ni en la escena de apertura ni con la pantalla final abierta.
+	if count < 3 or is_cinematic() or get_tree().get_first_node_in_group(&"modal_ui") != null:
 		return
+	_streak_label.visible = true
 	_streak_label.text = "Racha ×%d" % count
 	if _streak_tween:
 		_streak_tween.kill()
@@ -361,7 +416,7 @@ func _on_streak_changed(count: int) -> void:
 	_streak_tween.tween_method(func(t: float):
 		_streak_label.position.x = _streak_rest_x + sin(t * 38.0) * amp * (1.0 - t / 0.3), 0.0, 0.3, 0.3)
 	_streak_tween.chain().tween_interval(4.5)
-	_streak_tween.chain().tween_property(_streak_label, "modulate:a", 0.0, 1.2)
+	_streak_tween.chain().tween_property(_streak_label, "modulate:a", 0.0, 1.2).set_trans(Tween.TRANS_SINE)
 
 
 func _on_section_completed(section) -> void:
@@ -381,7 +436,7 @@ func _on_treasure_found(item) -> void:
 	_on_hint("¡Tesoro encontrado!  %s" % item.data.display_name, 3.2)
 	_treasure_label.pivot_offset = Vector2(0, _treasure_label.size.y * 0.5)
 	var pop := create_tween()
-	pop.tween_property(_treasure_label, "scale", Vector2(1.12, 1.12), 0.1)
+	pop.tween_property(_treasure_label, "scale", Vector2(1.12, 1.12), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	pop.tween_property(_treasure_label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
@@ -392,19 +447,67 @@ func _on_hint(text: String, seconds: float = 1.8) -> void:
 	if _toast_tween:
 		_toast_tween.kill()
 	_toast_tween = create_tween()
-	_toast_tween.tween_property(_toast, "modulate:a", 1.0, 0.15)
+	_toast_tween.tween_property(_toast, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_SINE)
 	_toast_tween.tween_interval(seconds)
-	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.6)
+	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
 
 
 func _on_room_completed(_room) -> void:
 	_banner.visible = true
 	_banner.scale = Vector2(0.92, 0.92)
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_banner, "modulate:a", 1.0, 0.6)
+	tw.tween_property(_banner, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_banner, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.chain().tween_interval(7.0)
-	tw.chain().tween_property(_banner, "modulate:a", 0.0, 1.8)
+	tw.chain().tween_interval(2.5)
+	tw.chain().tween_property(_banner, "modulate:a", 0.0, 1.5).set_trans(Tween.TRANS_SINE)
+
+
+## Escena de apertura: se apaga la interfaz de juego (mira, textos, progreso) y se vuelve a encender al final.
+func set_cinematic(on: bool, seconds: float = 1.2) -> void:
+	if _cinematic_tween != null:
+		_cinematic_tween.kill()
+	_cinematic_tween = create_tween()
+	_cinematic_tween.tween_property(_root, "modulate:a", 0.0 if on else 1.0, seconds).set_trans(Tween.TRANS_SINE)
+	if on:
+		# La racha no vuelve a asomar al encender la interfaz: se apaga del todo.
+		if _streak_tween:
+			_streak_tween.kill()
+		_streak_label.visible = false
+		_streak_label.modulate.a = 0.0
+
+
+func is_cinematic() -> bool:
+	return _root.modulate.a < 0.5
+
+
+## Letrero grande, cálido y con serifa en el centro: aparece, se queda `hold` segundos y se va.
+func show_title_card(text: String, hold: float = 4.0) -> void:
+	if _title_card == null:
+		_title_card = Label.new()
+		var font := SystemFont.new()
+		font.font_names = PackedStringArray(["Georgia", "Palatino Linotype", "Book Antiqua", "Times New Roman", "serif"])
+		_title_card.add_theme_font_override(&"font", font)
+		_title_card.add_theme_font_size_override(&"font_size", 78)
+		_title_card.add_theme_color_override(&"font_color", Color("ffe9c4"))
+		_title_card.add_theme_color_override(&"font_outline_color", Color(0.24, 0.13, 0.06, 0.75))
+		_title_card.add_theme_constant_override(&"outline_size", 12)
+		_title_card.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.35))
+		_title_card.add_theme_constant_override(&"shadow_offset_y", 4)
+		_title_card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_title_card.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_title_card.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_title_card.offset_bottom = -180
+		_title_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_title_card)
+	_title_card.text = text
+	_title_card.modulate.a = 0.0
+	_title_card.pivot_offset = _title_card.size * 0.5
+	_title_card.scale = Vector2(0.96, 0.96)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(_title_card, "modulate:a", 1.0, 1.4).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_title_card, "scale", Vector2.ONE, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(hold)
+	tw.chain().tween_property(_title_card, "modulate:a", 0.0, 1.6).set_trans(Tween.TRANS_SINE)
 
 
 func _fade_prompt(show_prompt: bool) -> void:
@@ -414,4 +517,4 @@ func _fade_prompt(show_prompt: bool) -> void:
 	if _prompt_tween:
 		_prompt_tween.kill()
 	_prompt_tween = create_tween()
-	_prompt_tween.tween_property(_prompt_box, "modulate:a", 1.0 if show_prompt else 0.0, 0.12)
+	_prompt_tween.tween_property(_prompt_box, "modulate:a", 1.0 if show_prompt else 0.0, 0.12).set_trans(Tween.TRANS_SINE)

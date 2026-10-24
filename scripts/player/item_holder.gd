@@ -30,6 +30,11 @@ const TREASURE_REACH := 3.6
 var state: State = State.EMPTY
 var held: PickableItem = null
 var hover_item: PickableItem = null
+## Lo que se puede usar con E sin cogerlo (la escoba y el recogedor, el gato): un nodo con
+## interact_info() -> Dictionary e interact(holder), padre de un Area3D en la capa de coger.
+var hover_target: Node = null
+## Barrer: mientras tiene la escoba y el recogedor, el ItemHolder le pasa la entrada y el fotograma.
+var sweeper: Sweeper
 ## Estado de la puntería sobre contenedores mientras se sostiene un objeto.
 var aim_status: StorageUnit.SlotStatus = StorageUnit.SlotStatus.NONE
 
@@ -63,9 +68,23 @@ func _ready() -> void:
 	Events.pause_toggled.connect(func(_paused: bool): _cancel_charge())
 	process_priority = 10   # después del jugador: usa la cámara ya actualizada
 	_build_ghost()
+	sweeper = Sweeper.new()
+	sweeper.name = "Sweeper"
+	add_child(sweeper)
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _player.input_locked:
+		return
+	if sweeper.active:
+		# Con la escoba: E la devuelve a la pared (y coge lo que haya delante, si hay algo).
+		if event.is_action_pressed(&"interact"):
+			sweeper.put_back()
+			_process_empty()
+			if hover_item != null:
+				try_pick()
+			get_viewport().set_input_as_handled()
+		return
 	if event.is_action_released(&"throw") and _charging:
 		try_throw()
 		get_viewport().set_input_as_handled()
@@ -77,7 +96,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(&"interact"):
 		if state == State.EMPTY:
-			try_pick()
+			if not try_pick() and hover_target != null and is_instance_valid(hover_target):
+				hover_target.interact(self)
 		elif state == State.HOLDING:
 			try_set_down()
 		get_viewport().set_input_as_handled()
@@ -90,6 +110,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	if sweeper.active:
+		sweeper.tick(delta)
+		return
+	if _player.input_locked and state == State.EMPTY:
+		_set_hover(null)
+		hover_target = null
+		return
 	match state:
 		State.EMPTY:
 			_process_empty()
@@ -157,6 +184,7 @@ func _collect_treasure(item: PickableItem) -> void:
 ## Suelta lo que haya en la mano sin colocarlo (lo deja suelto donde está) y deja las manos libres.
 func release_held() -> void:
 	_cancel_charge()
+	sweeper.put_back()
 	if held != null and is_instance_valid(held):
 		held.set_pickable(true)
 		held.state = PickableItem.State.LOOSE
@@ -254,14 +282,27 @@ func _process_empty() -> void:
 	# Los objetos se apuntan con un volumen algo mayor que el físico (más cómodo).
 	var hit := _raycast(MASK_WORLD | MASK_PICK, true)
 	var item: PickableItem = null
+	var target: Node = null
 	if not hit.is_empty():
 		var proxy := hit["collider"] as Area3D
 		if proxy != null:
 			item = proxy.get_parent() as PickableItem
-	if item == null:
+			if item == null and proxy.get_parent().has_method(&"interact"):
+				target = proxy.get_parent()
+				# Un objeto justo detrás (el gato sentado al lado de un ovillo): manda el objeto.
+				var behind := _raycast(MASK_WORLD | MASK_PICK, true, [proxy.get_rid()])
+				if not behind.is_empty() and behind["collider"] is Area3D:
+					var other := (behind["collider"] as Area3D).get_parent() as PickableItem
+					if other != null and (behind["position"] as Vector3).distance_to(hit["position"]) < 0.5:
+						item = other
+						target = null
+	if item == null and target == null:
 		item = _treasure_in_view()
 	_set_hover(item)
-	if item:
+	hover_target = target
+	if target != null:
+		_publish(target.interact_info())
+	elif item:
 		_publish({
 			"key": "E", "action": "Examinar" if item.is_display else "Recoger",
 			"title": item.data.display_name, "detail": item.data.detail,
@@ -424,9 +465,9 @@ func _update_ghost(delta: float) -> void:
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.007)
 	_ghost.scale = held.get_mesh_scale() * (1.0 + 0.03 * pulse)
 	if aim_status == StorageUnit.SlotStatus.OK:
-		_ghost_mat.albedo_color = Color(0.72, 1.0, 0.78, 0.30 + 0.12 * pulse)
+		_ghost_mat.albedo_color = Color(GameSettings.aim_ok_color(), 0.30 + 0.12 * pulse)
 	else:
-		_ghost_mat.albedo_color = Color(1.0, 0.50, 0.45, 0.28)
+		_ghost_mat.albedo_color = Color(GameSettings.aim_deny_color(), 0.28)
 
 
 func _publish_holding_info(status: StorageUnit.SlotStatus) -> void:
@@ -471,11 +512,12 @@ func _set_hover(item: PickableItem) -> void:
 		item.set_highlighted(true)
 
 
-func _raycast(mask: int, areas: bool = false) -> Dictionary:
+func _raycast(mask: int, areas: bool = false, exclude: Array[RID] = []) -> Dictionary:
 	var from := _camera.global_position
 	var to := from - _camera.global_basis.z * reach
 	var q := PhysicsRayQueryParameters3D.create(from, to, mask)
 	q.collide_with_areas = areas
+	q.exclude = exclude
 	return _camera.get_world_3d().direct_space_state.intersect_ray(q)
 
 

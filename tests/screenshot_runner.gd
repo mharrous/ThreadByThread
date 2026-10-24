@@ -25,6 +25,12 @@ var _out_dir := ""
 var _filled := false
 var _treasures := false  # --treasures: tesoros escondidos, repisa con los hallados y guirnaldas
 var _book := false      # --book: libro de colecciones del menú de pausa
+var _opening := false  # --opening: escena de apertura de la tienda y pantalla final
+var _hud := false      # --hud: la interfaz con todo a la vez (racha, aviso, tutorial, indicador) para ver solapes
+var _customer := false  # --customer: la clienta de la apertura (quieta, andando, mirando) y su esqueleto
+var _cat := false       # --cat: el gato en cada pose (de lado y de frente), el zarpazo y la caricia
+var _sweep := false     # --sweep: barrer en primera persona (coger, barrer, recogedor lleno, vaciar)
+var _access := false    # --access: menú de pausa y HUD con el texto a ×1,5 y colores para daltonismo
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
 
@@ -40,6 +46,18 @@ func _ready() -> void:
 			_book = true
 		elif arg == "--treasures":
 			_treasures = true
+		elif arg == "--opening":
+			_opening = true
+		elif arg == "--customer":
+			_customer = true
+		elif arg == "--cat":
+			_cat = true
+		elif arg == "--sweep":
+			_sweep = true
+		elif arg == "--access":
+			_access = true
+		elif arg == "--hud":
+			_hud = true
 	if _out_dir == "":
 		_out_dir = ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -143,6 +161,142 @@ func _run_street(main: Node, player: Player) -> void:
 	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
 
 
+func _run_customer(shop: Shop, player: Player) -> void:
+	var room := shop.room
+	var c := Customer.new()
+	room.add_child(c)
+	c.position = Vector3(0.0, 0.0, 0.6)
+	await _look_from(player, room, Vector3(0.0, 0.0, 2.6), Vector3(0.0, 1.0, 0.6))
+	await get_tree().create_timer(0.5).timeout
+	await _shot("clienta_frente")
+	c.rotation.y = PI * 0.5
+	await _shot("clienta_perfil")
+	c.velocity = Vector3(0.001, 0, 0)
+	c._play(&"walk", 1.0)
+	c.velocity = Vector3.ZERO
+	c.set_process(false)
+	for t in [0.0, 0.17, 0.33, 0.5]:
+		c._anim.seek(t, true)
+		await _shot("clienta_paso_%d" % int(t * 100))
+	c.rotation.y = 0.0
+	c.set_process(true)
+	c.look_around()
+	await get_tree().create_timer(1.2).timeout
+	await _shot("clienta_mira")
+	await _look_from(player, room, Vector3(1.2, 0.0, 1.4), Vector3(0.0, 1.0, 0.6))
+	await _shot("clienta_cesta")
+
+
+## El gato quieto en cada pose (se le para la vida), de lado y de frente; luego suelto un rato.
+func _run_cat(shop: Shop, player: Player) -> void:
+	var room := shop.room
+	var cat := room.shell.get_node("ShopCat") as ShopCat
+	var at := Vector3(1.0, 0.0, 1.5)
+	cat._gen += 1
+	cat._move_to = Vector3.INF
+	cat.position = at
+	cat.rotation.y = PI * 0.5
+	await _look_from(player, room, Vector3(1.05, 0.0, 2.55), at + Vector3(0.0, 0.2, 0.0))
+	# Cámara de cerca, a la altura del gato.
+	var close := Camera3D.new()
+	close.fov = 40.0
+	room.add_child(close)
+	close.position = at + Vector3(0.0, 0.32, 1.25)
+	close.look_at(room.to_global(at + Vector3(0.0, 0.2, 0.0)))
+	close.make_current()
+	await get_tree().create_timer(0.3).timeout
+	cat._set_animating(true)
+	for pose in [&"stand", &"walk", &"trot", &"sit", &"groom", &"sleep", &"pet"]:
+		cat._set_pose(pose)
+		await get_tree().create_timer(0.9).timeout
+		await _shot("gato_%s" % pose)
+	cat.rotation.y = 0.0
+	for pose in [&"stand", &"sit", &"pet"]:
+		cat._set_pose(pose)
+		await get_tree().create_timer(0.9).timeout
+		await _shot("gato_frente_%s" % pose)
+	cat._set_pose(&"sit")
+	cat.rotation.y = PI * 0.5
+	await get_tree().create_timer(0.6).timeout
+	cat._tree.set(&"parameters/bat/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	await get_tree().create_timer(0.75).timeout
+	await _shot("gato_zarpazo_arriba")
+	await get_tree().create_timer(0.35).timeout
+	await _shot("gato_zarpazo_golpe")
+	cat.interact()
+	await get_tree().create_timer(0.5).timeout
+	await _shot("gato_caricia")
+	close.position = at + Vector3(0.9, 0.5, 0.9)
+	close.look_at(room.to_global(at + Vector3(0.0, 0.2, 0.0)))
+	cat._set_pose(&"sit")
+	await get_tree().create_timer(0.9).timeout
+	await _shot("gato_tres_cuartos")
+	close.queue_free()
+	player.camera.make_current()
+	cat._life()
+	await get_tree().create_timer(14.0).timeout
+	await _look_from(player, room, Vector3(0.0, 0.0, 2.9), room.to_local(cat.global_position) + Vector3(0, 0.2, 0))
+	await _shot("gato_suelto")
+
+
+## Barrer en primera persona: coger la escoba, barrer unos papelitos, el recogedor lleno y vaciarlo.
+func _run_sweep(shop: Shop, player: Player) -> void:
+	var room := shop.room
+	var sweep := shop.floor_sweep()
+	var holder := player.get_node("ItemHolder") as ItemHolder
+	await _look_from(player, room, Vector3(3.9, 0.0, 2.9), ShopSweep.BROOM_REST + Vector3(-0.2, 0.6, 0.0))
+	await _shot("barrer_1_herramientas")
+	holder.sweeper.take(sweep)
+	await get_tree().create_timer(0.8).timeout
+	# Al papelito más cercano, mirando al suelo.
+	var target := room.to_local(sweep.nearest_scrap(player.global_position))
+	var feet := target + Vector3(0.0, 0.0, -1.0)
+	await _look_from(player, room, feet, target)
+	await get_tree().create_timer(0.5).timeout
+	await _shot("barrer_2_en_mano")
+	for k in 6:
+		var t := room.to_local(sweep.nearest_scrap(player.global_position))
+		await _look_from(player, room, t + (room.to_local(player.global_position) - t).normalized() * 1.0 * Vector3(1, 0, 1), t)
+		holder.sweeper._stroke = 0.0
+		holder.sweeper._stroke_hit_done = false
+		await get_tree().create_timer(0.2).timeout
+		if k == 0:
+			await _shot("barrer_3_escobazo")
+		await get_tree().create_timer(0.4).timeout
+	await _shot("barrer_4_recogedor_%d" % sweep.pan_count())
+	await _look_from(player, room, ShopSweep.BIN_AT + Vector3(-0.3, 0.0, -1.3), ShopSweep.BIN_AT + Vector3(0.0, ShopSweep.BIN_TOP, 0.0))
+	await get_tree().create_timer(0.4).timeout
+	await _shot("barrer_5_papelera")
+	sweep.dump()
+	await get_tree().create_timer(0.7).timeout
+	await _shot("barrer_6_vaciar")
+	await get_tree().create_timer(1.2).timeout
+	holder.sweeper.put_back()
+	await get_tree().create_timer(1.5).timeout
+	await _look_from(player, room, Vector3(3.9, 0.0, 2.9), ShopSweep.BROOM_REST + Vector3(-0.2, 0.6, 0.0))
+	await _shot("barrer_7_devuelta")
+
+
+func _run_opening(main: Node, shop: Shop, player: Player) -> void:
+	var opening := main.get_node("ShopOpening") as ShopOpening
+	player.teleport(shop.room.to_global(Vector3(1.6, 0.0, -0.6)))
+	player.look_at_point(shop.room.to_global(Vector3(6.0, 1.3, 2.2)))
+	shop.floor_sweep().finish_instantly()
+	shop.room.solve_instantly()
+	for s in [[&"door", 2.6, "apertura_1_puerta"], [&"enter", 1.6, "apertura_2_letrero"], [&"look", 1.8, "apertura_3_cliente"]]:
+		while opening.step != s[0]:
+			await get_tree().process_frame
+		await get_tree().create_timer(s[1]).timeout
+		await _shot(s[2])
+	while not opening.is_end_screen_open():
+		await get_tree().process_frame
+	await get_tree().create_timer(4.5).timeout
+	await _shot("apertura_4_final")
+	opening._end._on_continue()
+	await get_tree().create_timer(2.5).timeout
+	await _shot("apertura_5_seguir")
+
+
 func _run() -> void:
 	var main := (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	add_child(main)
@@ -152,6 +306,48 @@ func _run() -> void:
 	var player: Player = main.get_node("Player")
 	if _street:
 		await _run_street(main, player)
+		get_tree().quit()
+		return
+	if _customer:
+		await _run_customer(shop, player)
+		get_tree().quit()
+		return
+	if _cat:
+		await _run_cat(shop, player)
+		get_tree().quit()
+		return
+	if _sweep:
+		await _run_sweep(shop, player)
+		get_tree().quit()
+		return
+	if _access:
+		GameSettings.text_scale = 1.5
+		GameSettings.colorblind = true
+		GameSettings.notify_changed()
+		var menu := main.get_node("PauseMenu")
+		menu.open()
+		await get_tree().create_timer(0.5).timeout
+		await _shot("accesibilidad_menu")
+		menu.close()
+		await _look_from(player, shop.room, Vector3(0, 0, 2.9), Vector3(0, 0.4, 0.6))
+		Events.streak_changed.emit(12)
+		await get_tree().create_timer(0.5).timeout
+		await _shot("accesibilidad_hud")
+		GameSettings.text_scale = 1.0
+		GameSettings.colorblind = false
+		GameSettings.save_settings()
+		get_tree().quit()
+		return
+	if _hud:
+		await _look_from(player, shop.room, Vector3(0, 0, 2.9), Vector3(0, 0.4, 0.6))
+		Events.streak_changed.emit(12)
+		Events.hint_requested.emit("Partida guardada", 3.0)
+		await get_tree().create_timer(0.6).timeout
+		await _shot("hud_todo")
+		get_tree().quit()
+		return
+	if _opening:
+		await _run_opening(main, shop, player)
 		get_tree().quit()
 		return
 	if _book:

@@ -18,6 +18,11 @@ var msaa := true
 ## Desactivada = modo para equipos modestos.
 var high_quality := true
 var tutorial_done := false
+## Accesibilidad: tamaño de toda la interfaz (textos incluidos), de 1.0 a 1.5.
+var text_scale := 1.0
+## Colores para daltonismo: la mira y el objeto fantasma usan azul (cabe) y naranja (no cabe) en vez
+## de verde y rojo. La forma también cambia siempre (una X cuando no cabe), así no depende solo del color.
+var colorblind := false
 
 ## Las pruebas automáticas (--test-mode) usan otro fichero para no tocar tu configuración.
 var _path := PATH
@@ -43,6 +48,8 @@ func load_settings() -> void:
 	msaa = bool(cf.get_value("graphics", "msaa", true))
 	high_quality = bool(cf.get_value("graphics", "high_quality", true))
 	tutorial_done = bool(cf.get_value("progress", "tutorial_done", false))
+	text_scale = clampf(float(cf.get_value("accessibility", "text_scale", 1.0)), 1.0, 1.5)
+	colorblind = bool(cf.get_value("accessibility", "colorblind", false))
 
 
 ## Cerrar la ventana con Alt+F4 o la X tambien guarda los ajustes.
@@ -62,12 +69,16 @@ func save_settings() -> void:
 	cf.set_value("graphics", "msaa", msaa)
 	cf.set_value("graphics", "high_quality", high_quality)
 	cf.set_value("progress", "tutorial_done", tutorial_done)
+	cf.set_value("accessibility", "text_scale", text_scale)
+	cf.set_value("accessibility", "colorblind", colorblind)
 	var err := cf.save(_path)
 	if err != OK:
 		push_warning("No se pudo guardar la configuración (%s)" % error_string(err))
 
 
 func apply_display() -> void:
+	# La interfaz se dibuja sobre una vista base de 1920×1080 que se estira: el factor la agranda entera.
+	get_tree().root.content_scale_factor = text_scale
 	if DisplayServer.get_name() == "headless":
 		return
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
@@ -77,6 +88,15 @@ func apply_display() -> void:
 	DisplayServer.window_set_vsync_mode(
 		DisplayServer.VSYNC_ENABLED if use_vsync else DisplayServer.VSYNC_DISABLED)
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa else Viewport.MSAA_DISABLED
+
+
+## Color de "cabe aquí" y de "aquí no" (mira, objeto fantasma y textos del indicador).
+func aim_ok_color() -> Color:
+	return Color(0.48, 0.78, 1.0) if colorblind else Color(0.72, 1.0, 0.78)
+
+
+func aim_deny_color() -> Color:
+	return Color(1.0, 0.64, 0.16) if colorblind else Color(1.0, 0.50, 0.45)
 
 
 ## Llamar tras modificar cualquier valor desde la interfaz.

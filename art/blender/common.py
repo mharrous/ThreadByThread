@@ -242,3 +242,125 @@ class Model:
         size = self.max - self.min
         print("EXPORTADO: %s  triangulos=%d  tamaño(x,y,z)=(%.3f, %.3f, %.3f)  min=(%.3f, %.3f, %.3f)" % (
             self.name, tris, size.x, size.y, size.z, self.min.x, self.min.y, self.min.z))
+
+
+class Rig(Model):
+    """Modelo con esqueleto: cada pieza se pesa entera (100 %) al hueso activo (`self.bone`).
+
+    Los huesos se definen en ejes de Godot: bones = [(nombre, cabeza, cola, padre), ...].
+    Las animaciones se escriben con `pose(acción, fotograma, {hueso: (rot_x, rot_y, rot_z)})`, con los
+    giros en radianes alrededor de los ejes de Godot (X derecha, Y arriba, Z delante) y en el espacio
+    del modelo, no del hueso: así "girar la cabeza" es siempre rot_y aunque el hueso esté inclinado.
+    Cada acción se exporta como una animación del GLB con su nombre.
+    """
+
+    def __init__(self, name, bones, seed=1):
+        super().__init__(name, seed)
+        self.bones = bones
+        self.bone_names = [b[0] for b in bones]
+        self.bone = bones[0][0]
+        self.deform = self.bm.verts.layers.deform.verify()
+        self.actions = {}   # nombre -> {"length": n, "keys": {fotograma: {hueso: (rot, loc)}}}
+
+    def _finish(self, part, grain, mat, rotate):
+        self.bm.verts.ensure_lookup_table()
+        n0 = len(self.bm.verts)
+        super()._finish(part, grain, mat, rotate)
+        self.bm.verts.ensure_lookup_table()
+        gi = self.bone_names.index(self.bone)
+        for i in range(n0, len(self.bm.verts)):
+            self.bm.verts[i][self.deform][gi] = 1.0
+
+    def action(self, name, length):
+        self.actions[name] = {"length": length, "keys": {}}
+
+    def pose(self, action, frame, rots, locs=None, only=False, scales=None):
+        """only=True: solo se animan los huesos de `rots` (para animaciones que se mezclan encima de otra).
+        scales: {hueso: (sx, sy, sz)} en los ejes del hueso (Y = a lo largo del hueso), p. ej. para parpadear."""
+        keys = self.actions[action]["keys"].setdefault(frame, {})
+        for b in (list(rots) if only else self.bone_names):
+            keys[b] = (rots.get(b, (0.0, 0.0, 0.0)), (locs or {}).get(b, (0.0, 0.0, 0.0)),
+                       (scales or {}).get(b, (1.0, 1.0, 1.0)))
+
+    def export(self, shade_angle=38.0, center_y=False, fps=24):
+        bmesh.ops.recalc_face_normals(self.bm, faces=list(self.bm.faces))
+        mesh = bpy.data.meshes.new(self.name)
+        self.bm.to_mesh(mesh)
+        self.bm.free()
+        for m in self.materials:
+            mesh.materials.append(m)
+        obj = bpy.data.objects.new(self.name, mesh)
+        scene = bpy.context.scene
+        scene.collection.objects.link(obj)
+        for b in self.bone_names:
+            obj.vertex_groups.new(name=b)
+        scene.render.fps = fps
+
+        arm_data = bpy.data.armatures.new(self.name + "_rig")
+        arm = bpy.data.objects.new(self.name + "_rig", arm_data)
+        scene.collection.objects.link(arm)
+        bpy.context.view_layer.objects.active = arm
+        bpy.ops.object.mode_set(mode="EDIT")
+        for (bname, head, tail, parent) in self.bones:
+            eb = arm_data.edit_bones.new(bname)
+            eb.head = gv(*head)
+            eb.tail = gv(*tail)
+            eb.roll = 0.0
+            if parent:
+                eb.parent = arm_data.edit_bones[parent]
+                eb.use_connect = False
+        bpy.ops.object.mode_set(mode="OBJECT")
+        obj.parent = arm
+        mod = obj.modifiers.new("Armature", "ARMATURE")
+        mod.object = arm
+
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(shade_angle))
+
+        # Giros en ejes de Godot (espacio del modelo) -> giro local de cada hueso.
+        axes = {0: Vector((1, 0, 0)), 1: Vector((0, 0, 1)), 2: Vector((0, -1, 0))}
+        arm.animation_data_create()
+        arm.rotation_mode = "XYZ"
+        for pb in arm.pose.bones:
+            pb.rotation_mode = "QUATERNION"
+        for aname, act in self.actions.items():
+            action = bpy.data.actions.new(aname)
+            action.use_fake_user = True
+            arm.animation_data.action = action
+            for frame in sorted(act["keys"]):
+                for bname, (rot, loc, scl) in act["keys"][frame].items():
+                    pb = arm.pose.bones[bname]
+                    rest = pb.bone.matrix_local.to_3x3()
+                    r = Matrix.Identity(3)
+                    for i in (2, 1, 0):
+                        if abs(rot[i]) > 1e-9:
+                            r = Matrix.Rotation(rot[i], 3, axes[i]) @ r
+                    local = rest.inverted() @ r @ rest
+                    pb.rotation_quaternion = local.to_quaternion()
+                    pb.location = rest.inverted() @ gv(*loc)
+                    pb.scale = scl
+                    pb.keyframe_insert("rotation_quaternion", frame=frame)
+                    pb.keyframe_insert("location", frame=frame)
+                    pb.keyframe_insert("scale", frame=frame)
+            track = arm.animation_data.nla_tracks.new()
+            track.name = aname
+            track.strips.new(aname, int(min(act["keys"])), action)
+            arm.animation_data.action = None
+        for pb in arm.pose.bones:
+            pb.rotation_quaternion = (1, 0, 0, 0)
+            pb.location = (0, 0, 0)
+            pb.scale = (1, 1, 1)
+
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        arm.select_set(True)
+        path = os.path.join(OUT_DIR, self.name + ".glb")
+        bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_yup=True, export_normals=True,
+                                  use_selection=True, export_animations=True, export_animation_mode="NLA_TRACKS",
+                                  export_force_sampling=True, export_optimize_animation_size=False)
+        tris = sum(len(p.vertices) - 2 for p in mesh.polygons)
+        size = self.max - self.min
+        print("EXPORTADO: %s  triangulos=%d  huesos=%d  animaciones=%s  tamaño(x,y,z)=(%.3f, %.3f, %.3f)" % (
+            self.name, tris, len(self.bones), ",".join(self.actions), size.x, size.y, size.z))

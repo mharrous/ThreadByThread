@@ -32,24 +32,28 @@ const SKINS: Array[Color] = [Color("f0c8a0"), Color("d9a67a"), Color("b07a52"), 
 const HAIRS: Array[Color] = [Color("2b1b10"), Color("5a3a1e"), Color("c9a05a"), Color("1a1a1a"), Color("8a8a8a"), Color("7a2a14")]
 const FUR: Array[Color] = [Color("b98a55"), Color("e8dcc4"), Color("3a2c22"), Color("8a6a45"), Color("d9b27a")]
 
-var _next := 6.0
+var _clock: Timer
 var _last_kind: StringName = &""
 var _actors: Array[StreetActor] = []
 
 
 func _ready() -> void:
-	_next = first_event_delay
-
-
-func _process(delta: float) -> void:
+	# Un temporizador marca el siguiente suceso (nada cuenta en cada fotograma).
+	_clock = Timer.new()
+	_clock.one_shot = true
+	_clock.timeout.connect(_tick)
+	add_child(_clock)
 	# Hasta que los sonidos estén sintetizados no pasa nada: así el primer coche ya suena.
-	if not enabled or not AudioManager.ready_to_play:
-		return
-	_next -= delta
-	if _next <= 0.0:
-		_next = randf_range(min_gap, max_gap)
-		if _actors.size() < 3:
-			spawn(_pick_kind())
+	if AudioManager.ready_to_play:
+		_clock.start(first_event_delay)
+	else:
+		AudioManager.sounds_ready.connect(func(): _clock.start(first_event_delay), CONNECT_ONE_SHOT)
+
+
+func _tick() -> void:
+	_clock.start(randf_range(min_gap, max_gap))
+	if enabled and _actors.size() < 3:
+		spawn(_pick_kind())
 
 
 func _pick_kind() -> StringName:

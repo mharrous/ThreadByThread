@@ -1,6 +1,6 @@
 # THREAD BY THREAD — Progreso
 
-Última actualización: 2026-10-23 · Fases 1–3 cerradas · **Fase 4 en curso: la mercería es una sola sala**
+Última actualización: 2026-10-24 · Fases 1–3 cerradas · **Fase 4 en curso: final de la demo hecho (barrer a mano, apertura, pantalla final, gato por la sala)**
 
 ## Resumen de fases
 
@@ -11,6 +11,175 @@
 | 3 · Progresión (familias, estanterías, salas, colecciones, desbloqueos, guardado) | Cerrada |
 | 4 · Demo comercial (15–25 min, ejecutable de Windows) | **En curso**: sala única hecha (ver abajo) |
 | 5 · Pruebas y expansión | No empezada |
+
+## Fase 4 — Barrer a mano, gato por toda la sala y caricias (2026-10-24, segunda parte)
+
+### Barrer lo hace el jugador (desde el principio de la partida)
+
+Sustituye al barrido automático de la escena de apertura.
+
+- La escoba y el recogedor están apoyados en la pared sur desde el principio. Al apuntarles sale "[E] Coger escoba y recogedor".
+- Con ellos en la mano:
+  - el recogedor va por el suelo delante del jugador y la escoba donde mira;
+  - **mantener el clic** da escobazos (sonido en cada uno) y cada escobazo mete en el recogedor los papelitos que hay a unos 45 cm. Llega también debajo de las mesas.
+- El recogedor se ve lleno con los colores de los papelitos y le caben 30. Lleno sale "Recogedor lleno: vacíalo en la papelera" y la flecha del borde señala la papelera.
+- Apuntar a la papelera y clic: el recogedor vuela encima, se inclina y caen los papelitos con una nube de polvo y sonido. Para los 110 papelitos hacen falta 4 vueltas.
+- Cuando quedan menos de 10 papelitos, la flecha del borde señala el más cercano.
+- **E** devuelve las herramientas a la pared. Si se apunta a un objeto al pulsar E, las devuelve y coge el objeto.
+- Panel de arriba a la izquierda: línea nueva "Suelo barrido N %".
+- **La tienda abre con todo colocado y el suelo barrido** (y el recogedor vacío), en cualquier orden:
+  - Si se termina de colocar antes, sale "Solo falta barrer el suelo: la escoba está junto a la ventana sur" y el objetivo pasa a "barrer el suelo".
+  - El último vaciado en la papelera lanza la apertura a los 2 s.
+- La partida guarda qué papelitos se han barrido, lo que lleva el recogedor y los vaciados (clave `floor` del guardado).
+- Código:
+  - `scripts/room/shop_sweep.gd` (suelo, herramientas y papelera);
+  - `scripts/player/sweeper.gd` (nuevo: control en primera persona, hijo del `ItemHolder`).
+  - El `ItemHolder` tiene "cosas que se usan con E sin cogerlas": un `Area3D` en la capa de coger cuyo padre tiene `interact_info()` e `interact()`. Lo usan la escoba y el gato.
+
+### Papelera fuera de las cajas
+
+Estaba metida dentro de la tercera caja de cartón del rincón sureste. Ahora está en la pared sur, bajo la ventana, en (3,55, 4,12), junto a la escoba y el recogedor.
+
+### El gato, nuevo y por toda la sala
+
+- **Modelo nuevo** (`art/blender/make_cat.py` → `art/models/cat.glb`, 4.366 triángulos, 12 huesos):
+  - gato atigrado gris con rayas en el lomo, hocico, pechera, tripa y patitas blancos, ojos ámbar con pupila vertical, nariz rosa y bigotes;
+  - cola en tres huesos con la punta oscura.
+  - Superficies: `body`, `stripes`, `white`, `eyes`, `pupil`, `nose`, `inner_ear`, `whiskers`.
+  - `common.Rig` ahora también anima la escala de los huesos (para cerrar los ojos).
+- **Animaciones** a 12 fps:
+  - `walk` (8 fotogramas), `trot` (6), `stand`, `sit`, `groom` (se lame la pata), `sleep` (hecho un ovillo, ojos cerrados), `bat` (zarpazo) y `pet` (ojos cerrados, frota la cabeza);
+  - `blink` y las sacudidas de oreja (cada 6–10 s) se mezclan encima.
+- **Qué hace** (`scripts/room/shop_cat.gd`), mientras el jugador ordena:
+  - juega con el ovillo: va hasta él (al trote si está lejos), se sienta, le da un zarpazo y el ovillo rueda 0,8–1,8 m por suelo libre;
+  - pasea, se lava o se echa la siesta (20–35 s), y repite.
+- Solo pisa suelo libre:
+  - no cruza muebles ni montones de objetos;
+  - si una mesa le corta el paso, da un rodeo;
+  - si empieza dentro de un hueco de mueble, sale al suelo libre más cercano.
+- Se aparta si el jugador se le echa encima andando rápido. Si se le acerca despacio, no se espanta.
+- No tiene colisión: no bloquea ni empuja nada. Fuera de cámara no calcula huesos.
+- **Acariciar**: con las manos vacías, apuntarle y **E**. Sale "[E] Acariciar · Botón, el gato de la tienda".
+  - Se sienta mirando al jugador, cierra los ojos, frota la cabeza, hace "mrrp" y ronronea unos 3 s, con corazoncitos.
+  - Sonidos sintetizados nuevos: `cat_purr` (bucle de 2 s) y `cat_mrrp`.
+- El ovillo sigue siendo el de la tienda (`yarn_ball.glb` con el material de `yarn_red.tres`); ahora es hermano del gato en la sala (`CatYarn`) para poder rodar.
+
+### Arreglos que salieron al probar
+
+- **Objeto escondido detrás de la planta** (o de un cajón o las cajas, junto a la pared): un lanzamiento podía dejarlo entre la maceta y la pared, sin poder verlo ni cogerlo.
+  - Lo encontró la prueba de humo.
+  - Ahora `RoomController._rescue_if_stuck` también mira si un objeto en el suelo junto a la pared se ve desde un paso más adentro. Si no se ve, sale al suelo libre con el aviso "Se había quedado escondido: aquí lo tienes".
+- **El gato tapaba los objetos:** sentado junto a un objeto, al apuntar salía "Acariciar" en vez de "Recoger". Ahora, si hay un objeto justo detrás del gato (a menos de 0,5 m), manda el objeto.
+
+### Pruebas (2026-10-24, segunda parte)
+
+- `run_smoke.ps1 -Count 1`: **pasa** tres veces seguidas (229 comprobaciones). Nuevas:
+  - con todo colocado y papelitos en el suelo no abre, y el objetivo pasa a barrer;
+  - barrer como un jugador: apuntar y coger con E, 78 escobazos, 4 vaciados con polvo, el recogedor se llena (30), HUD al 100 %, guardado con el suelo barrido, y entonces empieza la apertura con la escoba ya en la pared;
+  - la papelera no está dentro de las cajas;
+  - un objeto escondido detrás de la planta sale al suelo libre;
+  - gato: anda 1,6 m sin pisar muebles, va hasta el ovillo, zarpazo (la pata gira 1,48 rad), el ovillo rueda y acaba en suelo libre, sacude una oreja, sale "Acariciar", E le acaricia (pose `pet`) y luego vuelve a lo suyo.
+- `run_persist.ps1`: **pasa**, ahora también con medio suelo barrido y papelitos en el recogedor entre dos procesos.
+- `run_end_screen.ps1`: **pasa**.
+- Capturas: `--sweep` (nuevo: coger, escobazo, recogedor, papelera, vaciar) y `--cat` (cada pose de cerca, zarpazo, caricia y suelto por la sala).
+
+Sin comprobar a mano:
+- cómo se sienten el ritmo del escobazo y el tamaño del alcance;
+- el sonido del ronroneo y del "mrrp";
+- si el gato se cruza demasiado en el camino.
+
+No se ha exportado el ejecutable.
+
+## Fase 4 — Final de la demo: barrido, apertura, clienta, gato y repaso para Steam (2026-10-24)
+
+### Escena de apertura (al colocar el último objeto)
+
+`scripts/room/shop_opening.gd` (nodo `ShopOpening` en `main.tscn`). Sin control del jugador durante toda la escena; la interfaz de juego se apaga y la cámara sigue lo que pasa.
+
+1. **Barrido** (*sustituido en la segunda parte: ahora barre el jugador, ver arriba*). Una escoba y un recogedor aparecen apoyados en la pared sur.
+   - La escoba junta en un montón los papelitos del suelo (el MultiMesh `FabricScraps`), un cuadrante cada vez y con tres escobazos.
+   - El recogedor recoge el montón (se ve lleno, con los colores de los papelitos) y lo vacía en la papelera de junto a la puerta, con una nube de polvo y sonido.
+   - Son cuatro cargas, cada una una cuarta parte del suelo, y dura unos 30 s. Al terminar, la escoba y el recogedor vuelven a la pared y se quedan allí.
+2. La música se apaga en 1,5 s y la campanilla de la puerta suena tres veces.
+3. La puerta se abre (ahora es una hoja con bisagra y hay un hueco real en la pared este, con escalón, camino y terreno detrás) y entra **la primera clienta**.
+4. Al cruzar la puerta:
+   - las luces suben un 20 % en 3 s;
+   - el cartel pasa a ABIERTO;
+   - cae confeti del techo;
+   - aparece el letrero "La mercería está abierta" (letra con serifa, 4 s).
+   - La capa `full` de la música vuelve 2 s después de abrirse la puerta; el resto, poco después.
+5. La clienta va al centro, se gira hacia la estantería más cercana, mira a su alrededor, espera 3 s y se va. La puerta se cierra tras ella.
+6. Fundido a negro (3 s) y **pantalla final** (`scenes/ui/end_screen.tscn`): de negro a crema, "Thread by Thread" y "Gracias por ordenar la mercería", con la música sonando.
+   - "Seguir explorando" devuelve a la tienda abierta e iluminada, con control libre.
+   - "Menú principal" recarga la escena y sale el título.
+7. Se guarda `shop_opened: true`. Una partida cargada con la tienda abierta no repite la escena: suelo limpio, escoba y recogedor en su rincón, tienda iluminada. Si se cerró el juego a media escena, se ve al cargar.
+8. Atajo: con `--test-mode`, la tecla **T** lanza la escena.
+
+### Arreglos
+
+- **Botones de la pantalla final (crítico).** "Seguir explorando" y "Menú principal" no respondían.
+  - Causa: `scripts/main.gd` recapturaba el ratón con cualquier clic en `_input`, que va antes que la interfaz. El clic nunca llegaba a los botones y el puntero desaparecía.
+  - Arreglo: la pantalla final está en el grupo `modal_ui` y `main.gd` no toca el ratón mientras haya un nodo de ese grupo.
+  - Prueba nueva con clics reales (`tests/run_end_screen.ps1`): reproducía el fallo con el código anterior y pasa con el arreglo.
+- **"Racha ×N"** va ahora arriba a la derecha (crece hacia la izquierda, nunca se sale del borde). Se oculta del todo durante la escena de apertura y con la pantalla final, y no vuelve a salir hasta la siguiente racha. El tutorial también se esconde durante la escena.
+- Revisión de solapes del HUD a 1600×900 y 1280×720: panel de progreso (arriba a la izquierda), tutorial (arriba al centro), racha (arriba a la derecha), indicador (centro, 60 %), avisos (80 %) y controles (abajo a la izquierda). Sin solapes.
+
+### Arte nuevo (Blender, todo original del proyecto)
+
+- **La clienta** (`art/blender/make_customer.py` → `art/models/customer.glb`, script `scripts/room/customer.gd`). Sustituye al peatón de la calle que hacía de cliente.
+  - Una mujer de unos 50 años: rebeca teja, falda, gafas redondas, moño canoso, mejillas sonrosadas, sonrisa y una cestita colgada del brazo.
+  - Esqueleto de 11 huesos; cada pieza va pesada entera a su hueso (estilo low-poly) y la malla tiene 3.732 triángulos.
+  - Tres animaciones a 12 fps: `walk` (ciclo de 8 fotogramas, que va al ritmo de su velocidad), `idle` (respira) y `look_around` (gira la cabeza a un lado y al otro).
+  - Superficies `skin`, `hair`, `clothes`, `basket` y `details`. Sin cuerpo físico: no toca los objetos.
+- **El gato** (`art/blender/make_cat.py` → `art/models/cat.glb`, script `scripts/room/shop_cat.gd`).
+  - Sentado en el rincón suroeste, junto al maniquí. Gris claro, redondo, de 2.000 triángulos.
+  - Da zarpazos lentos a un ovillo de la tienda: usa el mismo `yarn_ball.glb` y el material de `yarn_red.tres`, sin duplicarlo. Es un bucle de 24 fotogramas (2 s) y el ovillo rueda un poco con cada toque.
+  - Cada 6–10 s sacude una oreja al azar. Esa animación se mezcla encima del zarpazo con un AnimationTree (OneShot filtrado a la oreja).
+  - Superficies `body`, `eyes`, `nose` e `inner_ear`. Fuera de cámara se para.
+- **Escoba, recogedor y papelera de mimbre** (`make_props.py`: `broom`, `dustpan`, `waste_bin`). La papelera está junto a la puerta este, con colisión.
+- `art/blender/common.py` tiene una clase nueva, `Rig`: modelos con esqueleto y animaciones escritas en ejes de Godot, exportadas como pistas NLA del GLB.
+- Sonidos sintetizados nuevos: `sweep` (escobazo, 3 variantes) y `dust_dump` (vaciar el recogedor, 2 variantes).
+
+### Repaso para Steam
+
+Lo que piden las guías de accesibilidad de Steam y los juegos tranquilos de ordenar: tamaño de texto ajustable, colores para daltonismo con forma además de color, controles claros, sin bloqueos y sin trabajo inútil por fotograma.
+
+| # | Encontrado | Arreglo |
+|---|---|---|
+| 1 | La pantalla final no respondía al ratón | grupo `modal_ui` (arriba) |
+| 2 | Un objeto lanzado podía quedar en el hueco de 6 cm entre una estantería o un panel y la pared, o metido en el grueso de la pared (la prueba de humo lo pilló: un lanzamiento contra el rodapié sur dejó la tiza en z = 4,53, fuera del alcance, y la tienda no se podía terminar) | `RoomController._rescue_if_stuck`: al posarse ahí, se desliza delante del mueble o hacia dentro de la sala, con un aviso ("Se había colado detrás del mueble…" / "Se había quedado pegado a la pared…"). Con prueba para los dos casos |
+| 3 | Botón de desarrollo "Completar esta sección" visible para los jugadores en el menú de pausa | solo sale en el editor (versión de depuración) o con `--test-mode` |
+| 4 | Sin opción de tamaño de texto | Ajuste "Tamaño del texto" (×1,0–×1,5) en Accesibilidad: agranda toda la interfaz (`content_scale_factor`). Comprobado a ×1,5 en 1280×720: el menú cabe |
+| 5 | La mira y el objeto fantasma solo distinguían "cabe / no cabe" con verde y rojo | Ajuste "Colores para daltonismo": azul y naranja. Además, siempre, una X en la mira cuando no cabe (forma, no solo color). El texto del indicador usa los mismos colores |
+| 6 | Final de una sección y final de la tienda sonaban casi igual | El final de la tienda añade una cascada de campanillas que sube (do-mi-sol-do) |
+| 7 | Animaciones lineales: fundidos del HUD, menú, título, tutorial y pantalla final; saltos del contador y de los tesoros; color de los focos al completar sección | todas con curva suave (`TRANS_SINE`, `TRANS_QUAD`) |
+| 8 | Trabajo en cada fotograma que podía ir con temporizador | autoguardado (`Shop`), pájaros (`Ambience`) y sucesos de la calle (`StreetLife`) con `Timer`. `AudioManager.sounds_ready` sustituye a comprobar `ready_to_play` en cada fotograma. La flecha de orientación y el punto de mira se duermen cuando no cambian. El gato se para fuera de cámara |
+| 9 | Textos de controles distintos entre el HUD y el menú ("Clic colocar" / "Clic izq. colocar") | unificados ("E recoger / dejar · Clic izq. colocar") |
+
+Ya estaba bien: sonido al coger, al rechazar (`deny`, además del aviso de texto y el temblor), al colocar (según material y racha), al completar sección y tienda. También la red de seguridad para objetos que salen de la sala.
+
+### Pruebas (2026-10-24)
+
+- `run_smoke.ps1 -Count 1`: **pasa** (dos ejecuciones seguidas, 205 comprobaciones; una tercera anterior falló por el objeto metido en la pared, ya corregido). Comprobaciones nuevas:
+  - barrido: 4 cargas, el suelo se va limpiando por grupos, polvo en cada vaciado, escoba y recogedor de vuelta en la pared;
+  - clienta: anda, mira a su alrededor, entra y se va;
+  - gato: la pata gira y la oreja se sacude;
+  - un objeto colado detrás de una estantería sale delante, y uno metido en la pared vuelve dentro;
+  - la racha oculta durante la escena.
+- `run_persist.ps1`: **pasa**.
+- `run_end_screen.ps1` (nueva, clics reales):
+  - título, Jugar, apertura y "Seguir explorando";
+  - apertura otra vez y "Menú principal": recarga, sin nodos huérfanos, sale el título;
+  - la partida cargada tiene la tienda abierta y el suelo barrido.
+  - Resultado: **pasa**.
+- Capturas: `tests/screenshot_runner.gd` con `--opening` (incluye el barrido), `--customer`, `--cat`, `--hud` y `--access`.
+
+Sin comprobar a mano:
+- cómo se oyen el escobazo y el vaciado;
+- el ritmo total del final: unos 30 s de barrido más unos 25 s de apertura;
+- si la clienta y el gato quedan bien de cerca.
+
+No se ha exportado el ejecutable.
 
 ## Fase 4 — Respuesta de racha, pista, música por capas, título y volúmenes (2026-10-23, tercera parte)
 
@@ -214,6 +383,7 @@ pero falta probar en un equipo más modesto.
 powershell -File tests\run_smoke.ps1 -Count 1            # humo de extremo a extremo (1 objeto por tipo)
 powershell -File tests\run_smoke.ps1 -Count 0            # cantidades del juego completo (450 objetos)
 powershell -File tests\run_persist.ps1                   # guardado y carga entre dos procesos
+powershell -File tests\run_end_screen.ps1                # pantalla final con clics reales (seguir / menú)
 powershell -File tests\run_perf.ps1                      # FPS a 1080p sin VSync
 powershell -File tests\run_shots.ps1                     # capturas de la sala
 powershell -File tests\run_street_shots.ps1              # capturas de la ventana con cada suceso de la calle

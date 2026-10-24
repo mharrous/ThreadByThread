@@ -113,7 +113,7 @@ func show_completed(animate: bool) -> void:
 		if animate:
 			var tw := spot.create_tween().set_parallel(true)
 			tw.tween_property(spot, "light_energy", SPOT_ENERGY_DONE, dur).set_trans(Tween.TRANS_SINE)
-			tw.tween_property(spot, "light_color", SPOT_COLOR_DONE, dur)
+			tw.tween_property(spot, "light_color", SPOT_COLOR_DONE, dur).set_trans(Tween.TRANS_SINE)
 		else:
 			spot.light_energy = SPOT_ENERGY_DONE
 			spot.light_color = SPOT_COLOR_DONE

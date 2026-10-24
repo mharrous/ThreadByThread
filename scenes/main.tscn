@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://scripts/room/shop.gd" id="11_shop"]
 [ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="12_title"]
 [ext_resource type="Script" path="res://scripts/room/next_item_hint.gd" id="13_hint"]
+[ext_resource type="Script" path="res://scripts/room/shop_opening.gd" id="14_opening"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -52,3 +53,6 @@ script = ExtResource("6_tutorial")
 
 [node name="TitleScreen" type="CanvasLayer" parent="."]
 script = ExtResource("12_title")
+
+[node name="ShopOpening" type="Node" parent="."]
+script = ExtResource("14_opening")

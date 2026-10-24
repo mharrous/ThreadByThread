@@ -26,6 +26,7 @@ spawn_scale = 0.45
 script = ExtResource("2_shell")
 west_windows = Array[float]([0.0])
 south_windows = Array[float]([2.4])
+east_doors = Array[float]([2.2])
 sign_y = 2.5
 lamp_positions = Array[Vector3]([Vector3(-3, 2.5, -1), Vector3(3, 2.5, -1), Vector3(-3, 2.5, 2.4), Vector3(3, 2.5, 2.4)])
 display_x = 4.6

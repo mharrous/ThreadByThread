@@ -8,6 +8,8 @@ extends Node3D
 const WALL_T := 0.2
 ## Media anchura del hueco de una ventana (a lo largo de la pared).
 const WINDOW_HALF := 0.9
+const DOOR_HALF := 0.5
+const DOOR_H := 2.15
 
 const C_TRIM := Color("ead2a8")
 const C_CEILING := Color("fbf3e6")
@@ -22,6 +24,8 @@ const C_BEAM := Color("c99a62")
 @export var west_windows: Array[float] = [0.0]
 ## Centros (X) de las ventanas de la pared sur, que da al jardín.
 @export var south_windows: Array[float] = []
+## Centros (Z) de las puertas de la pared este: hueco de 1 m de ancho y 2,15 m de alto.
+@export var east_doors: Array[float] = []
 @export var sign_title := "THREAD BY THREAD"
 @export var sign_subtitle := "mercería · lanas · botones · telas"
 ## Centro del cartel principal (X y altura; va en la pared norte).
@@ -45,9 +49,16 @@ var floor_bounds := Rect2()
 ## Sitios donde se esconden los tesoros (base del objeto, coordenadas locales). La subclase los
 ## define en _build_furniture(); el tesoro n-ésimo (en el orden de las secciones) va al sitio n-ésimo.
 var treasure_spots: Array[Vector3] = []
+## Papelitos del suelo (MultiMesh "FabricScraps"): su sitio y color. Se guardan aparte porque el
+## MultiMesh no los devuelve sin servidor de render (pruebas sin ventana).
+var scrap_transforms: Array[Transform3D] = []
+var scrap_colors: PackedColorArray = PackedColorArray()
 var lamps: Array[OmniLight3D] = []
 ## Cartel colgado en el cristal de la puerta de la calle (CERRADO hasta ordenar la mercería).
 var door_sign: Label3D
+## Hoja de la puerta de la calle (pivote en la bisagra) y su giro cerrada.
+var door_leaf: Node3D
+var _door_closed_yaw := 0.0
 
 var _decor: Dictionary = {}
 var _display_slots: Array[Vector3] = []
@@ -107,6 +118,9 @@ func _openings_for(wall: StringName) -> Array[Dictionary]:
 			centers = south_windows
 	for c in centers:
 		out.append({"u0": c - WINDOW_HALF, "u1": c + WINDOW_HALF, "v0": 0.9, "v1": 2.2})
+	if wall == &"east":
+		for c in east_doors:
+			out.append({"u0": c - DOOR_HALF, "u1": c + DOOR_HALF, "v0": 0.0, "v1": DOOR_H})
 	out.sort_custom(func(a, b): return a["u0"] < b["u0"])
 	return out
 
@@ -495,11 +509,16 @@ func _scatter_scraps(count: int = 46) -> void:
 	bm.size = Vector3(0.22, 0.005, 0.16)
 	mm.mesh = bm
 	mm.instance_count = count
+	scrap_transforms.clear()
+	scrap_colors.clear()
 	for i in count:
 		var p := _random_floor_spot()
 		var t := Transform3D(Basis(Vector3.UP, _rng.randf() * TAU), Vector3(p.x, 0.02 + i * 0.0004, p.y))
+		var c := palette[_rng.randi() % palette.size()]
 		mm.set_instance_transform(i, t)
-		mm.set_instance_color(i, palette[_rng.randi() % palette.size()])
+		mm.set_instance_color(i, c)
+		scrap_transforms.append(t)
+		scrap_colors.append(c)
 	_add_multimesh(mm, "FabricScraps")
 
 
@@ -660,6 +679,10 @@ func is_decor_unlocked(id: StringName) -> bool:
 	return node != null and node.visible
 
 
+const OPEN_LIGHT := 1.2
+const DOOR_OPEN_ANGLE := deg_to_rad(95.0)
+
+
 ## Muestra una decoración; con `animate`, aparece con un pequeño rebote elástico.
 func unlock_decor(id: StringName, animate: bool = true) -> void:
 	var node := _decor.get(id) as Node3D
@@ -722,16 +745,35 @@ func _make_open_sign() -> Node3D:
 
 ## Final: las lámparas suben un poco (la tienda "se enciende") y el cartel de la puerta pasa a ABIERTO.
 ## Sin `animate`, de golpe.
-func open_shop(animate: bool) -> void:
+func open_shop(animate: bool, seconds: float = 3.0) -> void:
 	if door_sign != null:
 		door_sign.text = "ABIERTO"
 		door_sign.modulate = Color("2f7a4a")
 	for lamp in lamps:
-		var target := lamp_energy * 1.3
+		var target := lamp_energy * OPEN_LIGHT
 		if animate:
-			lamp.create_tween().tween_property(lamp, "light_energy", target, 2.0).set_trans(Tween.TRANS_SINE)
+			lamp.create_tween().tween_property(lamp, "light_energy", target, seconds).set_trans(Tween.TRANS_SINE)
 		else:
 			lamp.light_energy = target
+
+
+func is_shop_open() -> bool:
+	return door_sign != null and door_sign.text == "ABIERTO"
+
+
+## Abre (hacia dentro) o cierra la puerta de la calle. Devuelve el tween para esperarlo.
+func swing_door(open: bool, seconds: float) -> Tween:
+	if door_leaf == null:
+		return null
+	var tw := door_leaf.create_tween()
+	var target := _door_closed_yaw + (-DOOR_OPEN_ANGLE if open else 0.0)
+	tw.tween_property(door_leaf, "rotation:y", target, seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT if open else Tween.EASE_IN)
+	return tw
+
+
+## Ángulo abierta (rad) de la puerta.
+func door_open_amount() -> float:
+	return absf(door_leaf.rotation.y - _door_closed_yaw) if door_leaf != null else 0.0
 
 
 # --- Ambiente -----------------------------------------------------------------

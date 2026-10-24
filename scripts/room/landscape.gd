@@ -83,6 +83,9 @@ func _ready() -> void:
 	# Jardín trasero: lo que ve la ventana sur (empieza justo detrás de la fachada, para no asomar por el suelo).
 	_build_terrain(Rect2(-3.0, 4.6, 63.0, 95.4), 1.5)
 	_build_terrain(Rect2(60.0, 4.6, 270.0, 95.4), 8.0)
+	# Lo que se ve por la puerta de la calle (pared este de la sala, x local > 9).
+	_build_terrain(Rect2(9.0, -100.0, 51.0, 104.6), 1.5)
+	_build_terrain(Rect2(60.0, -100.0, 270.0, 104.6), 8.0)
 	_build_pond()
 	_build_street()
 	_build_houses()

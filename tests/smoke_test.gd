@@ -196,6 +196,14 @@ func _run() -> void:
 	var data := SaveGame.read()
 	_check(not data.is_empty() and data.get("room", {}).get("items", []).size() == shop.room.total_items, "el guardado se puede leer y contiene todos los objetos")
 
+	print("-- Atajo de pruebas")
+	var key := InputEventKey.new()
+	key.keycode = KEY_T
+	key.pressed = true
+	Input.parse_input_event(key)
+	await _frames(3)
+	_check((main.get_node("ShopOpening") as ShopOpening).playing, "con --test-mode, T lanza la escena de apertura")
+
 	print("")
 	if _failures == 0:
 		print("RESULTADO: TODO CORRECTO")
@@ -345,6 +353,43 @@ func _test_wall_throws(room: RoomController, items: Array) -> void:
 		# a un hueco del suelo para no contaminar el resto de la prueba.
 		if not inside or (local.y < 0.5 and room.shell.is_blocked(Vector2(local.x, local.z), 0.0)):
 			item.global_position = room.to_global(Vector3(-2.0 + 0.45 * next_item, item.half_height, 3.3))
+
+
+## Un objeto que cae en el hueco entre una estantería y la pared no se puede coger: se saca delante.
+func _test_stuck_rescue(room: RoomController, items: Array) -> void:
+	print("-- Objeto colado detrás de un mueble")
+	var item: PickableItem
+	for it: PickableItem in items:
+		if it.state == PickableItem.State.LOOSE:
+			item = it
+			break
+	var unit: ShelfUnit
+	for u in room.get_units():
+		if u is ShelfUnit:
+			unit = u
+			break
+	if item == null or unit == null:
+		_check(false, "preparar el objeto colado")
+		return
+	item.global_position = unit.to_global(Vector3(0.3, item.half_height, -0.03))
+	Events.item_landed.emit(item)
+	await get_tree().create_timer(0.8).timeout
+	var local := unit.to_local(item.global_position)
+	_check(local.z > unit.depth and item.state == PickableItem.State.LOOSE and item.is_pickable(),
+		"sale delante de la estantería y se puede coger (z=%.2f)" % local.z)
+	# Metido en el grueso de la pared sur (lo que dejó un lanzamiento contra el rodapié).
+	var hd := room.shell.room_d * 0.5
+	item.global_position = room.to_global(Vector3(3.7, -0.009, hd + 0.03))
+	Events.item_landed.emit(item)
+	await get_tree().create_timer(0.8).timeout
+	var in_room := room.to_local(item.global_position)
+	_check(in_room.z < hd - item.radius and item.is_pickable(), "un objeto metido en la pared vuelve dentro (z=%.2f)" % in_room.z)
+	# Detrás de la planta de la pared norte, entre la maceta y la pared (no se ve desde la sala).
+	item.global_position = room.to_global(Vector3(0.05, item.half_height, -4.4))
+	Events.item_landed.emit(item)
+	await _wait_until(func(): return item.state == PickableItem.State.LOOSE and item.is_pickable(), 3.0)
+	var behind := room.to_local(item.global_position)
+	_check(room.shell.floor_bounds.has_point(Vector2(behind.x, behind.z)) and item.is_pickable(), "un objeto escondido detrás de la planta sale al suelo libre (z=%.2f)" % behind.z)
 
 
 ## Un objeto que cae dentro de la estantería de su tipo entra solo en un hueco (canasta); en la de otro
@@ -542,6 +587,7 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(first.collision_layer == PickableItem.LAYER_ITEMS and first.freeze, "vuelve a ser recogible y está congelado")
 
 	await _test_wall_throws(room, items)
+	await _test_stuck_rescue(room, items)
 	await _test_basket(room, items)
 	await _test_pointer(room, items)
 
@@ -594,6 +640,8 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(_completed_rooms.has(room) and room.is_completed, "mercería completada")
 	await _frames(2)
 	_check(hud._count_label.text == "Organizados  %d / %d" % [total, total], "el HUD muestra el progreso total (" + hud._count_label.text + ")")
+	await _test_opening(room, hud)
+	await _test_cat(room)
 	await _test_stacks(room)
 	await _wait_until(func(): return room.shell.is_decor_unlocked(&"bunting") and room.shell.is_decor_unlocked(&"open_sign"), 5.0)
 	_check(room.shell.is_decor_unlocked(&"bunting"), "las guirnaldas de pared a pared aparecen al terminar")
@@ -606,6 +654,288 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(again.container == null and again.slot_row == -1, "el hueco queda libre")
 	_check(await _place_on_correct_row(room, again), "volver a colocarlo")
 	_check(room.placed_items == total, "progreso otra vez %d/%d" % [total, total])
+
+
+## La escena de apertura al ordenarlo todo: música, puerta, cliente, luces, cartel, confeti, letrero,
+## pantalla final, guardado y vuelta al juego con "Seguir explorando".
+func _test_opening(room: RoomController, hud: Node) -> void:
+	print("-- Apertura de la tienda")
+	var opening := main.get_node("ShopOpening") as ShopOpening
+	var shell := room.shell
+	_check(shell.door_sign.text == "CERRADO", "antes de la apertura la puerta dice CERRADO")
+	# Todo colocado pero con papelitos en el suelo: todavía no abre; el objetivo pasa a barrer.
+	await get_tree().create_timer(4.5).timeout
+	_check(not opening.playing, "con el suelo sin barrer la tienda no abre")
+	_check(hud._objective.text == hud.OBJECTIVE_SWEEP, "el objetivo pasa a barrer el suelo (%s)" % hud._objective.text)
+	await _test_sweep(room, hud)
+	_check(await _wait_until(func(): return opening.playing, 8.0), "con el suelo barrido empieza la escena de apertura")
+	_check(not holder.sweeper.active, "la escoba vuelve a la pared al empezar la escena")
+	_check(player.input_locked, "el jugador no se mueve ni coge nada durante la escena")
+	await _wait_until(func(): return hud.is_cinematic(), 2.0)
+	_check(hud.is_cinematic(), "la interfaz de juego se apaga")
+	_check(not hud._streak_label.visible, "la racha no se ve durante la escena")
+	_check(await _wait_until(func(): return opening.step == &"door", 8.0), "suenan las campanadas y se abre la puerta")
+	_check(AudioManager.is_music_silent(), "la música está en silencio antes de abrir")
+	var max_open := 0.0
+	var saw_visitor := false
+	var visitor_inside := false
+	var saw_card := false
+	var saw_confetti := false
+	var anims := {}
+	var t := 0.0
+	while not opening.is_end_screen_open() and t < 45.0:
+		max_open = maxf(max_open, shell.door_open_amount())
+		var v := room.get_node_or_null("FirstCustomer") as Customer
+		if v != null:
+			saw_visitor = true
+			visitor_inside = visitor_inside or v.position.x < 2.0
+			anims[v.current_animation()] = true
+		if hud._title_card != null and hud._title_card.modulate.a > 0.9:
+			saw_card = saw_card or hud._title_card.text == ShopOpening.OPEN_TEXT
+		saw_confetti = saw_confetti or room.get_node_or_null("OpeningConfetti") != null
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	_check(max_open > deg_to_rad(80.0), "la puerta se abre (%.0f°)" % rad_to_deg(max_open))
+	_check(saw_visitor and visitor_inside, "entra la clienta y llega al centro de la tienda")
+	_check(anims.has(&"walk") and anims.has(&"look_around"), "la clienta anda y mira a su alrededor (%s)" % ", ".join(anims.keys()))
+	_check(shell.door_sign.text == "ABIERTO", "el cartel de la puerta pasa a ABIERTO")
+	_check(shell.lamps[0].light_energy >= shell.lamp_energy * 1.19, "las luces suben un 20 %% (%.2f)" % shell.lamps[0].light_energy)
+	_check(saw_confetti, "cae confeti del techo")
+	_check(saw_card, "letrero grande: «%s»" % ShopOpening.OPEN_TEXT)
+	_check(opening.is_end_screen_open(), "fundido a negro y pantalla final (%.1f s)" % t)
+	_check(shell.door_open_amount() < 0.05, "la puerta se cierra tras el cliente")
+	_check(room.get_node_or_null("FirstCustomer") == null, "el cliente se ha ido")
+	_check(shop.shop_opened and bool(SaveGame.read().get("shop_opened", false)), "se guarda shop_opened")
+	await _wait_until(func(): return not AudioManager.is_music_silent(), 4.0)
+	_check(not AudioManager.is_music_silent(), "la música vuelve")
+	opening._end._on_continue()
+	_check(await _wait_until(func(): return not opening.playing, 4.0), "«Seguir explorando» vuelve a la tienda")
+	_check(not player.input_locked, "el jugador se puede mover otra vez")
+	await _wait_until(func(): return not hud.is_cinematic(), 3.0)
+	_check(not hud.is_cinematic(), "vuelve la interfaz de juego")
+	# Con la apertura ya vista, al cargar no se repite.
+	var saved := SaveGame.read()
+	_check(bool(saved.get("shop_opened", false)) and bool(saved.get("room", {}).get("completed", false)), "el guardado tiene la tienda ordenada y abierta")
+	opening._resume_pending()
+	await _frames(4)
+	await get_tree().create_timer(2.0).timeout
+	_check(not opening.playing, "al cargar no se repite la escena")
+
+
+## El gato de la tienda: anda por suelo libre, persigue el ovillo (de la tienda) y le da zarpazos, sacude
+## las orejas y se deja acariciar con E.
+func _test_cat(room: RoomController) -> void:
+	print("-- Gato")
+	var shell := room.shell
+	var cat := shell.get_node_or_null("ShopCat") as ShopCat
+	_check(cat != null, "hay un gato en la tienda")
+	if cat == null:
+		return
+	var yarn := shell.get_node_or_null("CatYarn") as Node3D
+	_check(yarn != null, "tiene un ovillo para jugar")
+	if yarn == null:
+		return
+	var meshes := yarn.find_children("*", "MeshInstance3D", true, false)
+	_check(not meshes.is_empty() and (meshes[0] as MeshInstance3D).material_override == (load(ShopCat.YARN_ITEM) as ItemData).get_material(), "el ovillo es uno de la tienda (su modelo y su lana)")
+	var skel := cat.find_child("Skeleton3D", true, false) as Skeleton3D
+	_check(skel != null and skel.find_bone("leg_fr") >= 0 and skel.find_bone("tail_3") >= 0, "tiene esqueleto con patas y cola")
+	if skel == null:
+		return
+	cat._set_animating(true)
+	# Pasea: se le manda a un punto libre y se mira que nunca pise un mueble.
+	cat._gen += 1
+	var gen := cat._gen
+	var to := cat._free_point(1.5, 3.0)
+	_check(to != Vector3.INF, "encuentra un sitio libre al que ir (desde %s)" % cat.position)
+	if to == Vector3.INF:
+		return
+	var start := cat.position
+	var on_furniture := 0
+	var saw_walk := false
+	cat._go_route(to, ShopCat.WALK_SPEED, &"walk", gen)
+	var t := 0.0
+	await _frames(1)
+	while cat._move_to != Vector3.INF and t < 16.0:
+		if shell.is_blocked(Vector2(cat.position.x, cat.position.z), 0.0):
+			on_furniture += 1
+		saw_walk = saw_walk or cat.current_pose() == &"walk"
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	_check(cat.position.distance_to(start) > 1.0, "anda por la sala (%.2f m)" % cat.position.distance_to(start))
+	_check(saw_walk, "con la animación de andar")
+	_check(on_furniture == 0, "sin pisar muebles (%d fotogramas)" % on_furniture)
+	# Juega con el ovillo: va hasta él, le da un zarpazo (la pata gira) y el ovillo rueda.
+	var leg := skel.find_bone("leg_fr")
+	var yarn_from := yarn.position
+	var lo := INF
+	var hi := -INF
+	cat._gen += 1
+	gen = cat._gen
+	# Si el ovillo quedó donde no llega, lo devuelve rodando a un sitio libre y lo intenta otra vez.
+	var reached := false
+	for attempt in 3:
+		cat._gen += 1
+		gen = cat._gen
+		cat._play_with_yarn(gen)
+		if await _wait_until(func(): return cat.activity == &"bat", 14.0):
+			reached = true
+			break
+		await get_tree().create_timer(1.2).timeout
+	_check(reached, "va hasta el ovillo")
+	yarn_from = yarn.position
+	t = 0.0
+	var moved := 0.0
+	while t < 2.6:
+		var a := skel.get_bone_pose_rotation(leg).get_angle()
+		lo = minf(lo, a)
+		hi = maxf(hi, a)
+		moved = yarn.position.distance_to(yarn_from)
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	_check(moved >= 0.3, "le da un zarpazo y el ovillo rueda (%.2f m)" % moved)
+	_check(hi - lo > 0.6, "la pata del zarpazo gira (%.2f rad)" % (hi - lo))
+	await get_tree().create_timer(1.6).timeout
+	_check(shell.floor_bounds.has_point(Vector2(yarn.position.x, yarn.position.z)) and not shell.is_blocked(Vector2(yarn.position.x, yarn.position.z), 0.0), "el ovillo acaba en suelo libre")
+	cat._gen += 1
+	cat._move_to = Vector3.INF
+	# Orejas.
+	var ear := skel.find_bone("ear_l")
+	var ear_r := skel.find_bone("ear_r")
+	var ear_moved := 0.0
+	cat.twitch_now()
+	for i in 10:
+		await get_tree().create_timer(0.05).timeout
+		ear_moved = maxf(ear_moved, maxf(skel.get_bone_pose_rotation(ear).get_angle(), skel.get_bone_pose_rotation(ear_r).get_angle()))
+	_check(ear_moved > 0.2, "sacude una oreja (%.2f rad)" % ear_moved)
+	# Caricia: apuntarle con las manos vacías y E.
+	var c := cat.global_position
+	var aimed := false
+	for d: Vector3 in [Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, -1), Vector3(0.7, 0, 0.7), Vector3(-0.7, 0, -0.7)]:
+		var spot := room.to_local(c + d * 1.1)
+		if shell.is_blocked(Vector2(spot.x, spot.z), 0.1) or not shell.floor_bounds.has_point(Vector2(spot.x, spot.z)):
+			continue
+		player.teleport(c + d * 1.1)
+		await _settle()
+		player.look_at_point(c + Vector3(0.0, 0.2, 0.0))
+		await _frames(3)
+		if holder.hover_target == cat:
+			aimed = true
+			break
+	_check(aimed, "al apuntarle sale «Acariciar»")
+	var pets := cat.pets
+	await _press(&"interact")
+	_check(await _wait_until(func(): return cat.is_petting(), 1.0), "E le acaricia")
+	_check(cat.pets == pets + 1 and cat.current_pose() == &"pet", "se sienta, cierra los ojos y ronronea (%s)" % cat.current_pose())
+	_check(await _wait_until(func(): return not cat.is_petting(), ShopCat.PET_TIME + 2.0), "luego vuelve a lo suyo")
+	cat._set_animating(false)
+
+
+## Barrer a mano: coger la escoba y el recogedor (E), barrer todos los papelitos, vaciar el recogedor en
+## la papelera cada vez que se llena (con polvo) y dejar el suelo limpio.
+func _test_sweep(room: RoomController, hud: Node) -> void:
+	print("-- Barrer el suelo")
+	var sweep := shop.floor_sweep()
+	_check(sweep != null, "hay escoba, recogedor y papelera")
+	if sweep == null:
+		return
+	var total := sweep.scraps_total()
+	_check(sweep.scraps_left() > 50, "papelitos en el suelo antes de barrer (%d)" % sweep.scraps_left())
+	_check(sweep.broom.visible and sweep.broom.position.distance_to(ShopSweep.BROOM_REST) < 0.01, "la escoba y el recogedor están apoyados en la pared")
+	var boxes := Rect2(5.4 - 0.45, 3.85 - 1.0, 0.95, 1.5)
+	_check(not boxes.grow(0.05).has_point(Vector2(ShopSweep.BIN_AT.x, ShopSweep.BIN_AT.z)), "la papelera no está dentro de las cajas")
+	player.teleport(room.to_global(ShopSweep.BROOM_REST + Vector3(-0.3, 0.0, -1.3)))
+	await _settle()
+	player.look_at_point(room.to_global(ShopSweep.BROOM_REST + Vector3(-0.2, 0.6, 0.0)))
+	await _frames(3)
+	_check(holder.hover_target == sweep, "al apuntar a la escoba sale «Coger escoba y recogedor»")
+	await _press(&"interact")
+	_check(await _wait_until(func(): return holder.sweeper.active, 1.0), "E coge la escoba y el recogedor")
+	await get_tree().create_timer(Sweeper.TAKE_TIME + 0.1).timeout
+	var dumps := [0]
+	var puffs := 0
+	var max_pan := 0
+	var strokes := 0
+	var stuck := 0
+	var t0 := Time.get_ticks_msec()
+	var on_dump := func(_n: int): dumps[0] += 1
+	sweep.load_dumped.connect(on_dump)
+	while sweep.scraps_left() > 0 and stuck < 6 and Time.get_ticks_msec() - t0 < 400000:
+		if sweep.pan_full():
+			puffs += await _dump_pan(room, sweep)
+			continue
+		var target := sweep.nearest_scrap(player.global_position)
+		var left := sweep.scraps_left()
+		if not await _stand_to_sweep(room, target):
+			stuck += 1
+			print("    (diagnóstico) no hay sitio para barrer el papelito en %s" % room.to_local(target).snapped(Vector3.ONE * 0.01))
+			sweep._hide_scrap(_scrap_at(sweep, target))
+			continue
+		await _press(&"place", 3)
+		await _wait_until(func(): return holder.sweeper._stroke < 0.0, 1.0)
+		strokes += 1
+		max_pan = maxi(max_pan, sweep.pan_count())
+		if sweep.scraps_left() == left and not sweep.pan_full():
+			stuck += 1
+			print("    (diagnóstico) el escobazo no cogió el papelito en %s (jugador %s)" % [room.to_local(target).snapped(Vector3.ONE * 0.01), room.to_local(player.global_position).snapped(Vector3.ONE * 0.01)])
+			sweep._hide_scrap(_scrap_at(sweep, target))
+	if sweep.pan_count() > 0:
+		puffs += await _dump_pan(room, sweep)
+	sweep.load_dumped.disconnect(on_dump)
+	var secs := (Time.get_ticks_msec() - t0) / 1000.0
+	_check(stuck == 0, "todos los papelitos se pueden barrer (%d no)" % stuck)
+	_check(sweep.scraps_left() == 0, "suelo sin papelitos (%d escobazos, %.0f s)" % [strokes, secs])
+	_check(max_pan == ShopSweep.PAN_CAPACITY, "el recogedor se llena (%d)" % max_pan)
+	_check(dumps[0] >= ceili(float(total) / ShopSweep.PAN_CAPACITY), "%d vaciados en la papelera" % dumps[0])
+	_check(puffs == dumps[0], "nube de polvo en cada vaciado (%d)" % puffs)
+	_check(sweep.is_clean(), "suelo limpio y recogedor vacío")
+	_check(hud._floor_label.text == "Suelo barrido  100 %", "el HUD lo cuenta (%s)" % hud._floor_label.text)
+	await _frames(3)
+	var floor_state: Dictionary = SaveGame.read().get("floor", {})
+	_check((floor_state.get("swept", []) as Array).size() == total, "el guardado tiene el suelo barrido")
+
+
+## Se pone a 1 m del papelito, mirándolo en el suelo, desde un sitio libre.
+func _stand_to_sweep(room: RoomController, target: Vector3) -> bool:
+	var local := room.to_local(target)
+	var dirs: Array[Vector3] = []
+	for k in 12:
+		dirs.append(Vector3.FORWARD.rotated(Vector3.UP, TAU * k / 12.0))
+	for dist: float in [1.0, 1.3, 0.85]:
+		for d in dirs:
+			var spot := local + d * dist
+			if room.shell.is_blocked(Vector2(spot.x, spot.z), 0.25) or not room.shell.floor_bounds.has_point(Vector2(spot.x, spot.z)):
+				continue
+			player.teleport(room.to_global(Vector3(spot.x, 0.0, spot.z)))
+			await _settle()
+			var at := room.to_local(player.global_position)
+			if Vector2(at.x - spot.x, at.z - spot.z).length() > 0.2:
+				continue
+			player.look_at_point(target)
+			await _frames(4)
+			return true
+	return false
+
+
+func _scrap_at(sweep: ShopSweep, global_pos: Vector3) -> int:
+	var p := sweep.to_local(global_pos)
+	for i in sweep._home.size():
+		if not sweep._gone[i] and sweep._home[i].origin.distance_to(p) < 0.01:
+			return i
+	return -1
+
+
+## Va a la papelera, la apunta y vacía el recogedor con un clic. Devuelve 1 si salió la nube de polvo.
+func _dump_pan(room: RoomController, sweep: ShopSweep) -> int:
+	player.teleport(room.to_global(ShopSweep.BIN_AT + Vector3(-0.4, 0.0, -1.2)))
+	await _settle()
+	player.look_at_point(sweep.bin_top())
+	await _frames(3)
+	_check(holder.sweeper._aiming_at_bin(), "apunta a la papelera con el recogedor lleno")
+	await _press(&"place", 2)
+	var puff := await _wait_until(func(): return sweep.get_node_or_null("DustPuff") != null, 2.0)
+	await _wait_until(func(): return not sweep.is_dumping(), 3.0)
+	_check(sweep.pan_count() == 0, "el recogedor se vacía en la papelera")
+	return 1 if puff else 0
 
 
 ## Tras colocar, si queda otro suelto del mismo tipo, ese (el más cercano) brilla como pista.

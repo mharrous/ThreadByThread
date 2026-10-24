@@ -3,6 +3,10 @@ extends Control
 ## Con un objeto en la mano, si su estantería queda fuera de la vista (o a la espalda), una flecha suave
 ## en el borde de la pantalla señala hacia ella. Aparece tras un momento sostenido, para no estorbar a
 ## quien ya sabe adónde va, y se apaga en cuanto la estantería entra en pantalla.
+## Con la escoba en la mano señala lo que pida Sweeper (Events.guide_target_changed): la papelera con el
+## recogedor lleno o el papelito más cercano cuando quedan pocos.
+
+const GUIDE_COLOR := Color("e9c98f")
 
 ## Segundos con el objeto en la mano antes de que la flecha pueda salir.
 const DELAY := 1.2
@@ -19,17 +23,30 @@ var _alpha := 0.0
 var _pos := Vector2.ZERO
 var _angle := 0.0
 var _bob := 0.0
+var _guide_on := false
+var _guide := Vector3.ZERO
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Events.held_item_changed.connect(_on_held_item_changed)
+	Events.guide_target_changed.connect(_on_guide_changed)
+
+
+func _on_guide_changed(active: bool, pos: Vector3) -> void:
+	if active and not _guide_on:
+		_held_time = 0.0
+	_guide_on = active
+	_guide = pos
+	if active:
+		set_process(true)
 
 
 func _on_held_item_changed(item) -> void:
 	_item = null
 	_held_time = 0.0
+	set_process(true)
 	if item == null or not is_instance_valid(item) or item.data == null or item.room == null or item.data.treasure:
 		return
 	var found: Dictionary = item.room.find_row(item.data.sort_key)
@@ -47,7 +64,11 @@ func _on_held_item_changed(item) -> void:
 func _process(delta: float) -> void:
 	var want := 0.0
 	var cam := get_viewport().get_camera_3d()
-	if is_instance_valid(_item) and _item.state == PickableItem.State.HELD and cam != null:
+	var has_item := is_instance_valid(_item) and _item.state == PickableItem.State.HELD
+	if (has_item or _guide_on) and cam != null:
+		if not has_item:
+			_target = _guide
+			_color = GUIDE_COLOR
 		_held_time += delta
 		var rect := get_viewport().get_visible_rect()
 		var center := rect.size * 0.5
@@ -71,6 +92,10 @@ func _process(delta: float) -> void:
 	_bob += delta
 	if _alpha > 0.0 or want > 0.0:
 		queue_redraw()
+	elif not is_instance_valid(_item) and not _guide_on:
+		# Sin objeto en la mano y ya apagada: duerme hasta que se coja otro.
+		queue_redraw()
+		set_process(false)
 
 
 func _draw() -> void:

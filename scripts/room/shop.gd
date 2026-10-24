@@ -8,10 +8,11 @@ signal state_saved
 const AUTOSAVE_SECONDS := 20.0
 
 var room: RoomController
+## Ya se vio la escena de apertura: al cargar se va directo a la tienda abierta, sin repetirla.
+var shop_opened := false
 
 var _player: Player
 var _dirty := false
-var _autosave_timer := AUTOSAVE_SECONDS
 var _loaded := false
 
 
@@ -28,6 +29,8 @@ func _ready() -> void:
 	Events.item_set_down.connect(func(_i): _dirty = true)
 	Events.item_landed.connect(func(_i): _dirty = true)
 	Events.treasure_found.connect(func(_i): save_game())
+	Events.floor_progress_changed.connect(func(_s, _t): _dirty = true)
+	Events.floor_cleaned.connect(func(): save_game.call_deferred())
 	Events.pause_toggled.connect(func(paused: bool):
 		if paused:
 			save_game())
@@ -38,19 +41,21 @@ func _start() -> void:
 	_player = get_tree().get_first_node_in_group(&"player") as Player
 	load_game()
 	_loaded = true
+	# Autoguardado con un temporizador (no cuenta en cada fotograma); solo guarda si algo cambió.
+	var autosave := Timer.new()
+	autosave.name = "Autosave"
+	autosave.wait_time = AUTOSAVE_SECONDS
+	autosave.timeout.connect(func():
+		if _dirty:
+			save_game())
+	add_child(autosave)
+	autosave.start()
 	if room != null:
 		Events.active_room_changed.emit(room)
 		Events.progress_changed.emit(room.placed_items, room.total_items)
-
-
-func _process(delta: float) -> void:
-	if not _loaded:
-		return
-	_autosave_timer -= delta
-	if _autosave_timer <= 0.0:
-		_autosave_timer = AUTOSAVE_SECONDS
-		if _dirty:
-			save_game()
+		var sweep := floor_sweep()
+		if sweep != null:
+			sweep.emit_progress()
 
 
 func _notification(what: int) -> void:
@@ -92,7 +97,11 @@ func skip_section() -> void:
 func save_game() -> bool:
 	if not _loaded or room == null:
 		return false
-	var ok := SaveGame.write({"room": room.capture_state()})
+	var data := {"room": room.capture_state(), "shop_opened": shop_opened}
+	var sweep := floor_sweep()
+	if sweep != null:
+		data["floor"] = sweep.capture_state()
+	var ok := SaveGame.write(data)
 	if ok:
 		_dirty = false
 		Events.game_saved.emit()
@@ -108,4 +117,20 @@ func load_game() -> bool:
 	if not (st is Dictionary) or not room.apply_state(st):
 		push_warning("El guardado no encaja con el contenido actual de la mercería; se ignora")
 		return false
+	shop_opened = bool(data.get("shop_opened", false)) and room.is_completed
+	var sweep := floor_sweep()
+	if sweep != null:
+		var fl: Variant = data.get("floor")
+		if shop_opened:
+			# La tienda solo abre con el suelo barrido.
+			sweep.finish_instantly()
+		elif fl is Dictionary:
+			sweep.apply_state(fl)
 	return true
+
+
+## El suelo y sus herramientas (escoba, recogedor y papelera).
+func floor_sweep() -> ShopSweep:
+	if room == null or room.shell == null:
+		return null
+	return room.shell.get_node_or_null("ShopSweep") as ShopSweep

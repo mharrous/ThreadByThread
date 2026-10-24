@@ -21,6 +21,8 @@ const MAX_PITCH := 1.5
 var yaw := 0.0
 var pitch := 0.0
 var crouching := false
+## Durante una escena (la apertura de la tienda) no se mueve, no mira con el ratón ni coge cosas.
+var input_locked := false
 
 var _eye := 1.62
 var _prev_pos := Vector3.ZERO
@@ -47,6 +49,8 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if input_locked:
+		return
 	var motion := event as InputEventMouseMotion
 	if motion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var s := BASE_SENSITIVITY * GameSettings.mouse_sensitivity
@@ -55,13 +59,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	_update_crouch()
-	var input := Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
+	if not input_locked:
+		_update_crouch()
+	var input := Vector2.ZERO if input_locked else Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
 	var wish := Basis(Vector3.UP, yaw) * Vector3(input.x, 0.0, input.y)
 	var speed := walk_speed
 	if crouching:
 		speed = crouch_speed
-	elif Input.is_action_pressed(&"sprint"):
+	elif Input.is_action_pressed(&"sprint") and not input_locked:
 		speed = run_speed
 	var target := wish * speed
 	var k := 1.0 - exp(-acceleration * delta)

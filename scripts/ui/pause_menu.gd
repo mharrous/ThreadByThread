@@ -271,7 +271,7 @@ func open() -> void:
 	_main_panel.pivot_offset = _main_panel.size * 0.5
 	_main_panel.scale = Vector2(0.96, 0.96)
 	_open_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
-	_open_tween.tween_property(_root, "modulate:a", 1.0, 0.14)
+	_open_tween.tween_property(_root, "modulate:a", 1.0, 0.14).set_trans(Tween.TRANS_SINE)
 	_open_tween.tween_property(_main_panel, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
@@ -340,6 +340,7 @@ func _build_main() -> Control:
 		_show_book(true))
 	left.add_child(book_btn)
 	# Atajo de desarrollo/pruebas: da por ordenada la sección en la que estás (la del objeto en la mano o la más cercana).
+	# Solo en el editor y en pruebas: en el ejecutable para jugadores no sale.
 	var skip_btn := _sewn_button("Completar esta sección", Color("c98a1e"), Color("94620f"))
 	skip_btn.pressed.connect(func():
 		AudioManager.play(&"ui_click")
@@ -347,7 +348,10 @@ func _build_main() -> Control:
 		close()   # primero se reanuda: los avisos de "sección completada" usan temporizadores que respetan la pausa
 		if shop != null:
 			shop.skip_section())
-	left.add_child(skip_btn)
+	if OS.is_debug_build() or OS.get_cmdline_user_args().has("--test-mode"):
+		left.add_child(skip_btn)
+	else:
+		skip_btn.queue_free()
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(spacer)
@@ -382,6 +386,11 @@ func _build_main() -> Control:
 		func(on: bool): GameSettings.msaa = on))
 	right.add_child(_check_row("Iluminación avanzada", GameSettings.high_quality,
 		func(on: bool): GameSettings.high_quality = on))
+	right.add_child(_section("Accesibilidad"))
+	right.add_child(_slider_row("Tamaño del texto", 1.0, 1.5, 0.1, GameSettings.text_scale,
+		func(v: float): GameSettings.text_scale = v))
+	right.add_child(_check_row("Colores para daltonismo (azul / naranja)", GameSettings.colorblind,
+		func(on: bool): GameSettings.colorblind = on))
 	return panel
 
 

@@ -51,6 +51,10 @@ static func build_banks() -> Dictionary:
 		&"sparkle": [sparkle(NOTE_E5)],
 		&"aim_ok": [aim_tick()],
 		&"shop_bell": [shop_bell()],
+		&"sweep": [sweep(3), sweep(11), sweep(19)],
+		&"dust_dump": [dust_dump(5), dust_dump(13)],
+		&"cat_purr": [cat_purr(7)],
+		&"cat_mrrp": [cat_mrrp(3), cat_mrrp(9)],
 	}
 
 
@@ -254,6 +258,85 @@ static func step(seed_value: int) -> AudioStreamWAV:
 		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.07
 		b[i] = lp * 2.2 * _ad(t, 0.002, 0.025) + sin(ph) * 0.55 * _ad(t, 0.002, 0.04)
 	return _to_stream(b, 0.22)
+
+
+## Escobazo: roce de paja sobre la madera (ruido agudo y granulado que sube y baja).
+static func sweep(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.46)
+	var lp := 0.0
+	var slow := 0.0
+	var grit := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var shape := pow(sin(PI * minf(t / 0.44, 1.0)), 1.5)
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.55
+		slow += (lp - slow) * 0.04
+		# Las briznas se enganchan en las juntas del suelo: chasquidos sueltos.
+		if rng.randf() < 0.0025:
+			grit = 1.0
+		grit *= 0.993
+		b[i] = (lp - slow) * shape * (0.75 + 0.6 * grit)
+	return _to_stream(b, 0.3)
+
+
+## Vaciar el recogedor en la papelera: golpecito sordo y papeles que caen y se asientan.
+static func dust_dump(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.7)
+	var lp := 0.0
+	var crinkle := 0.0
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		ph += TAU * (110.0 - 40.0 * minf(t / 0.08, 1.0)) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.3
+		if rng.randf() < 0.004 * exp(-t / 0.25):
+			crinkle = rng.randf_range(0.5, 1.0)
+		crinkle *= 0.996
+		b[i] = sin(ph) * 0.8 * _ad(t, 0.003, 0.05) + lp * (0.25 * _ad(t, 0.01, 0.2) + crinkle * 0.9)
+	return _to_stream(b, 0.3)
+
+
+## Ronroneo del gato (bucle de 2 s): pulsos graves de unos 25 por segundo, más fuertes al espirar.
+static func cat_purr(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(2.0)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		# Dos respiraciones por bucle: espirar (fuerte) e inspirar (más suave y algo más agudo).
+		var breath := 0.62 + 0.38 * sin(TAU * t / 2.0)
+		var rate := 25.0 if fmod(t, 2.0) < 1.0 else 27.0
+		var pulse := pow(maxf(0.0, sin(PI * t * rate)), 3.0)
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.08
+		lp2 += (lp - lp2) * 0.2
+		b[i] = (lp2 * 2.4 + sin(TAU * 50.0 * t) * 0.18) * pulse * breath
+	var stream := _to_stream(b, 0.5)
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = b.size()
+	return stream
+
+
+## "Mrrp" del gato al acariciarlo: trino corto que sube, con la boca cerrada (pocos armónicos).
+static func cat_mrrp(seed_value: int) -> AudioStreamWAV:
+	var rng := _rng(seed_value)
+	var b := _buf(0.36)
+	var ph := 0.0
+	var f0 := rng.randf_range(360.0, 420.0)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var k := minf(t / 0.3, 1.0)
+		var f := f0 * (1.0 + 0.55 * k * k) * (1.0 + 0.03 * sin(TAU * 28.0 * t) * (1.0 - k))
+		ph += TAU * f / RATE
+		var env := minf(t / 0.03, 1.0) * clampf((0.36 - t) / 0.12, 0.0, 1.0)
+		var voice := sin(ph) + 0.45 * sin(2.0 * ph) + 0.18 * sin(3.0 * ph)
+		lp += (voice - lp) * 0.35
+		b[i] = lp * env
+	return _to_stream(b, 0.35)
 
 
 ## Lanzamiento: soplo de aire corto.

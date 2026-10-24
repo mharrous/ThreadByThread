@@ -32,6 +32,7 @@ func _build_furniture() -> void:
 	# Maniquí en el rincón suroeste y puerta de la calle en la pared este (decorativa).
 	_add_prop("res://art/models/dress_form.glb", Vector3(-5.6, 0.0, 3.95), 0.6, Vector3(0.36, 1.5, 0.3))
 	blocked_rects.append(Rect2(-5.95, 3.6, 0.7, 0.75))
+	_add_cat(Vector3(-4.98, 0.0, 3.72), deg_to_rad(135.0))
 	_add_shop_door(Vector3(hw, 0.0, 2.2))
 	# Rincones: cajas de cartón (noroeste y sureste), cajón (noreste) y planta en el centro de la pared norte.
 	_add_cardboard_boxes(Vector3(-5.45, 0.0, -3.3))
@@ -51,7 +52,34 @@ func _build_furniture() -> void:
 	treasure_spots.append(Vector3(-5.8, 1.92, 2.9))       # telas: encima del mueble de telas dobladas
 	treasure_spots.append(Vector3(5.42, 0.76, 3.87))      # sastrería: sobre las cajas del rincón sureste
 	treasure_spots.append(Vector3(5.8, 1.92, 0.8))        # sastrería: encima de su estantería
+	# Papelera y rincón de la escoba y el recogedor, en la pared sur bajo la ventana (ShopSweep):
+	# sin papelitos ni objetos debajo.
+	_static_box(Vector3(0.34, 0.36, 0.34), ShopSweep.BIN_AT + Vector3(0.0, 0.18, 0.0))
+	blocked_rects.append(Rect2(ShopSweep.BIN_AT.x - 0.25, ShopSweep.BIN_AT.z - 0.25, 0.5, 0.5))
+	blocked_rects.append(Rect2(ShopSweep.PAN_REST.x - 0.25, ShopSweep.PAN_REST.z - 0.3, 0.75, 0.6))
+	blocked_rects.append(Rect2(ShopSweep.BIN_AT.x - 0.25, ShopSweep.BIN_AT.z - 0.3, 0.85, 0.6))
 	_scatter_scraps(110)
+	var sweep := ShopSweep.new()
+	sweep.name = "ShopSweep"
+	add_child(sweep)
+	sweep.bind_scraps(get_node_or_null("FabricScraps") as MultiMeshInstance3D, scrap_transforms, scrap_colors)
+
+
+## El gato de la tienda: empieza sentado junto al maniquí y luego va por toda la sala (ShopCat).
+## Sin colisión: no bloquea al jugador ni a los objetos.
+func _add_cat(pos: Vector3, yaw: float) -> void:
+	var cat := ShopCat.new()
+	cat.name = "ShopCat"
+	cat.position = pos
+	cat.rotation.y = yaw
+	add_child(cat)
+
+
+## Lo que se ve al abrir la puerta: escalón y un camino de losas hacia el este.
+func _add_porch(at_wall: Vector3) -> void:
+	var stone := _mat(Color("b9ad98"), 0.85)
+	_box(self, Vector3(0.5, 0.16, 1.3), at_wall + Vector3(0.3, -0.08, 0.0), stone, false)
+	_box(self, Vector3(9.0, 0.2, 1.2), at_wall + Vector3(5.0, -0.12, 0.0), _mat(Color("a89c88"), 0.9), false)
 
 
 ## Premios de sección (Blender): ocultos hasta completar la sección, que los desbloquea con su id.
@@ -102,6 +130,18 @@ func _add_prop(path: String, base: Vector3, yaw: float, box: Vector3) -> void:
 ## Puerta de entrada (no se abre) con el cartel de CERRADO/ABIERTO colgado tras el cristal.
 func _add_shop_door(at_wall: Vector3) -> void:
 	_instance_model("res://art/models/shop_door.glb", at_wall, -PI * 0.5)
+	# Hoja con la bisagra en el lado norte; abre hacia dentro (ver swing_door). El cartel va colgado en ella.
+	door_leaf = Node3D.new()
+	door_leaf.name = "DoorLeaf"
+	door_leaf.position = at_wall + Vector3(0.0, 0.0, -DOOR_HALF)
+	door_leaf.rotation.y = -PI * 0.5
+	_door_closed_yaw = door_leaf.rotation.y
+	add_child(door_leaf)
+	if ResourceLoader.exists("res://art/models/shop_door_leaf.glb"):
+		door_leaf.add_child((load("res://art/models/shop_door_leaf.glb") as PackedScene).instantiate())
+	# El hueco de la pared queda siempre cerrado para la física: nada sale por la puerta.
+	_static_box(Vector3(0.1, DOOR_H, DOOR_HALF * 2.0), at_wall + Vector3(0.02, DOOR_H * 0.5, 0.0))
+	_add_porch(at_wall)
 	door_sign = Label3D.new()
 	door_sign.text = "CERRADO"
 	door_sign.font_size = 64
@@ -109,6 +149,5 @@ func _add_shop_door(at_wall: Vector3) -> void:
 	door_sign.outline_size = 8
 	door_sign.outline_modulate = Color("f6ecd8")
 	door_sign.modulate = Color("8e3b46")
-	door_sign.rotation.y = -PI * 0.5
-	door_sign.position = at_wall + Vector3(-0.045, 1.5, 0.0)
-	add_child(door_sign)
+	door_sign.position = Vector3(DOOR_HALF, 1.5, 0.045)
+	door_leaf.add_child(door_sign)

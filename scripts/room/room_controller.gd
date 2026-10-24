@@ -386,12 +386,12 @@ func _complete_section(s: ShopSection) -> void:
 func _announce_completion() -> void:
 	await get_tree().create_timer(1.6, false).timeout
 	Events.room_completed.emit(self)
-	# Premio final: guirnaldas de pared a pared, cartel de ABIERTO y la tienda un poco más luminosa,
-	# cuando ya se ha leído el cartel de mercería ordenada.
+	# Premio final: guirnaldas de pared a pared y cartel de ABIERTO, cuando ya se ha leído el cartel de
+	# mercería ordenada. La puerta, las luces y el cartel de la puerta los abre la escena de apertura
+	# (ShopOpening, en main.tscn).
 	await get_tree().create_timer(1.6, false).timeout
 	shell.unlock_decor(&"bunting", true)
 	shell.unlock_decor(&"open_sign", true)
-	shell.open_shop(true)
 	Events.decor_unlocked.emit(self, &"bunting")
 
 
@@ -456,6 +456,75 @@ func _on_item_landed(it: PickableItem) -> void:
 			Events.item_placed.emit(it, unit)
 			Events.hint_requested.emit("¡Canasta!"))
 		return
+	_rescue_if_stuck(it)
+
+
+## Un objeto lanzado que cae detrás de una estantería o un panel (en el hueco con la pared), o que se
+## queda metido en el grueso de una pared, no se puede ver ni coger: la partida no se podría terminar.
+## Se desliza a un sitio alcanzable y se avisa.
+func _rescue_if_stuck(it: PickableItem) -> void:
+	for unit in _units:
+		var width := 0.0
+		if unit is ShelfUnit:
+			width = (unit as ShelfUnit).unit_width
+		elif unit is PegBoard:
+			width = (unit as PegBoard).board_width
+		else:
+			continue
+		var ul := unit.to_local(it.global_position)
+		if absf(ul.x) > width * 0.5 + 0.04 or ul.z > 0.04 or ul.z < -0.3 or ul.y > 2.4:
+			continue
+		var out := unit.to_global(Vector3(clampf(ul.x, -width * 0.5 + 0.15, width * 0.5 - 0.15), 0.0, 0.0))
+		var front := unit.global_basis.z.normalized()
+		var depth := (unit as ShelfUnit).depth if unit is ShelfUnit else 0.12
+		out += front * (depth + 0.35)
+		out.y = global_position.y + it.half_height
+		_slide_out(it, out, "Se había colado detrás del mueble: aquí lo tienes")
+		return
+	# Si no hay mueble delante y está metido en el grueso de una pared (un lanzamiento contra el rodapié): se aparta hacia dentro.
+	var local := to_local(it.global_position)
+	var lim := Vector2(shell.room_w * 0.5, shell.room_d * 0.5) - Vector2.ONE * (it.radius + 0.04)
+	var in_wall := absf(local.x) > lim.x or absf(local.z) > lim.y
+	if in_wall:
+		local = Vector3(clampf(local.x, -lim.x, lim.x), maxf(local.y, it.half_height), clampf(local.z, -lim.y, lim.y))
+	# En el suelo junto a la pared y tapado por algo (detrás de la planta, de un cajón o de las cajas): si
+	# desde un paso más adentro no se ve, sale al suelo libre.
+	var fb := shell.floor_bounds
+	if local.y < 0.3 and not fb.has_point(Vector2(local.x, local.z)):
+		var inner := Vector2(clampf(local.x, fb.position.x, fb.end.x), clampf(local.z, fb.position.y, fb.end.y))
+		var inward := (inner - Vector2(local.x, local.z)).normalized()
+		inner += inward * 0.1
+		var eye := inner + inward * 0.6
+		var q := PhysicsRayQueryParameters3D.create(to_global(Vector3(eye.x, 1.5, eye.y)), to_global(local), 1)
+		q.exclude = [it.get_rid()]
+		if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+			var spot := inner
+			for r: float in [0.0, 0.3, 0.6, 0.9, 1.2]:
+				var found := false
+				for k in 8:
+					var c := inner + Vector2.from_angle(TAU * k / 8.0) * r
+					if fb.has_point(c) and not shell.is_blocked(c, 0.05):
+						spot = c
+						found = true
+						break
+				if found:
+					break
+			_slide_out(it, to_global(Vector3(spot.x, it.half_height, spot.y)), "Se había quedado escondido: aquí lo tienes")
+			return
+	if in_wall:
+		_slide_out(it, to_global(local), "Se había quedado pegado a la pared: aquí lo tienes")
+
+
+func _slide_out(it: PickableItem, to: Vector3, message: String) -> void:
+	it.state = PickableItem.State.MOVING
+	it.set_pickable(false)
+	var tw := it.create_tween()
+	tw.tween_property(it, "global_position", to, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func():
+		it.state = PickableItem.State.LOOSE
+		it.set_pickable(true)
+		it.squash(0.6)
+		Events.hint_requested.emit(message))
 
 
 func _nearest_free_slot(unit: StorageUnit, row: int, pos: Vector3, it: PickableItem) -> int:

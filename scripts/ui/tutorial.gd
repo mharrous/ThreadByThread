@@ -36,6 +36,9 @@ func _ready() -> void:
 	Events.target_changed.connect(func(info: Dictionary):
 		if info.get("kind", "") == "place":
 			_complete(&"aim"))
+	# Durante la escena de apertura no se ve (si no se terminó, vuelve después).
+	Events.shop_opening_started.connect(func(): _panel.visible = false)
+	Events.shop_opening_finished.connect(func(): _panel.visible = true)
 
 
 func _build() -> void:
@@ -90,7 +93,7 @@ func _show_step(index: int, animate: bool = true) -> void:
 	_text_label.add_theme_color_override(&"font_color", CREAM)
 	if animate:
 		_panel.modulate.a = 0.0
-		create_tween().tween_property(_panel, "modulate:a", 1.0, 0.35)
+		create_tween().tween_property(_panel, "modulate:a", 1.0, 0.35).set_trans(Tween.TRANS_SINE)
 	_busy = false
 	var step_event := StringName(STEPS[index]["event"])
 	if _seen.has(step_event):
@@ -105,7 +108,7 @@ func _complete(event: StringName) -> void:
 	_text_label.add_theme_color_override(&"font_color", GOOD)
 	var tw := create_tween()
 	tw.tween_interval(0.9)
-	tw.tween_property(_panel, "modulate:a", 0.0, 0.3)
+	tw.tween_property(_panel, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
 	tw.tween_callback(_next)
 
 
@@ -117,9 +120,9 @@ func _next() -> void:
 	_text_label.text = "Ya sabes jugar. ¡Ordena toda la mercería! Hay tesoros escondidos en lo alto"
 	_text_label.add_theme_color_override(&"font_color", GOOD)
 	var tw := create_tween()
-	tw.tween_property(_panel, "modulate:a", 1.0, 0.35)
+	tw.tween_property(_panel, "modulate:a", 1.0, 0.35).set_trans(Tween.TRANS_SINE)
 	tw.tween_interval(4.5)
-	tw.tween_property(_panel, "modulate:a", 0.0, 1.2)
+	tw.tween_property(_panel, "modulate:a", 0.0, 1.2).set_trans(Tween.TRANS_SINE)
 	tw.tween_callback(func():
 		GameSettings.tutorial_done = true
 		GameSettings.save_settings()
