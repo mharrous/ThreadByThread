@@ -75,12 +75,22 @@ func _build_decor() -> void:
 		root.name = "Reward_" + String(r[0])
 		root.position = r[2]
 		root.rotation.y = r[3]
-		root.add_child((load(r[1]) as PackedScene).instantiate())
+		var model := (load(r[1]) as PackedScene).instantiate() as Node3D
+		root.add_child(model)
+		if r[0] == &"yarn":
+			_breathe(model)
 		add_decor_body(root, r[4], Vector3(0.0, r[4].y * 0.5, 0.0))
 		add_decor(r[0], root)
 		# Que no caigan objetos donde aparecerá el premio del suelo.
 		if r[2].y < 0.1:
 			blocked_rects.append(Rect2(r[2].x - r[4].x * 0.5, r[2].z - r[4].z * 0.5, r[4].x, r[4].z))
+
+
+## El gato respira despacio mientras duerme (es una sola malla con la cesta: el gesto es mínimo).
+func _breathe(model: Node3D) -> void:
+	var tw := model.create_tween().set_loops()
+	tw.tween_property(model, "scale", Vector3(1.0, 1.022, 1.008), 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(model, "scale", Vector3.ONE, 1.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 ## Atrezo de Blender con su caja de colisión (para que los objetos no lo atraviesen al caer o dejarlos).
