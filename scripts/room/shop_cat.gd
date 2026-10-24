@@ -101,6 +101,10 @@ func _process(delta: float) -> void:
 		else:
 			position += to / dist * step
 			_face(to, delta)
+	# Encima de la alfombra el suelo está algo más alto: ni el gato ni el ovillo se hunden en ella.
+	position.y = _floor_y(position)
+	if _yarn != null and _yarn.is_inside_tree():
+		_yarn.position.y = YARN_RADIUS + _floor_y(_yarn.position)
 	# Si el jugador se le echa encima andando, se aparta (no si duerme o le están acariciando; acercarse
 	# despacio para acariciarlo no lo espanta).
 	if _player != null and _shell != null and not _petting and activity != &"sleep" and activity != &"dodge":
@@ -643,6 +647,7 @@ func _roll_yarn(to: Vector3, seconds: float) -> void:
 	_yarn_tween.tween_method(func(t: float):
 		var e := 1.0 - pow(1.0 - t, 2.4)
 		_yarn.position = from.lerp(to, e)
+		_yarn.position.y = YARN_RADIUS + _floor_y(_yarn.position)
 		_yarn.basis = Basis(axis, turns * e) * start_basis, 0.0, 1.0, seconds)
 
 
@@ -651,6 +656,10 @@ func _yarn_home() -> void:
 	var spot := _free_point(0.4, 1.4)
 	if spot != Vector3.INF:
 		_roll_yarn(spot + Vector3(0.0, YARN_RADIUS, 0.0), 1.0)
+
+
+func _floor_y(p: Vector3) -> float:
+	return _shell.floor_height(p) if _shell != null else 0.0
 
 
 func yarn_position() -> Vector3:

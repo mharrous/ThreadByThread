@@ -46,6 +46,9 @@ var tables: Array[Dictionary] = []
 var blocked_rects: Array[Rect2] = []
 ## Zona del suelo donde se reparten montones de objetos (se calcula con el tamaño de la sala).
 var floor_bounds := Rect2()
+## Alfombras (x, z, ancho, fondo): su superficie queda RUG_HEIGHT por encima del suelo.
+var rugs: Array[Rect2] = []
+const RUG_HEIGHT := 0.016
 ## Sitios donde se esconden los tesoros (base del objeto, coordenadas locales). La subclase los
 ## define en _build_furniture(); el tesoro n-ésimo (en el orden de las secciones) va al sitio n-ésimo.
 var treasure_spots: Array[Vector3] = []
@@ -80,6 +83,14 @@ func _ready() -> void:
 	_build_display_shelf()
 	_build_decor()
 	_build_atmosphere()
+
+
+## Altura del suelo en este punto (coordenadas locales): encima de una alfombra, algo más alta.
+func floor_height(p: Vector3) -> float:
+	for r in rugs:
+		if r.has_point(Vector2(p.x, p.z)):
+			return RUG_HEIGHT
+	return 0.0
 
 
 ## ¿Está ocupado por mobiliario este punto del suelo (con margen)?
@@ -380,7 +391,8 @@ func _static_box(size: Vector3, pos: Vector3, yaw: float = 0.0, layers: int = 1)
 
 func _add_rug(center: Vector3, size: Vector2 = Vector2(2.8, 1.9)) -> void:
 	# Una sola pieza con la textura tejida (orla y rombos). Sin colisión ni sombra.
-	_box(self, Vector3(size.x, 0.016, size.y), center + Vector3(0, 0.008, 0), MaterialLibrary.get_material(&"rug"), false, 1, false)
+	_box(self, Vector3(size.x, RUG_HEIGHT, size.y), center + Vector3(0, RUG_HEIGHT * 0.5, 0), MaterialLibrary.get_material(&"rug"), false, 1, false)
+	rugs.append(Rect2(center.x - size.x * 0.5, center.z - size.y * 0.5, size.x, size.y))
 
 
 ## Mesa de madera; registra su tablero como zona donde caen objetos y su suelo como ocupado.

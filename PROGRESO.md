@@ -39,6 +39,10 @@
 
 - La puntada discontinua de la nota de tareas, de la cinta "Racha" y del banner final se pintaba encima del texto, porque se ajustaba al contenido y no al panel. Ahora sigue el borde del panel (`Stitch.cover_parent`).
 
+### Alfombra
+
+- El ovillo del gato (y el propio gato) se hundían 1,6 cm en la alfombra, que está por encima del suelo. Ahora la sala sabe dónde hay alfombras (`RoomShell.rugs`, `floor_height()`) y el gato y el ovillo se apoyan encima. La prueba de humo lo comprueba.
+
 ### Pruebas
 
 - `run_smoke.ps1 -Count 1`, `run_persist.ps1` y `run_end_screen.ps1`: **pasan**.

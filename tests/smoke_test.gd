@@ -742,6 +742,18 @@ func _test_cat(room: RoomController) -> void:
 		return
 	var meshes := yarn.find_children("*", "MeshInstance3D", true, false)
 	_check(not meshes.is_empty() and (meshes[0] as MeshInstance3D).material_override == (load(ShopCat.YARN_ITEM) as ItemData).get_material(), "el ovillo es uno de la tienda (su modelo y su lana)")
+	# Encima de la alfombra ni el gato ni el ovillo se hunden.
+	var on_rug := Vector3(shell.rugs[0].get_center().x, 0.0, shell.rugs[0].get_center().y) if not shell.rugs.is_empty() else Vector3.ZERO
+	var cat_was := cat.position
+	var yarn_was := yarn.position
+	yarn.position = on_rug + Vector3(0.3, 0.0, 0.0)
+	cat.position = on_rug
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(not shell.rugs.is_empty() and is_equal_approx(cat.position.y, RoomShell.RUG_HEIGHT) 			and is_equal_approx(yarn.position.y, ShopCat.YARN_RADIUS + RoomShell.RUG_HEIGHT),
+			"sobre la alfombra, el gato y el ovillo quedan encima (no se hunden)")
+	cat.position = cat_was
+	yarn.position = yarn_was
 	var skel := cat.find_child("Skeleton3D", true, false) as Skeleton3D
 	_check(skel != null and skel.find_bone("leg_fr") >= 0 and skel.find_bone("tail_3") >= 0, "tiene esqueleto con patas y cola")
 	if skel == null:
