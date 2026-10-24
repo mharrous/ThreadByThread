@@ -26,6 +26,9 @@ const SPOT_ENERGY := 0.9
 const SPOT_ENERGY_DONE := 1.7
 const SPOT_COLOR := Color("ffe2b8")
 const SPOT_COLOR_DONE := Color("ffcf8a")
+## Grosor de la tabla del cartel (modelo sign_section) y color del "¡sección completa!".
+const SIGN_THICK := 0.03
+const DONE_INK := Color("962c1f")
 
 var room: RoomController
 var units: Array[StorageUnit] = []
@@ -35,6 +38,7 @@ var is_completed := false
 
 var _spots: Array[SpotLight3D] = []
 var _sign_sub: Label3D
+var _sign_sub_width := 1.0
 var _bunting: Node3D
 
 
@@ -107,7 +111,8 @@ func treasures_found() -> int:
 func show_completed(animate: bool) -> void:
 	is_completed = true
 	_sign_sub.text = "¡sección completa!"
-	_sign_sub.modulate = Color("ffe08a")
+	_sign_sub.modulate = DONE_INK
+	ShopSign.fit(_sign_sub, Vector2(_sign_sub_width, 0.09))
 	var dur := 1.4 if animate else 0.0
 	for spot in _spots:
 		if animate:
@@ -153,39 +158,34 @@ func _build_spots() -> void:
 		_spots.append(spot)
 
 
+## Tabla de roble con la moldura del color de la sección (modelo sign_section) y su icono pirograbado
+## a la izquierda; el título y el subtítulo van encima, centrados en el hueco que queda.
 func _build_sign() -> void:
 	var holder := Node3D.new()
 	holder.name = "Sign"
 	holder.position = sign_position
 	holder.rotation.y = deg_to_rad(sign_yaw_deg)
 	add_child(holder)
-	var board := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(sign_width, 0.4, 0.035)
-	board.mesh = bm
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = accent.darkened(0.35)
-	wood.roughness = 0.7
-	board.material_override = wood
-	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var board := ShopSign.skinned("sign_section", {
+		"wood": ShopSign.wood(ShopSign.OAK),
+		"frame": ShopSign.paint(accent.darkened(0.3), 0.55),
+	})
+	# El modelo mide 2 m de ancho: se estira en X si la sección pide otro ancho.
+	board.scale.x = sign_width / 2.0
 	holder.add_child(board)
-	var title := Label3D.new()
-	title.text = display_name.to_upper()
-	title.font_size = 80
-	title.font = UiStyle.font(&"title")
-	title.pixel_size = 0.0024 if display_name.length() < 16 else 0.0019
-	title.outline_size = 0
-	title.modulate = Color("fff3dc")
-	title.position = Vector3(0, 0.05, 0.02)
+	var face := SIGN_THICK * 0.5 + 0.001
+	var icon_x := -sign_width * 0.5 + 0.24
+	holder.add_child(ShopSign.icon(ShopSign.SECTION_ICONS.get(section_id, "yarn"), Vector3(icon_x, 0.0, face), 1.12))
+	var text_left := icon_x + 0.17
+	var text_right := sign_width * 0.5 - 0.08
+	var text_x := (text_left + text_right) * 0.5
+	var text_w := text_right - text_left
+	var title := ShopSign.label(display_name.to_upper(), &"title", 80, ShopSign.INK, 0.0024, Vector2(text_w, 0.17))
+	title.position = Vector3(text_x, 0.045, face + 0.002)
 	holder.add_child(title)
-	_sign_sub = Label3D.new()
-	_sign_sub.text = sign_subtitle
-	_sign_sub.font_size = 44
-	_sign_sub.font = UiStyle.font(&"hand")
-	_sign_sub.pixel_size = 0.0019
-	_sign_sub.outline_size = 0
-	_sign_sub.modulate = Color("f3d7a8")
-	_sign_sub.position = Vector3(0, -0.11, 0.02)
+	_sign_sub = ShopSign.label(sign_subtitle, &"hand", 44, ShopSign.INK_SOFT, 0.0019, Vector2(text_w, 0.09))
+	_sign_sub_width = text_w
+	_sign_sub.position = Vector3(text_x, -0.105, face + 0.002)
 	holder.add_child(_sign_sub)
 
 

@@ -10,6 +10,9 @@ const WALL_T := 0.2
 const WINDOW_HALF := 0.9
 const DOOR_HALF := 0.5
 const DOOR_H := 2.15
+## Medidas del cartel principal (modelo sign_main).
+const MAIN_SIGN_H := 0.62
+const MAIN_SIGN_THICK := 0.035
 
 const C_TRIM := Color("ead2a8")
 const C_CEILING := Color("fbf3e6")
@@ -57,8 +60,8 @@ var treasure_spots: Array[Vector3] = []
 var scrap_transforms: Array[Transform3D] = []
 var scrap_colors: PackedColorArray = PackedColorArray()
 var lamps: Array[OmniLight3D] = []
-## Cartel colgado en el cristal de la puerta de la calle (CERRADO hasta ordenar la mercería).
-var door_sign: Label3D
+## Placa colgada tras el cristal de la puerta de la calle (CERRADO hasta ordenar la mercería).
+var door_sign: DoorSign
 ## Hoja de la puerta de la calle (pivote en la bisagra) y su giro cerrada.
 var door_leaf: Node3D
 var _door_closed_yaw := 0.0
@@ -342,27 +345,24 @@ func _bulb_material() -> StandardMaterial3D:
 	return _mats["bulb"]
 
 
+## Cartel principal: tabla de nogal con moldura dorada, un carrete de hilo a la izquierda y la hebra
+## que corre por abajo hasta una aguja (modelo sign_main). El texto va encima, entre los dos.
 func _build_sign() -> void:
-	var board := _mat(Color("a8703f"), 0.7)
-	_box(self, Vector3(2.9, 0.46, 0.04), Vector3(sign_x, sign_y, -room_d * 0.5 + 0.02), board, false)
-	var label := Label3D.new()
-	label.text = sign_title
-	label.font_size = 96
-	label.font = UiStyle.font(&"title")
-	label.pixel_size = 0.0028 if sign_title.length() < 20 else 0.0021
-	label.outline_size = 0
-	label.modulate = Color("fff3dc")
-	label.position = Vector3(sign_x, sign_y + 0.04, -room_d * 0.5 + 0.045)
-	add_child(label)
-	var sub := Label3D.new()
-	sub.text = sign_subtitle
-	sub.font_size = 48
-	sub.font = UiStyle.font(&"hand")
-	sub.pixel_size = 0.0022
-	sub.outline_size = 0
-	sub.modulate = Color("f3d7a8")
-	sub.position = Vector3(sign_x, sign_y - 0.12, -room_d * 0.5 + 0.045)
-	add_child(sub)
+	var root := Node3D.new()
+	root.name = "MainSign"
+	root.position = Vector3(sign_x, sign_y, -room_d * 0.5 + MAIN_SIGN_THICK * 0.5)
+	add_child(root)
+	root.add_child(ShopSign.skinned("sign_main", {
+		"wood": ShopSign.wood(Color(0.58, 0.39, 0.26)),
+		"frame": ShopSign.paint(Color("c9974a"), 0.4),
+	}))
+	var face := MAIN_SIGN_THICK * 0.5 + 0.004
+	var label := ShopSign.label(sign_title, &"title", 96, Color("fff1d6"), 0.0028, Vector2(2.3, 0.24))
+	label.position = Vector3(0.02, 0.07, face)
+	root.add_child(label)
+	var sub := ShopSign.label(sign_subtitle, &"hand", 48, Color("f0cf98"), 0.0022, Vector2(2.2, 0.1))
+	sub.position = Vector3(0.02, -0.115, face)
+	root.add_child(sub)
 
 
 # --- Utilidades de mobiliario ---------------------------------------------
@@ -725,30 +725,17 @@ func _build_decor() -> void:
 	add_decor(&"open_sign", _make_open_sign())
 
 
+## Placa esmaltada de ¡ABIERTO! colgada con dos cordeles del canto de abajo del cartel principal.
 func _make_open_sign() -> Node3D:
 	var root := Node3D.new()
 	root.name = "OpenSign"
-	root.position = Vector3(sign_x, sign_y - 0.42, -room_d * 0.5 + 0.03)
-	var board := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(1.1, 0.24, 0.03)
-	board.mesh = bm
-	var m := StandardMaterial3D.new()
-	m.albedo_color = Color("2f5f58")
-	m.emission_enabled = true
-	m.emission = Color("2f5f58")
-	m.emission_energy_multiplier = 0.25
-	board.material_override = m
-	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(board)
-	var label := Label3D.new()
-	label.text = "¡ABIERTO!"
-	label.font_size = 72
-	label.font = UiStyle.font(&"title")
-	label.pixel_size = 0.0024
-	label.outline_size = 0
-	label.modulate = Color("ffe08a")
-	label.position = Vector3(0, 0, 0.018)
+	root.position = Vector3(sign_x, sign_y - MAIN_SIGN_H * 0.5, -room_d * 0.5 + 0.012)
+	root.add_child(ShopSign.skinned("sign_open", {
+		"enamel": ShopSign.paint(ShopSign.ENAMEL, 0.32),
+		"rim": ShopSign.paint(ShopSign.GREEN, 0.35),
+	}))
+	var label := ShopSign.label("¡ABIERTO!", &"title", 72, ShopSign.GREEN, 0.0024, Vector2(0.64, 0.15))
+	label.position = Vector3(0, -0.18, 0.0064)
 	root.add_child(label)
 	return root
 
@@ -757,8 +744,7 @@ func _make_open_sign() -> Node3D:
 ## Sin `animate`, de golpe.
 func open_shop(animate: bool, seconds: float = 3.0) -> void:
 	if door_sign != null:
-		door_sign.text = "ABIERTO"
-		door_sign.modulate = Color("2f7a4a")
+		door_sign.set_open(true, animate)
 	for lamp in lamps:
 		var target := lamp_energy * OPEN_LIGHT
 		if animate:
@@ -768,7 +754,7 @@ func open_shop(animate: bool, seconds: float = 3.0) -> void:
 
 
 func is_shop_open() -> bool:
-	return door_sign != null and door_sign.text == "ABIERTO"
+	return door_sign != null and door_sign.text == DoorSign.OPEN_TEXT
 
 
 ## Abre (hacia dentro) o cierra la puerta de la calle. Devuelve el tween para esperarlo.

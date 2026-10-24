@@ -150,13 +150,12 @@ func _add_shop_door(at_wall: Vector3) -> void:
 	# El hueco de la pared queda siempre cerrado para la física: nada sale por la puerta.
 	_static_box(Vector3(0.1, DOOR_H, DOOR_HALF * 2.0), at_wall + Vector3(0.02, DOOR_H * 0.5, 0.0))
 	_add_porch(at_wall)
-	door_sign = Label3D.new()
-	door_sign.text = "CERRADO"
-	door_sign.font_size = 64
-	door_sign.font = UiStyle.font(&"title")
-	door_sign.pixel_size = 0.0022
-	door_sign.outline_size = 8
-	door_sign.outline_modulate = Color("f6ecd8")
-	door_sign.modulate = Color("8e3b46")
-	door_sign.position = Vector3(DOOR_HALF, 1.5, 0.045)
+	# Gancho de latón en el larguero de arriba (por dentro) y la placa colgada de él, separada del
+	# cristal lo justo para dar la vuelta sin tocarlo.
+	var hook_at := Vector3(DOOR_HALF, 2.075, 0.037 + 0.152)
+	var hook := ShopSign.skinned("sign_door_hook")
+	hook.position = hook_at
+	door_leaf.add_child(hook)
+	door_sign = DoorSign.new()
+	door_sign.position = hook_at + Vector3(0.0, 0.012, 0.0)
 	door_leaf.add_child(door_sign)
