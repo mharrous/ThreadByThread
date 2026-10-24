@@ -451,6 +451,17 @@ func _run() -> void:
 			title._open_settings()
 			await get_tree().create_timer(0.6).timeout
 			await _shot("menu_ajustes_en")
+			var menu := get_tree().get_first_node_in_group(&"pause_menu")
+			if menu == null:
+				menu = main.find_child("PauseMenu", true, false)
+			if menu != null:
+				menu._show_controls(true)
+				await get_tree().create_timer(0.4).timeout
+				await _shot("menu_controles_en")
+				GameSettings.language = "es"
+				GameSettings.apply_language()
+				await get_tree().create_timer(0.4).timeout
+				await _shot("menu_controles_es")
 		GameSettings.language = "es"
 		GameSettings.apply_language()
 		get_tree().quit()

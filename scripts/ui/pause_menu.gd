@@ -25,6 +25,7 @@ var _root: Control
 var _resume: Button
 var _main_panel: Control
 var _book_panel: Control
+var _controls_panel: Control
 var _book_content: VBoxContainer
 var _opened := false
 var _from_title := false
@@ -291,6 +292,7 @@ func open(from_title: bool = false) -> void:
 	_from_title = from_title
 	_root.visible = true
 	_show_book(false)
+	_controls_panel.visible = false
 	_resume.text = "Volver" if from_title else "Continuar"
 	_ribbon.text = "Ajustes" if from_title else "Pausa"
 	_ribbon.queue_redraw()
@@ -348,6 +350,8 @@ func _build() -> void:
 	center.add_child(_main_panel)
 	_book_panel = _build_book()
 	center.add_child(_book_panel)
+	_controls_panel = _build_controls()
+	center.add_child(_controls_panel)
 
 
 func _build_main() -> Control:
@@ -381,6 +385,11 @@ func _build_main() -> Control:
 		AudioManager.play(&"ui_click")
 		_show_book(true))
 	left.add_child(book_btn)
+	var controls_btn := _sewn_button("Controles", Color("7a8f4e"), Color("56662f"))
+	controls_btn.pressed.connect(func():
+		AudioManager.play(&"ui_click")
+		_show_controls(true))
+	left.add_child(controls_btn)
 	# Atajo de pruebas: da por ordenada la sección en la que estás (la del objeto en la mano o la más cercana).
 	# Solo con --test-mode (pruebas automáticas y capturas): jugando, también desde el editor, no sale.
 	var skip_btn := _sewn_button("Completar esta sección", Color("c98a1e"), Color("94620f"))
@@ -397,7 +406,6 @@ func _build_main() -> Control:
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(spacer)
-	left.add_child(_keys_card())
 	var quit := _sewn_button("Salir del juego", BROWN, BROWN.darkened(0.25))
 	quit.pressed.connect(func():
 		GameSettings.save_settings()
@@ -473,25 +481,6 @@ func _style_languages() -> void:
 			b.add_theme_color_override(c, Color("fff6e6") if on else INK)
 
 
-## Tarjeta con las teclas, como una etiqueta de patrón pegada.
-func _keys_card() -> Control:
-	var card := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = PAPER_EDGE
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 8
-	sb.content_margin_bottom = 8
-	card.add_theme_stylebox_override(&"panel", sb)
-	var l := Label.new()
-	l.text = "WASD mover · Shift correr\nCtrl agacharse · R girar\nE recoger / dejar\nClic izq. colocar · F lanzar\nEsc pausa"
-	l.add_theme_font_size_override(&"font_size", 13)
-	l.add_theme_color_override(&"font_color", INK_SOFT)
-	card.add_child(l)
-	return card
-
-
 func _build_book() -> Control:
 	var panel := PinkedPanel.new()
 	var vb := VBoxContainer.new()
@@ -518,6 +507,70 @@ func _build_book() -> Control:
 		_show_book(false))
 	vb.add_child(back)
 	return panel
+
+
+## Controles: una fila por acción, con sus teclas dibujadas.
+const CONTROLS := [
+	[["W", "A", "S", "D"], "Moverse"],
+	[["Ratón"], "Mirar alrededor"],
+	[["Shift"], "Correr"],
+	[["Ctrl"], "Agacharse"],
+	[["E"], "Coger, usar y acariciar al gato"],
+	[["Clic izq."], "Colocar en su sitio · barrer · dejar el cartón en el montón"],
+	[["Clic der.", "Q"], "Dejar en el suelo o en una mesa"],
+	[["F"], "Lanzar (mantén para más fuerza)"],
+	[["R"], "Girar lo que llevas"],
+	[["Esc"], "Pausar"],
+]
+
+
+func _build_controls() -> Control:
+	var panel := PinkedPanel.new()
+	panel.visible = false
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override(&"separation", 16)
+	panel.add_child(vb)
+	var ribbon := Ribbon.new()
+	ribbon.text = "Controles"
+	ribbon.custom_minimum_size = Vector2(420, 70)
+	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vb.add_child(ribbon)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override(&"h_separation", 22)
+	grid.add_theme_constant_override(&"v_separation", 10)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vb.add_child(grid)
+	for row: Array in CONTROLS:
+		var keys := HBoxContainer.new()
+		keys.add_theme_constant_override(&"separation", 4)
+		keys.alignment = BoxContainer.ALIGNMENT_END
+		keys.custom_minimum_size = Vector2(150, 0)
+		for k: String in row[0]:
+			keys.add_child(UiStyle.keycap(k, 17))
+		grid.add_child(keys)
+		var l := Label.new()
+		l.text = row[1]
+		l.add_theme_font_size_override(&"font_size", 19)
+		l.add_theme_color_override(&"font_color", INK)
+		l.custom_minimum_size = Vector2(520, 0)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		grid.add_child(l)
+	var back := _sewn_button("Volver", TEAL, TEAL_DARK)
+	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	back.custom_minimum_size = Vector2(240, 50)
+	back.pressed.connect(func():
+		AudioManager.play(&"ui_click")
+		_show_controls(false))
+	vb.add_child(back)
+	return panel
+
+
+func _show_controls(on: bool) -> void:
+	_controls_panel.visible = on
+	_main_panel.visible = not on
+	if not on:
+		_resume.grab_focus()
 
 
 func _show_book(on: bool) -> void:
