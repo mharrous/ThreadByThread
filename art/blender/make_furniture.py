@@ -147,12 +147,12 @@ def reset_scene():
 # ------------------------------------------------------------------------
 # Estantería: coincide con ShelfUnit (2.1 de ancho, 5 filas, paso 0.34, base 0.16, fondo 0.30)
 # ------------------------------------------------------------------------
-def make_shelf(depth=0.30):
+def make_shelf(depth=0.30, width=2.1):
     reset_scene()
     # Nombre = shelf_<filas>x<ancho cm>x<fondo cm>; ShelfUnit lo busca por sus medidas.
-    m = Model("shelf_5x210x%d" % round(depth * 100), seed=3)
+    m = Model("shelf_5x%dx%d" % (round(width * 100), round(depth * 100)), seed=3)
     m.add_material("wood", (0.9, 0.78, 0.58), 0.7)
-    W, rows, pitch, base = 2.1, 5, 0.34, 0.16
+    W, rows, pitch, base = width, 5, 0.34, 0.16
     SIDE_T, BOARD_T = 0.04, 0.06
     inner = W - 2 * SIDE_T
     H = base + rows * pitch + BOARD_T
@@ -337,5 +337,6 @@ if __name__ == "__main__":
     make_shelf(0.30)
     make_shelf(0.40)
     make_shelf(0.50)
+    make_shelf(0.40, 1.45)
     for fn in (make_table, make_crate, make_cardboard, make_plant, make_tray):
         fn()

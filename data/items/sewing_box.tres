@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ItemData" format=3]
 
-[ext_resource type="Resource" path="res://data/motion/wood.tres" id="1_ooocr"]
+[ext_resource type="Resource" path="res://data/motion/box.tres" id="1_ooocr"]
 [ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_s0rt3"]
 [ext_resource type="PackedScene" path="res://art/models/items/sewing_box.glb" id="3_vxek0"]
 

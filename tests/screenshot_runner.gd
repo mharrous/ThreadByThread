@@ -18,7 +18,10 @@ const POSES := [
 const REWARD_POSES := [
 	{"name": "premio_gato", "pos": Vector3(-4.2, 0, -0.5), "look": Vector3(-5.45, 0.1, -1.25)},
 	{"name": "premio_mesa_corte", "pos": Vector3(-3.0, 0, 0.5), "look": Vector3(-3.0, 0.8, 1.6)},
-	{"name": "premio_te", "pos": Vector3(2.0, 0, 3.0), "look": Vector3(2.4, 0.95, 4.43)},
+	{"name": "premio_te", "pos": Vector3(2.0, 0, 3.2), "look": Vector3(2.4, 0.95, 4.39)},
+	# Bandejas de cerca (con --filled): si lo de dentro toca el fondo y si las etiquetas caben.
+	{"name": "bandeja_botones", "pos": Vector3(1.6, 0, -0.95), "look": Vector3(1.6, 0.78, -1.7)},
+	{"name": "bandeja_sastreria", "pos": Vector3(3.6, 0, 2.15), "look": Vector3(3.6, 0.78, 1.4)},
 ]
 
 var _out_dir := ""

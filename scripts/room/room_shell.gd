@@ -233,7 +233,11 @@ func _window(wall: StringName, c: float) -> void:
 		_box(self, Vector3(0.1, 1.3, 0.07), Vector3(x, 1.55, c + 0.92), frame, false)
 		# Solo montante vertical: un travesaño a 1,55 m quedaría justo a la altura de los ojos y taparía la vista.
 		_box(self, Vector3(0.05, 1.3, 0.03), Vector3(x, 1.55, c), frame, false)
+		# Alféizar: encima hay un tesoro y se pueden dejar cosas. La colisión acaba en la cara de la pared
+		# (un objeto lanzado a la ventana no se queda dentro del muro).
 		_box(self, Vector3(0.28, 0.045, 2.06), Vector3(-hw + 0.08, 0.915, c), frame, false)
+		_static_box(Vector3(0.215, 0.045, 2.06), Vector3(-hw + 0.1125, 0.915, c), 0.0, 1 | 16)
+		_static_box(Vector3(0.02, 1.28, 1.8), Vector3(-hw - 0.01, 1.58, c))
 		# Con colisión: los objetos lanzados rebotan en el cristal en vez de salir volando.
 		_box(self, Vector3(0.04, 1.3, 1.8), Vector3(-hw - 0.1, 1.55, c), glass, true, 1, false)
 	else:
@@ -244,6 +248,8 @@ func _window(wall: StringName, c: float) -> void:
 		# Igual que en la oeste: solo montante vertical, sin travesaño a la altura de los ojos.
 		_box(self, Vector3(0.045, 1.3, 0.05), Vector3(c, 1.55, z), frame, false)
 		_box(self, Vector3(2.06, 0.045, 0.28), Vector3(c, 0.915, hd - 0.08), frame, false)
+		_static_box(Vector3(2.06, 0.045, 0.215), Vector3(c, 0.915, hd - 0.1125), 0.0, 1 | 16)
+		_static_box(Vector3(1.8, 1.28, 0.02), Vector3(c, 1.58, hd + 0.01))
 		_box(self, Vector3(1.8, 1.3, 0.04), Vector3(c, 1.55, hd + 0.1), glass, true, 1, false)
 
 
@@ -390,8 +396,9 @@ func _static_box(size: Vector3, pos: Vector3, yaw: float = 0.0, layers: int = 1)
 
 
 func _add_rug(center: Vector3, size: Vector2 = Vector2(2.8, 1.9)) -> void:
-	# Una sola pieza con la textura tejida (orla y rombos). Sin colisión ni sombra.
-	_box(self, Vector3(size.x, RUG_HEIGHT, size.y), center + Vector3(0, RUG_HEIGHT * 0.5, 0), MaterialLibrary.get_material(&"rug"), false, 1, false)
+	# Una sola pieza con la textura tejida (orla y rombos), sin sombra.
+	# Con colisión fina: lo que cae o se deja encima reposa sobre la alfombra, no hundido en ella.
+	_box(self, Vector3(size.x, RUG_HEIGHT, size.y), center + Vector3(0, RUG_HEIGHT * 0.5, 0), MaterialLibrary.get_material(&"rug"), true, 1 | 16, false)
 	rugs.append(Rect2(center.x - size.x * 0.5, center.z - size.y * 0.5, size.x, size.y))
 
 
@@ -435,22 +442,6 @@ func _add_plant(pos: Vector3) -> void:
 	body.add_child(cs)
 	add_child(body)
 	blocked_rects.append(Rect2(pos.x - 0.3, pos.z - 0.3, 0.6, 0.6))
-
-
-## Pila de cajas de cartón (dos, una encima de otra) y, si `small`, una tercera al lado (hacia -z).
-func _add_cardboard_boxes(base: Vector3, small: bool = true) -> void:
-	var card := MaterialLibrary.get_material(&"cardboard")
-	var path := "res://art/models/cardboard_box.glb"
-	_instance_model(path, base, 0.12, 1.0, card)
-	_static_box(Vector3(0.62, 0.42, 0.5), base + Vector3(0, 0.21, 0), 0.12)
-	_instance_model(path, base + Vector3(0.02, 0.42, 0.02), -0.3, 0.8, card)
-	_static_box(Vector3(0.5, 0.34, 0.4), base + Vector3(0.02, 0.59, 0.02), -0.3)
-	if not small:
-		blocked_rects.append(Rect2(base.x - 0.45, base.z - 0.35, 0.95, 0.85))
-		return
-	_instance_model(path, base + Vector3(0.1, 0.0, -0.65), 0.5, 0.72, card)
-	_static_box(Vector3(0.45, 0.3, 0.36), base + Vector3(0.1, 0.15, -0.65), 0.5)
-	blocked_rects.append(Rect2(base.x - 0.45, base.z - 1.0, 0.95, 1.5))
 
 
 ## Cuadro enmarcado en una pared lateral (este: x>0, oeste: x<0).

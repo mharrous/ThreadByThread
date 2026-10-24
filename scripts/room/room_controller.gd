@@ -252,7 +252,7 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 				var flat := Vector2(c.x + rng.randfn(0.0, spread), c.y + rng.randfn(0.0, spread))
 				if not shell.floor_bounds.has_point(flat) or shell.is_blocked(flat, r):
 					continue
-				p = Vector3(flat.x, h, flat.y)
+				p = Vector3(flat.x, h + shell.floor_height(Vector3(flat.x, 0.0, flat.y)), flat.y)
 			if _is_free(p, r, spacing):
 				_take(p, r)
 				return p
@@ -261,7 +261,7 @@ func _find_spot(rng: RandomNumberGenerator, item: PickableItem) -> Vector3:
 	for attempt in 600:
 		var flat := Vector2(rng.randf_range(b.position.x, b.end.x), rng.randf_range(b.position.y, b.end.y))
 		if not shell.is_blocked(flat, r):
-			var q := Vector3(flat.x, h, flat.y)
+			var q := Vector3(flat.x, h + shell.floor_height(Vector3(flat.x, 0.0, flat.y)), flat.y)
 			_take(q, r)
 			return q
 	push_warning("Sin sitio libre para %s" % data.id)

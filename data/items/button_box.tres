@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/box.tres" id="1_7skg8"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_rrwp7"]
+[ext_resource type="PackedScene" path="res://art/models/items/button_box.glb" id="3_rx07j"]
+
+[resource]
+script = ExtResource("2_rrwp7")
+id = &"button_box"
+display_name = "Caja de botones grande"
+detail = "Muestrario surtido"
+family = 5
+sort_key = &"button_box"
+sort_label = "Cajas de botones"
+shape = 2
+size = Vector3(0.24, 0.094, 0.17)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_rx07j")])
+align_on_shelf = true
+material_kind = &"paper"
+color = Color(0.55, 0.7, 0.62, 1)
+accent_color = Color(0.97, 0.95, 0.9, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("1_7skg8")
+spawn_count = 3
+spawn_zone = 1

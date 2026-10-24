@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/box.tres" id="1_jt2ga"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_k1rj6"]
+[ext_resource type="PackedScene" path="res://art/models/items/industrial_cone.glb" id="3_7lxya"]
+
+[resource]
+script = ExtResource("2_k1rj6")
+id = &"industrial_cone"
+display_name = "Bobina industrial"
+detail = "Hilo de poliéster · 5000 m"
+family = 5
+sort_key = &"industrial_cone"
+sort_label = "Bobinas industriales"
+shape = 1
+radius = 0.052
+size = Vector3(0.052, 0.221, 0.052)
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_7lxya")])
+align_on_shelf = true
+material_kind = &"thread"
+color = Color(0.85, 0.3, 0.25, 1)
+accent_color = Color(0.97, 0.95, 0.9, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("1_jt2ga")
+spawn_count = 3
+spawn_zone = 1

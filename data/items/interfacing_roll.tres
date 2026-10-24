@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_scn7f"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_fehqc"]
+[ext_resource type="PackedScene" path="res://art/models/items/interfacing_roll.glb" id="3_wrmgy"]
+
+[resource]
+script = ExtResource("2_fehqc")
+id = &"interfacing_roll"
+display_name = "Rollo de entretela"
+detail = "Entretela termoadhesiva · 10 m"
+family = 5
+sort_key = &"interfacing_roll"
+sort_label = "Rollos de entretela"
+shape = 1
+radius = 0.063
+size = Vector3(0.063, 0.282, 0.063)
+pick_radius = 0.1
+variants = Array[PackedScene]([ExtResource("3_wrmgy")])
+align_on_shelf = true
+material_kind = &"cloth"
+color = Color(0.95, 0.94, 0.9, 1)
+accent_color = Color(0.62, 0.48, 0.32, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("1_scn7f")
+spawn_count = 3
+spawn_zone = 1

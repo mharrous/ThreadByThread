@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/box.tres" id="1_pt0p2"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_nfsiq"]
+[ext_resource type="PackedScene" path="res://art/models/items/needle_box.glb" id="3_gcstq"]
+
+[resource]
+script = ExtResource("2_nfsiq")
+id = &"needle_box"
+display_name = "Caja de agujas surtidas"
+detail = "Agujas de mano y de máquina"
+family = 5
+sort_key = &"needle_box"
+sort_label = "Cajas de agujas"
+shape = 2
+size = Vector3(0.2, 0.045, 0.14)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_gcstq")])
+align_on_shelf = true
+material_kind = &"metal"
+color = Color(0.2, 0.35, 0.55, 1)
+accent_color = Color(0.97, 0.95, 0.9, 1)
+accent_kind = &"paper"
+roughness = 0.5
+motion = ExtResource("1_pt0p2")
+spawn_count = 3
+spawn_zone = 1

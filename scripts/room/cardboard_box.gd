@@ -111,6 +111,7 @@ func flatten() -> void:
 	_set_solid(false)
 	if boxes != null:
 		boxes.drop_items_on(self)
+		boxes.drop_boxes_on(self)
 	var tw := create_tween()
 	tw.tween_property(_squash, "position:y", 0.07, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(_squash, "scale", Vector3(0.92, 1.12, 0.92), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

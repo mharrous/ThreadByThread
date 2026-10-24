@@ -553,7 +553,8 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(holder.state == ItemHolder.State.EMPTY, "las manos quedan libres")
 	await _frames(2)
 	_check(not hud._section_label.visible, "sin nada en la mano el HUD no muestra sección")
-	_check(absf(first.global_position.y - first.half_height - room.global_position.y) < 0.01, "el objeto reposa sobre el suelo")
+	var ground := room.global_position.y + room.shell.floor_height(room.to_local(first.global_position))
+	_check(absf(first.global_position.y - first.half_height - ground) < 0.01, "el objeto reposa sobre el suelo (o la alfombra)")
 
 	print("-- Lanzar: rebote y reposo")
 	_check(await _pick(room, first), "recoger el objeto del suelo otra vez")
@@ -587,6 +588,7 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(first.collision_layer == PickableItem.LAYER_ITEMS and first.freeze, "vuelve a ser recogible y está congelado")
 
 	await _test_wall_throws(room, items)
+	await _test_heavy_drop(room, items)
 	await _test_stuck_rescue(room, items)
 	await _test_basket(room, items)
 	await _test_pointer(room, items)
@@ -639,6 +641,7 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	await _wait_until(func(): return _completed_rooms.has(room), 4.0)
 	_check(_completed_rooms.has(room) and room.is_completed, "mercería completada")
 	await _frames(2)
+	await _check_trays_resting(room)
 	_check(hud._count_label.text == "Organizados  %d / %d" % [total, total], "el HUD muestra el progreso total (" + hud._count_label.text + ")")
 	await _test_opening(room, hud)
 	await _test_cat(room)
@@ -654,6 +657,87 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(again.container == null and again.slot_row == -1, "el hueco queda libre")
 	_check(await _place_on_correct_row(room, again), "volver a colocarlo")
 	_check(room.placed_items == total, "progreso otra vez %d/%d" % [total, total])
+
+
+## Cajas, latas y bobinas (perfil "box"): soltadas y empujadas unas contra otras se deslizan o vuelcan,
+## no salen despedidas.
+func _test_heavy_drop(room: RoomController, items: Array) -> void:
+	print("-- Cajas pesadas: soltar y empujar varias a la vez")
+	var heavy: Array[PickableItem] = []
+	for it: PickableItem in items:
+		if it.state == PickableItem.State.LOOSE and it.data.motion != null and it.data.motion.id == &"box":
+			heavy.append(it)
+		if heavy.size() == 4:
+			break
+	_check(heavy.size() >= 3, "hay %d objetos con perfil de caja para probar" % heavy.size())
+	if heavy.size() < 3:
+		return
+	var base := room.to_global(Vector3(0.4, 0.0, 1.0))
+	var starts: Array[Vector3] = []
+	for i in heavy.size():
+		var it := heavy[i]
+		# Dos juntas en el suelo y las demás caen encima, empujadas de lado.
+		var at := base + Vector3((i % 2) * 0.32, it.half_height + 0.02 + (i / 2) * 0.35, 0.0)
+		it.freeze = true
+		it.global_position = at
+		starts.append(at)
+		it.launch(Vector3(0.9 if i % 2 == 0 else -0.9, 0.0, 0.4) if i >= 2 else Vector3(0.5, 0.0, 0.0), Vector3(0.0, 2.0, 0.0))
+	var max_travel := 0.0
+	var max_rise := 0.0
+	var waited := 0.0
+	while waited < 6.0 and heavy.any(func(it: PickableItem): return it.state == PickableItem.State.THROWN):
+		for i in heavy.size():
+			var d := heavy[i].global_position - starts[i]
+			max_travel = maxf(max_travel, Vector2(d.x, d.z).length())
+			max_rise = maxf(max_rise, d.y)
+		await get_tree().physics_frame
+		waited += get_physics_process_delta_time()
+	_check(heavy.all(func(it: PickableItem): return it.state == PickableItem.State.LOOSE), "se quedan quietas (%.1f s)" % waited)
+	_check(max_travel < 0.7, "no salen despedidas: recorren como mucho %.2f m" % max_travel)
+	_check(max_rise < 0.06, "no saltan hacia arriba al chocar (suben %.3f m)" % max_rise)
+
+
+## Lo que hay en las bandejas toca el fondo: no flota (ni el centro ni la malla quedan por encima).
+func _check_trays_resting(room: RoomController) -> void:
+	# Al completar la sala todo da un saltito de celebración: se mide cuando ya ha vuelto a su sitio.
+	await get_tree().create_timer(1.2).timeout
+	var worst := 0.0
+	var worst_id := ""
+	var count := 0
+	for tray in room.find_children("*", "TrayUnit", true, false):
+		var t := tray as TrayUnit
+		var floor_world := t.to_global(Vector3(0.0, t.floor_y, 0.0)).y
+		for row in t.rows:
+			for it: PickableItem in t.items_in_row(row):
+				var mesh := it._mesh
+				# Solo los que están derechos: la caja de un objeto girado no dice dónde está su fondo.
+				if mesh == null or it.global_basis.y.normalized().y < 0.995:
+					continue
+				var bottom := (mesh.global_transform * mesh.get_aabb()).position.y
+				var gap := maxf(bottom - floor_world, absf(it.global_position.y - it.half_height - floor_world))
+				count += 1
+				if gap > worst:
+					worst = gap
+					worst_id = String(it.data.id)
+	_check(count > 0 and worst < 0.003, "lo de las bandejas toca el fondo (%d objetos; el más separado, %s a %.1f mm)" % [count, worst_id, worst * 1000.0])
+	# Etiquetas: nombres largos caben en su placa (en dos líneas como mucho).
+	var tray := room.find_children("*", "TrayUnit", true, false)[0] as TrayUnit
+	var saved: ItemData = tray._row_data[0]
+	for name in ["Estuche de agujas", "Cinta métrica", "Bastidor de bordado", "Estuches de agujas de punto de cruz"]:
+		var fake := saved.duplicate() as ItemData
+		fake.sort_label = name
+		tray._row_data[0] = fake
+		tray._refresh_row_visuals(0)
+		var label := tray._plaque_labels[0]
+		var font: Font = label.font if label.font != null else ThemeDB.fallback_font
+		var size := font.get_multiline_string_size(name, HORIZONTAL_ALIGNMENT_CENTER, label.width, label.font_size)
+		var lines := roundi(size.y / font.get_height(label.font_size))
+		var plaque_h := (tray._plaques[0].mesh as BoxMesh).size.y
+		# Con una línea basta que quepa a lo ancho (la placa de siempre); con dos, también a lo alto.
+		_check(size.x <= label.width + 0.5 and lines <= 2 and (lines == 1 or TrayUnit.label_height(font, label.font_size, lines) <= plaque_h + 0.0005),
+				"la etiqueta '%s' cabe en la placa (%d línea(s), letra %d)" % [name, lines, label.font_size])
+	tray._row_data[0] = saved
+	tray._refresh_row_visuals(0)
 
 
 ## La escena de apertura al ordenarlo todo: música, puerta, cliente, luces, cartel, confeti, letrero,
@@ -963,7 +1047,7 @@ func _test_boxes(room: RoomController, hud: Node) -> void:
 		_check(await _wait_until(func(): return boxes.stacked_count() == before + 1, 2.0), "clic deja el cartón %d en el montón (%d / %d)" % [b.index, before + 1, boxes.total()])
 	await get_tree().create_timer(1.2).timeout
 	_check(boxes.is_done() and boxes._twine.visible, "todas en el montón y atadas con el cordel")
-	_check(hud._boxes_label.text == "5 / 5" and hud._rows[&"boxes"]["dot"].done, "el HUD lo cuenta y lo marca (%s)" % hud._boxes_label.text)
+	_check(hud._boxes_label.text == "%d / %d" % [boxes.total(), boxes.total()] and hud._rows[&"boxes"]["dot"].done, "el HUD lo cuenta y lo marca (%s)" % hud._boxes_label.text)
 	await _frames(3)
 	var st: Dictionary = SaveGame.read().get("boxes", {})
 	_check((st.get("stacked", []) as Array).size() == boxes.total(), "el guardado tiene las cajas en el montón")

@@ -34,25 +34,26 @@ func _build_furniture() -> void:
 	blocked_rects.append(Rect2(-5.95, 3.6, 0.7, 0.75))
 	_add_cat(Vector3(-4.98, 0.0, 3.72), deg_to_rad(135.0))
 	_add_shop_door(Vector3(hw, 0.0, 2.2))
-	# Rincones: cajas de cartón (noroeste y sureste), cajón (noreste) y planta en el centro de la pared norte.
-	_add_cardboard_boxes(Vector3(-5.45, 0.0, -3.3))
-	# Sin la caja pequeña: a su lado, junto a la puerta, va el montón de cartón para tirar (ShopBoxes).
-	_add_cardboard_boxes(Vector3(5.4, 0.0, 3.85), false)
-	_add_crate(Vector3(5.45, 0, -4.0), 0.1)
+	# Rincones: cajas de cartón apiladas (noroeste y sureste: son de ShopBoxes, se aplanan y van al montón
+	# como las demás), cajón (noreste) y planta en el centro de la pared norte.
+	# El cajón, corrido hacia el oeste: en la pared este, junto al rincón, va la segunda estantería de sastrería.
+	_add_crate(Vector3(5.12, 0, -4.12), 0.1)
 	_add_plant(Vector3(0.0, 0, -4.05))
 	_add_picture(-hw, -2.3, 2.0, 0.34, 0.46, Color("f3b6c8"), Color("e58f9f"), Color("f7e6c4"))
 	_add_picture(-hw, 1.4, 2.35, 0.42, 0.32, Color("2f4f7a"), Color("a0522d"), Color("e0824a"))
 	_add_clock(-hw, -3.6, 2.3)
-	# Tesoros escondidos, dos por sección y en el orden de las secciones (lanas, botones, telas, sastrería):
-	# encima de las estanterías altas, de los cajones y de las pilas de cajas.
+	# Tesoros escondidos, dos por sección y en el orden de las secciones (lanas, botones, telas, sastrería),
+	# en sitios a la vista desde donde se está de pie. Encima de las estanterías altas solo un ovillo: desde
+	# el suelo los ojos quedan por debajo del tablero y un objeto plano (botón, cinta, lazo, tijeras) no
+	# asoma por encima del remate.
 	treasure_spots.append(Vector3(-1.25, 1.92, -4.3))     # lanas: encima de la segunda estantería de ovillos
 	treasure_spots.append(Vector3(-5.43, 0.76, -3.28))    # lanas: sobre las cajas del rincón noroeste
-	treasure_spots.append(Vector3(4.0, 1.92, -4.3))       # botones: encima de la segunda estantería de carretes
-	treasure_spots.append(Vector3(5.45, 0.32, -4.0))      # botones: sobre el cajón del rincón noreste
-	treasure_spots.append(Vector3(-4.5, 1.92, 4.3))       # telas: encima del primer bastidor de rollos
-	treasure_spots.append(Vector3(-5.8, 1.92, 2.9))       # telas: encima del mueble de telas dobladas
+	treasure_spots.append(Vector3(yarn_t.x - 0.36, 1.16, yarn_t.y - 0.3))   # botones: encima de la caja registradora
+	treasure_spots.append(Vector3(5.12, 0.32, -4.12))     # botones: sobre el cajón del rincón noreste
+	treasure_spots.append(Vector3(cut_t.x, 1.08, cut_t.y - 0.3))   # telas: encima de la máquina de coser
+	treasure_spots.append(Vector3(-5.86, 0.938, 0.7))     # telas: en el alféizar de la ventana de la calle
 	treasure_spots.append(Vector3(5.42, 0.76, 3.87))      # sastrería: sobre las cajas del rincón sureste
-	treasure_spots.append(Vector3(5.8, 1.92, 0.8))        # sastrería: encima de su estantería
+	treasure_spots.append(Vector3(3.15, 0.938, 4.39))     # sastrería: en el alféizar del jardín, junto al té
 	# Papelera y rincón de la escoba y el recogedor, en la pared sur bajo la ventana (ShopSweep):
 	# sin papelitos ni objetos debajo.
 	_static_box(Vector3(0.34, 0.36, 0.34), ShopSweep.BIN_AT + Vector3(0.0, 0.18, 0.0))
@@ -95,7 +96,8 @@ const REWARDS := [
 	[&"yarn", "res://art/models/cat_basket.glb", Vector3(-5.45, 0.0, -1.25), PI * 0.5, Vector3(0.56, 0.26, 0.56)],
 	[&"buttons", "res://art/models/radio.glb", Vector3(-2.55, 0.76, 1.6), PI, Vector3(0.32, 0.22, 0.17)],
 	[&"fabrics", "res://art/models/flower_vase.glb", Vector3(-3.5, 0.76, 1.58), 0.0, Vector3(0.14, 0.4, 0.14)],
-	[&"store", "res://art/models/tea_set.glb", Vector3(2.4, 0.94, 4.43), PI, Vector3(0.26, 0.15, 0.28)],
+	# Juego de té centrado en el alféizar (tablero de z 4,28 a 4,5 y arriba a 0,9375 m).
+	[&"store", "res://art/models/tea_set.glb", Vector3(2.4, 0.938, 4.39), PI, Vector3(0.5, 0.15, 0.17)],
 ]
 
 

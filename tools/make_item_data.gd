@@ -12,7 +12,7 @@ var _by_id := {}
 
 
 func _init() -> void:
-	for id in ["wool", "plastic", "wood", "metal", "fabric"]:
+	for id in ["wool", "plastic", "wood", "metal", "fabric", "box"]:
 		_motion[id] = load("res://data/motion/%s.tres" % id)
 
 	_make_spools_and_buttons()
@@ -272,13 +272,20 @@ func _make_store() -> void:
 		_save(d)
 		ids.append(d.id)
 
-	# Piezas grandes: estantería.
+	# Piezas grandes: estanterías (la primera, cinco tipos; la segunda, junto al rincón, otros cinco).
+	# Las cajas, latas, la plancha y la bobina usan el perfil "box": pesan, apenas rebotan y frenan pronto
+	# (se deslizan o vuelcan en vez de salir despedidas).
 	var bigs := [
-		["sewing_box", "Cajas de costura", "Caja de costura de madera", "Con asa y cierres", Color(0.78, 0.55, 0.36), "sewing_box", ItemData.Shape.BOX, Vector3(0.31, 0.212, 0.21), &"wood", "wood"],
-		["sewing_tin", "Latas de costura", "Lata de costura", "Hojalata decorada", Color(0.75, 0.20, 0.25), "sewing_tin", ItemData.Shape.CYLINDER, Vector3(0.088, 0.063, 0.088), &"metal", "metal"],
-		["pattern", "Patrones", "Sobre de patrón de costura", "Patrón de vestido", Color(0.90, 0.75, 0.55), "pattern_envelope", ItemData.Shape.BOX, Vector3(0.22, 0.005, 0.32), &"paper", "fabric"],
-		["hoop", "Bastidores", "Bastidor de bordado", "Con tela tensada", Color(0.95, 0.90, 0.80), "embroidery_hoop", ItemData.Shape.CYLINDER, Vector3(0.095, 0.024, 0.095), &"cloth", "wood"],
-		["iron", "Planchas de hierro", "Plancha de hierro vintage", "Hierro fundido", Color(0.22, 0.22, 0.25), "iron", ItemData.Shape.BOX, Vector3(0.150, 0.119, 0.075), &"metal", "metal"],
+		["sewing_box", "Cajas de costura", "Caja de costura de madera", "Con asa y cierres", Color(0.78, 0.55, 0.36), "sewing_box", ItemData.Shape.BOX, Vector3(0.31, 0.212, 0.21), &"wood", "box", 4],
+		["sewing_tin", "Latas de costura", "Lata de costura", "Hojalata decorada", Color(0.75, 0.20, 0.25), "sewing_tin", ItemData.Shape.CYLINDER, Vector3(0.088, 0.063, 0.088), &"metal", "box", 4],
+		["pattern", "Patrones", "Sobre de patrón de costura", "Patrón de vestido", Color(0.90, 0.75, 0.55), "pattern_envelope", ItemData.Shape.BOX, Vector3(0.22, 0.005, 0.32), &"paper", "fabric", 4],
+		["hoop", "Bastidores", "Bastidor de bordado", "Con tela tensada", Color(0.95, 0.90, 0.80), "embroidery_hoop", ItemData.Shape.CYLINDER, Vector3(0.095, 0.024, 0.095), &"cloth", "wood", 4],
+		["iron", "Planchas de hierro", "Plancha de hierro vintage", "Hierro fundido", Color(0.22, 0.22, 0.25), "iron", ItemData.Shape.BOX, Vector3(0.150, 0.119, 0.075), &"metal", "box", 4],
+		["button_box", "Cajas de botones", "Caja de botones grande", "Muestrario surtido", Color(0.55, 0.70, 0.62), "button_box", ItemData.Shape.BOX, Vector3(0.24, 0.094, 0.17), &"paper", "box", 3],
+		["interfacing_roll", "Rollos de entretela", "Rollo de entretela", "Entretela termoadhesiva · 10 m", Color(0.95, 0.94, 0.90), "interfacing_roll", ItemData.Shape.CYLINDER, Vector3(0.063, 0.282, 0.063), &"cloth", "fabric", 3],
+		["stuffing_bag", "Bolsas de relleno", "Bolsa de relleno", "Fibra para cojines y peluches", Color(0.97, 0.97, 0.98), "stuffing_bag", ItemData.Shape.BOX, Vector3(0.21, 0.189, 0.156), &"cloth", "fabric", 3],
+		["needle_box", "Cajas de agujas", "Caja de agujas surtidas", "Agujas de mano y de máquina", Color(0.20, 0.35, 0.55), "needle_box", ItemData.Shape.BOX, Vector3(0.2, 0.045, 0.14), &"metal", "box", 3],
+		["industrial_cone", "Bobinas industriales", "Bobina industrial", "Hilo de poliéster · 5000 m", Color(0.85, 0.30, 0.25), "industrial_cone", ItemData.Shape.CYLINDER, Vector3(0.052, 0.221, 0.052), &"thread", "box", 3],
 	]
 	for b in bigs:
 		var d := _base(b[0], b[1], b[2], b[3], ItemData.Family.ACCESSORY, b[4], b[9])
@@ -288,10 +295,14 @@ func _make_store() -> void:
 			_cyl(d, b[7].x, b[7].y, b[5], 0.1)
 		d.material_kind = b[8]
 		d.roughness = 0.5
-		d.accent_kind = &"wood" if b[0] in ["sewing_box", "iron", "hoop"] else &"paper"
+		d.accent_kind = &"wood" if b[0] in ["sewing_box", "iron", "hoop"] else (&"cloth" if b[0] == "stuffing_bag" else &"paper")
 		d.accent_color = Color(0.55, 0.38, 0.25) if b[0] == "sewing_box" else (Color(0.45, 0.30, 0.20) if b[0] == "iron" else (Color(0.82, 0.62, 0.38) if b[0] == "hoop" else Color(0.97, 0.95, 0.90)))
+		if b[0] == "stuffing_bag":
+			d.accent_color = Color(0.86, 0.36, 0.40)
+		elif b[0] == "interfacing_roll":
+			d.accent_color = Color(0.62, 0.48, 0.32)
 		d.align_on_shelf = true
-		d.spawn_count = 4
+		d.spawn_count = b[10]
 		d.spawn_zone = ItemData.SpawnZone.FLOOR
 		_save(d)
 		ids.append(d.id)

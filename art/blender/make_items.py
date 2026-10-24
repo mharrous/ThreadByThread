@@ -312,6 +312,82 @@ def make_iron():
     m.export()
 
 
+# ---------------------------------------------------------------- piezas grandes nuevas de sastrería
+def make_button_box():
+    reset_scene()
+    m = Model("button_box", 66)
+    mats(m, (0.55, 0.70, 0.62), (0.96, 0.92, 0.82), metal=True, main_rough=0.75)
+    # Caja de cartón forrado con tapa encajada, etiqueta y un muestrario de botones cosidos encima.
+    X, Y, Z = 0.24, 0.09, 0.17
+    m.box((0, -0.008, 0), (X - 0.006, Y - 0.016, Z - 0.006), grain="x", bevel=0.004, segments=2, mat=0)
+    m.box((0, Y / 2 - 0.014, 0), (X, 0.028, Z), grain="x", bevel=0.005, segments=2, mat=0)        # tapa
+    m.box((0, Y / 2 + 0.0005, -0.035), (0.15, 0.001, 0.05), bevel=0.0, mat=1)                    # etiqueta
+    for i, (bx, bz) in enumerate(((-0.07, 0.04), (-0.025, 0.045), (0.02, 0.04), (0.065, 0.045))):
+        m.cylinder((bx, Y / 2 + 0.002, bz), 0.012 - 0.0015 * (i % 2), 0.004, mat=1 if i % 2 else 2, round_edge=0.0012, segments=16)
+    m.export()
+
+
+def make_interfacing_roll():
+    reset_scene()
+    m = Model("interfacing_roll", 67)
+    mats(m, (0.95, 0.94, 0.90), (0.62, 0.48, 0.32), main_rough=0.95)
+    # Rollo de entretela de pie: tela enrollada (con el borde de la última vuelta) sobre un tubo de cartón.
+    R, H, RC = 0.06, 0.27, 0.018
+    m.lathe([(RC, -H / 2), (R - 0.004, -H / 2), (R, -H / 2 + 0.004), (R, H / 2 - 0.004), (R - 0.004, H / 2), (RC, H / 2)],
+            segments=32, mat=0, closed=False)
+    m.cylinder((0, 0, 0), RC, H + 0.012, mat=1, segments=16)                                     # tubo
+    m.box((R - 0.001, 0, 0.012), (0.004, H - 0.01, 0.03), bevel=0.001, segments=1, mat=0)       # borde suelto
+    m.torus((0, 0.06, 0), R + 0.001, 0.0018, axis="y", major_seg=32, minor_seg=4, mat=1)         # cinta de papel
+    m.export()
+
+
+def make_stuffing_bag():
+    reset_scene()
+    m = Model("stuffing_bag", 68)
+    mats(m, (0.97, 0.97, 0.98), (0.86, 0.36, 0.40), main_rough=0.9)
+    # Bolsa de relleno: cojín mullido (esferas aplastadas) con el cuello atado con un lazo.
+    m.sphere((0, -0.015, 0), 0.1, scale=(1.05, 0.72, 0.78), segments=20, rings=12, mat=0)
+    m.sphere((0.02, 0.03, -0.01), 0.07, scale=(1.0, 0.8, 0.9), segments=16, rings=10, mat=0)
+    m.lathe([(0.03, 0.055), (0.018, 0.075), (0.02, 0.09), (0.032, 0.1), (0.0, 0.102)], 14, mat=0)  # cuello
+    m.torus((0, 0.074, 0), 0.02, 0.004, axis="y", major_seg=14, minor_seg=5, mat=1)                # lazo
+    for s in (-1, 1):
+        c = (s * 0.022, 0.078, 0.012)
+        m.sphere(c, 0.013, scale=(1.0, 0.6, 0.45), segments=8, rings=6, mat=1, rotate=("Z", s * 25.0, c))
+    m.box((0.0, -0.02, 0.072), (0.08, 0.05, 0.002), bevel=0.0, mat=1)                             # etiqueta
+    m.export()
+
+
+def make_needle_box():
+    reset_scene()
+    m = Model("needle_box", 69)
+    mats(m, (0.20, 0.35, 0.55), (0.95, 0.90, 0.78), metal=True, main_rough=0.4)
+    # Caja metálica de agujas surtidas, abierta: dentro, sobres de agujas en fila y la tapa apoyada detrás.
+    X, Y, Z = 0.20, 0.045, 0.14
+    m.box((0, -Y / 2 + 0.004, 0), (X, 0.008, Z), bevel=0.002, segments=1, mat=0)
+    for sx in (-1, 1):
+        m.box((sx * (X / 2 - 0.003), 0, 0), (0.006, Y, Z), bevel=0.0015, segments=1, mat=0)
+    for sz in (-1, 1):
+        m.box((0, 0, sz * (Z / 2 - 0.003)), (X, Y, 0.006), bevel=0.0015, segments=1, mat=0)
+    for i in range(6):
+        x = -X / 2 + 0.022 + i * 0.031
+        m.box((x, -0.002, 0.0), (0.024, 0.032, 0.11), bevel=0.001, segments=1, mat=1)            # sobres
+        m.box((x, 0.0145, -0.03), (0.016, 0.003, 0.03), bevel=0.0, mat=2)                        # agujas que asoman
+    m.export()
+
+
+def make_industrial_cone():
+    reset_scene()
+    m = Model("industrial_cone", 70)
+    mats(m, (0.85, 0.30, 0.25), (0.92, 0.85, 0.68), main_rough=0.75)
+    # Bobina industrial: cono de cartón con el hilo enrollado en forma de tonel y el cabo suelto.
+    H = 0.2
+    m.lathe([(0.0, -H / 2), (0.034, -H / 2), (0.032, -H / 2 + 0.01), (0.012, H / 2 - 0.004), (0.0, H / 2 - 0.004)], 24, mat=1)
+    m.lathe([(0.03, -H / 2 + 0.012), (0.05, -H / 2 + 0.016), (0.052, -H / 2 + 0.06), (0.044, H / 2 - 0.05),
+             (0.026, H / 2 - 0.022), (0.016, H / 2 - 0.02)], 32, mat=0)
+    m.tube([(0.016, H / 2 - 0.02, 0.0), (0.013, H / 2 + 0.005, 0.002), (0.02, H / 2 + 0.02, 0.01)], 0.0009, 5, mat=0)
+    m.export()
+
+
 def run():
     make_spool()
     button("button_flat2", "flat", 22)
@@ -335,6 +411,16 @@ def run():
     make_pattern_envelope()
     make_embroidery_hoop()
     make_iron()
+    make_new_bigs()
 
 
-run()
+def make_new_bigs():
+    make_button_box()
+    make_interfacing_roll()
+    make_stuffing_bag()
+    make_needle_box()
+    make_industrial_cone()
+
+
+if __name__ == "__main__":
+    run()

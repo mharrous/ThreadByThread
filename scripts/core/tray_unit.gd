@@ -12,10 +12,18 @@ extends StorageUnit
 
 const WALL_T := 0.012
 const HEIGHT := 0.06
+## Etiquetas: tamaño de letra normal y mínimo, y alto de la placa con una y con dos líneas.
+const LABEL_FONT := 30
+const LABEL_FONT_MIN := 18
+const LABEL_LINE_SPACING := -2.0
+const LABEL_PIXEL := 0.0007
+const PLAQUE_H := 0.026
+const PLAQUE_H_MAX := 0.046
 const MODEL_PATH := "res://art/models/button_tray.glb"
 
 var _plaque_mats: Array[StandardMaterial3D] = []
 var _plaque_labels: Array[Label3D] = []
+var _plaques: Array[MeshInstance3D] = []
 var _cell_mats: Array[StandardMaterial3D] = []
 var _body: StaticBody3D
 
@@ -193,9 +201,10 @@ func _build_labels() -> void:
 			plaque.material_override = plaque_mat
 			plaque.position = Vector3(_cell_cx(r), HEIGHT * 0.5 - 0.005, side * (tray_depth * 0.5 + 0.002))
 			add_child(plaque)
+			_plaques.append(plaque)
 			var label := Label3D.new()
-			label.font_size = 30
-			label.pixel_size = 0.0007
+			label.font_size = LABEL_FONT
+			label.pixel_size = LABEL_PIXEL
 			label.outline_size = 0
 			label.modulate = Color("2e2118")
 			label.position = Vector3(_cell_cx(r), HEIGHT * 0.5 - 0.005, side * (tray_depth * 0.5 + 0.0048))
@@ -215,9 +224,62 @@ func _refresh_row_visuals(row: int) -> void:
 	for label in [_plaque_labels[row * 2], _plaque_labels[row * 2 + 1]]:
 		label.text = data.sort_label
 		label.modulate = Color("2e2118") if lum > 0.5 else Color("fff6e6")
+	_fit_label(row)
 	# El fondo de la celda lleva el color del tipo (sin transparencia del color: el cristal también se ve).
 	var c := _plaque_mats[row].albedo_color
 	_cell_mats[row].albedo_color = Color(c.r, c.g, c.b, 1.0)
+
+
+## El nombre cabe en su placa: primero en una línea con la letra normal; si no, en dos líneas (la placa
+## crece hacia abajo) y, si aun así no cabe, con la letra más pequeña. Se mide el texto ya traducido.
+func _fit_label(row: int) -> void:
+	var data := _row_data[row]
+	if data == null:
+		return
+	var a := _plaque_labels[row * 2]
+	var font: Font = a.font if a.font != null else ThemeDB.fallback_font
+	var text := tr(data.sort_label)
+	var max_px := (cell_width - 0.03) / LABEL_PIXEL
+	var size := LABEL_FONT
+	var lines := 1
+	while size > LABEL_FONT_MIN + 4 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, size).x > max_px:
+		size -= 2
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, size).x > max_px:
+		# No cabe en una línea: dos, con la letra más grande con la que quepan a lo ancho y a lo alto.
+		lines = 2
+		size = LABEL_FONT - 6
+		while size > LABEL_FONT_MIN and (_wrapped_lines(font, text, max_px, size) > 2
+				or label_height(font, size, 2) > PLAQUE_H_MAX - 0.004):
+			size -= 1
+	var plaque_h := PLAQUE_H if lines == 1 else minf(PLAQUE_H_MAX, label_height(font, size, 2) + 0.004)
+	for side in 2:
+		var label := _plaque_labels[row * 2 + side]
+		label.font_size = size
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF if lines == 1 else TextServer.AUTOWRAP_WORD_SMART
+		label.width = max_px
+		label.line_spacing = LABEL_LINE_SPACING
+		var plaque := _plaques[row * 2 + side]
+		(plaque.mesh as BoxMesh).size.y = plaque_h
+		# Con una línea, la placa en su sitio; con dos, crece hacia arriba hasta casi el borde de la pared.
+		plaque.position.y = HEIGHT * 0.5 - 0.005 if lines == 1 else HEIGHT - 0.003 - plaque_h * 0.5
+		label.position.y = plaque.position.y
+
+
+## Alto en metros de `lines` líneas de texto con esta letra.
+static func label_height(font: Font, size: int, lines: int) -> float:
+	return (font.get_height(size) * lines + LABEL_LINE_SPACING * (lines - 1)) * LABEL_PIXEL
+
+
+func _wrapped_lines(font: Font, text: String, max_px: float, size: int) -> int:
+	var h := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, max_px, size).y
+	return roundi(h / font.get_height(size))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		for row in _row_data.size():
+			if row < _plaques.size() / 2:
+				_fit_label(row)
 
 
 func _set_marker_visible(_row: int, _slot: int, _visible: bool) -> void:

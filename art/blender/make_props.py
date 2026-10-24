@@ -319,8 +319,9 @@ def make_tea_set():
     m.sphere((0, 0.145, 0), 0.013, mat=1)
     m.tube([(0.07, 0.06, 0), (0.1, 0.09, 0), (0.12, 0.125, 0)], 0.012, 8, mat=0, taper=0.4)
     m.tube([(-0.065, 0.1, 0), (-0.11, 0.1, 0), (-0.115, 0.06, 0), (-0.07, 0.035, 0)], 0.008, 6, mat=0)
-    # Dos tazas con plato delante.
-    for cx, cz in ((-0.05, 0.13), (0.09, 0.12)):
+    # Dos tazas con plato, una a cada lado de la tetera y con un poco de hueco: todo en fila, para que
+    # quepa en el alféizar (fondo de 0,16 m).
+    for cx, cz in ((-0.205, 0.01), (0.215, -0.01)):
         m.cylinder((cx, 0.004, cz), 0.045, 0.008, mat=1, round_edge=0.003, segments=24)
         m.lathe([(0.0, 0.008), (0.022, 0.008), (0.032, 0.03), (0.034, 0.05), (0.031, 0.05),
                  (0.029, 0.032), (0.0, 0.03)], 22, center=(cx, 0, cz), mat=1)

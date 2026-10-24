@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Resource" path="res://data/motion/fabric.tres" id="1_d0w0w"]
+[ext_resource type="Script" path="res://scripts/core/item_data.gd" id="2_nfb5x"]
+[ext_resource type="PackedScene" path="res://art/models/items/stuffing_bag.glb" id="3_gupau"]
+
+[resource]
+script = ExtResource("2_nfb5x")
+id = &"stuffing_bag"
+display_name = "Bolsa de relleno"
+detail = "Fibra para cojines y peluches"
+family = 5
+sort_key = &"stuffing_bag"
+sort_label = "Bolsas de relleno"
+shape = 2
+size = Vector3(0.21, 0.189, 0.156)
+pick_radius = 0.12
+variants = Array[PackedScene]([ExtResource("3_gupau")])
+align_on_shelf = true
+material_kind = &"cloth"
+color = Color(0.97, 0.97, 0.98, 1)
+accent_color = Color(0.86, 0.36, 0.4, 1)
+accent_kind = &"cloth"
+roughness = 0.5
+motion = ExtResource("1_d0w0w")
+spawn_count = 3
+spawn_zone = 1

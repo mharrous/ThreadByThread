@@ -146,4 +146,12 @@ slots_per_row = 5
 slot_spacing = 0.38
 marker_radius = 0.06
 
+[node name="StoreShelfB" parent="Sections/Store" instance=ExtResource("4_shelf")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 5.94, 0, -3.69)
+unit_width = 1.45
+depth = 0.4
+slots_per_row = 3
+slot_spacing = 0.38
+marker_radius = 0.06
+
 [node name="Items" type="Node3D" parent="."]

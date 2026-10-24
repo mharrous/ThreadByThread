@@ -6,13 +6,20 @@ extends Node3D
 ## falta para abrir la tienda (ShopOpening), con todo ordenado y el suelo barrido.
 ## Va en coordenadas de la sala (hijo de RoomShell); lo que guarda está en capture_state().
 
-## Dónde están tiradas: x, z, giro y, tumbada de lado y tamaño.
+## Dónde están: x, z, giro y, tumbada de lado, tamaño y altura (las de los rincones, una encima de otra).
+## Las cinco primeras, tiradas por el suelo; las demás, apiladas en los rincones noroeste y sureste (encima
+## de las de arriba hay un tesoro escondido). Todas van al montón.
 const SPOTS := [
-	[-1.0, -3.0, 0.4, false, 0.78],
-	[2.4, -3.2, -0.7, true, 0.72],
-	[-4.6, 0.3, 1.1, false, 0.8],
-	[2.75, -0.2, 0.25, false, 0.7],
-	[1.2, 3.2, 2.2, true, 0.76],
+	[-1.0, -3.0, 0.4, false, 0.78, 0.0],
+	[2.4, -3.2, -0.7, true, 0.72, 0.0],
+	[-4.6, 0.3, 1.1, false, 0.8, 0.0],
+	[2.75, -0.2, 0.25, false, 0.7, 0.0],
+	[1.2, 3.2, 2.2, true, 0.76, 0.0],
+	[-5.43, -3.28, -0.3, false, 0.8, 0.42],
+	[-5.45, -3.3, 0.12, false, 1.0, 0.0],
+	[-5.25, -2.6, 0.5, false, 0.72, 0.0],
+	[5.42, 3.87, -0.3, false, 0.8, 0.42],
+	[5.4, 3.85, 0.12, false, 1.0, 0.0],
 ]
 ## Montón para tirar: los cartones de pie apoyados en la pared este, al sur de la puerta de la calle.
 const PILE_AT := Vector3(5.95, 0.0, 3.2)
@@ -45,7 +52,7 @@ func _ready() -> void:
 		var s: Array = SPOTS[i]
 		var b := CardboardBox.new()
 		b.name = "Box%d" % i
-		b.setup(i, Vector3(s[0], 0.0, s[1]), s[2], s[3], s[4])
+		b.setup(i, Vector3(s[0], s[5], s[1]), s[2], s[3], s[4])
 		b.boxes = self
 		add_child(b)
 		boxes.append(b)
@@ -123,6 +130,32 @@ func finish_instantly() -> void:
 	_emit_progress()
 
 
+## Cajas apiladas encima de esta (en los rincones): al aplanarla, bajan a su sitio con un golpe sordo.
+func drop_boxes_on(b: CardboardBox) -> void:
+	for o in boxes:
+		if o == b or o.state != CardboardBox.State.LOOSE or o.position.y <= b.position.y + 0.05:
+			continue
+		if Vector2(o.position.x - b.position.x, o.position.z - b.position.z).length() > 0.3:
+			continue
+		var tw := o.create_tween()
+		tw.tween_property(o, "position:y", b.position.y, 0.28).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		tw.tween_callback(func(): AudioManager.play(&"cardboard_drop", o.global_position + Vector3.UP * 0.2, -6.0, 0.1))
+
+
+## Al cargar: una caja que estaba encima de otra que ya no está (aplanada o en el montón) queda en el suelo.
+func _settle_loose() -> void:
+	for o in boxes:
+		if o.state != CardboardBox.State.LOOSE or o.position.y < 0.01:
+			continue
+		var held := false
+		for b in boxes:
+			if b != o and b.state == CardboardBox.State.LOOSE and b.position.y < o.position.y - 0.05 \
+					and Vector2(o.position.x - b.position.x, o.position.z - b.position.z).length() < 0.3:
+				held = true
+		if not held:
+			o.position.y = 0.0
+
+
 ## Objetos que se habían quedado encima de una caja: al aplanarla, caen.
 func drop_items_on(b: CardboardBox) -> void:
 	var room := get_parent().get_parent() as RoomController
@@ -171,6 +204,7 @@ func apply_state(state: Dictionary) -> void:
 			continue
 		boxes[i].flatten_instantly()
 		boxes[i].lay_flat(_inside(Vector3(float(v[1]), 0.0, float(v[2]))), float(v[3]))
+	_settle_loose()
 	if is_done():
 		_tie(false)
 	_emit_progress()
