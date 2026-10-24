@@ -2,12 +2,14 @@ class_name ShopCat
 extends Node3D
 ## El gato de la tienda (art/models/cat.glb, de art/blender/make_cat.py), atigrado y tranquilo. Vive por
 ## toda la sala mientras el jugador ordena, sin estorbar: juega con un ovillo (le da un zarpazo, el ovillo
-## rueda y lo persigue al trote), pasea, se sienta a lavarse y se echa la siesta. Solo pisa suelo libre (no
+## rueda y lo persigue al trote), pasea, se sienta a lavarse, amasa, se estira, se tumba y se revuelca panza
+## arriba, le dan carreras locas de vez en cuando y se echa la siesta. Solo pisa suelo libre (no
 ## cruza muebles ni montones de objetos) y se aparta si el jugador se le echa encima. Con las manos
 ## vacías se le puede acariciar (E): se sienta, cierra los ojos, frota la cabeza y ronronea.
 ## Va en coordenadas de la sala (es hijo de RoomShell). No tiene cuerpo físico: no bloquea ni empuja nada.
 ## Animaciones: un AnimationTree con una transición entre poses (paso, trote, de pie, sentado, aseo,
-## siesta, caricia), el zarpazo encima y, más arriba, parpadeo y sacudidas de oreja (filtrados).
+## siesta, caricia, tumbado, revolcarse, estirarse, amasar y galope), el zarpazo encima y, más arriba,
+## parpadeo y sacudidas de oreja (filtrados).
 
 const MODEL := "res://art/models/cat.glb"
 ## El ovillo es uno de los de la tienda: su modelo y el material de su lana.
@@ -21,6 +23,11 @@ const BAT_PERIOD := 2.0
 const BAT_TOUCH := 13.0 / 24.0 * BAT_PERIOD
 const WALK_SPEED := 0.38
 const TROT_SPEED := 0.85
+## Carrera loca: galope por la sala, solo con el jugador lejos.
+const ZOOM_SPEED := 2.1
+const ZOOM_CLEAR := 2.2
+## El estiramiento dura sus 30 fotogramas a 12 fps.
+const STRETCH_TIME := 2.5
 const TURN_SPEED := 5.0
 ## Distancia al jugador a la que se aparta (si no está dormido ni le están acariciando).
 const PERSONAL_SPACE := 0.5
@@ -30,7 +37,9 @@ const TWITCH_GAP := Vector2(6.0, 10.0)
 const BLINK_GAP := Vector2(2.5, 6.0)
 const PET_TIME := 3.2
 const NAME := "Botón, el gato de la tienda"
-const LOOPS := [&"walk", &"trot", &"stand", &"sit", &"groom", &"sleep", &"pet"]
+const LOOPS := [&"walk", &"trot", &"stand", &"sit", &"groom", &"sleep", &"pet", &"lie", &"roll", &"stretch", &"knead", &"gallop"]
+## Poses con los ojos cerrados o entornados (no parpadea).
+const EYES_SHUT := [&"sleep", &"pet", &"roll", &"knead", &"stretch"]
 
 ## Lo que está haciendo (para las pruebas y para depurar).
 var activity := &"sit"
@@ -114,13 +123,19 @@ func _life() -> void:
 	await _wait(_rng.randf_range(0.5, 2.0))
 	while gen == _gen and is_inside_tree():
 		var r := _rng.randf()
-		if r < 0.42:
+		if r < 0.32:
 			await _play_with_yarn(gen)
-		elif r < 0.62:
+		elif r < 0.46:
 			await _wander(gen)
-		elif r < 0.76:
+		elif r < 0.55:
 			await _groom(gen)
-		elif r < 0.88 and not _player_near(1.6):
+		elif r < 0.67:
+			await _lounge(gen)
+		elif r < 0.75:
+			await _knead(gen)
+		elif r < 0.81 and not _player_near(ZOOM_CLEAR):
+			await _zoomies(gen)
+		elif r < 0.9 and not _player_near(1.6):
 			await _nap(gen)
 		else:
 			activity = &"sit"
@@ -187,7 +202,85 @@ func _wander(gen: int) -> void:
 		return
 	activity = &"stand"
 	_set_pose(&"stand")
-	await _wait(_rng.randf_range(1.5, 3.5))
+	await _wait(_rng.randf_range(1.0, 2.5))
+	# A veces, al pararse, se estira.
+	if gen == _gen and _rng.randf() < 0.4:
+		await _stretch(gen)
+
+
+## Se estira con el culete en alto y vuelve a quedarse de pie.
+func _stretch(gen: int) -> void:
+	activity = &"stretch"
+	_set_pose(&"stand")
+	await _wait(0.3)
+	if gen != _gen:
+		return
+	_set_pose(&"stretch")
+	await _wait(STRETCH_TIME - 0.1)
+	if gen == _gen:
+		_set_pose(&"stand")
+		await _wait(0.6)
+
+
+## Se tumba de lado y se revuelca panza arriba un rato; luego se vuelve a sentar.
+func _lounge(gen: int) -> void:
+	activity = &"wander"
+	var to := _free_point(0.6, 2.5)
+	if to != Vector3.INF and not await _go_route(to, WALK_SPEED, &"walk", gen):
+		return
+	activity = &"lie"
+	_set_pose(&"sit")
+	await _wait(0.8)
+	if gen != _gen:
+		return
+	_set_pose(&"lie")
+	await _wait(_rng.randf_range(2.5, 4.5))
+	for _i in _rng.randi_range(1, 2):
+		if gen != _gen:
+			return
+		activity = &"roll"
+		_set_pose(&"roll")
+		await _wait(_rng.randf_range(3.0, 6.0))
+		if gen != _gen:
+			return
+		activity = &"lie"
+		_set_pose(&"lie")
+		await _wait(_rng.randf_range(2.0, 4.0))
+	if gen == _gen:
+		_set_pose(&"sit")
+		await _wait(1.2)
+
+
+## Amasa sentado, con los ojos entornados.
+func _knead(gen: int) -> void:
+	activity = &"knead"
+	_set_pose(&"sit")
+	await _wait(0.6)
+	if gen != _gen:
+		return
+	_set_pose(&"knead")
+	await _wait(_rng.randf_range(4.0, 7.0))
+	if gen == _gen:
+		_set_pose(&"sit")
+		await _wait(1.0)
+
+
+## Carrera loca: galopa por tres o cuatro sitios libres de la sala, se para en seco y se lava, como si
+## no hubiera pasado nada. Se corta si el jugador se acerca.
+func _zoomies(gen: int) -> void:
+	activity = &"zoomies"
+	for _i in _rng.randi_range(3, 4):
+		if gen != _gen or _player_near(1.4):
+			break
+		var to := _free_point(1.5, 4.0)
+		if to == Vector3.INF or not await _go_route(to, ZOOM_SPEED, &"gallop", gen):
+			break
+	if gen != _gen:
+		return
+	_set_pose(&"sit")
+	await _wait(0.8)
+	if gen == _gen:
+		await _groom(gen)
 
 
 func _groom(gen: int) -> void:
@@ -210,6 +303,9 @@ func _nap(gen: int) -> void:
 	if gen == _gen:
 		_set_pose(&"sit")
 		await _wait(1.5)
+	# Al despertar se estira.
+	if gen == _gen:
+		await _stretch(gen)
 
 
 ## Se aparta del jugador: un trotecito hacia el lado contrario.
@@ -638,7 +734,7 @@ func _twitch() -> void:
 
 ## Parpadea (no con los ojos ya cerrados: dormido o mientras le acarician).
 func _blink() -> void:
-	if _tree != null and _tree.active and _pose != &"sleep" and _pose != &"pet":
+	if _tree != null and _tree.active and not _pose in EYES_SHUT:
 		_tree.set(&"parameters/blink_shot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 

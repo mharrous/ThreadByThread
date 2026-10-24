@@ -13,6 +13,12 @@ cola en tres huesos; cada pieza pesada entera a su hueso) en pose de pie, y anim
   sleep         hecho un ovillo, con los ojos cerrados (48, bucle)
   bat           sentado, da un zarpazo con la pata derecha (24; toca el suelo en el fotograma 13)
   pet           sentado, ojos cerrados, frota la cabeza contra la mano y ronronea (24, bucle)
+  lie           tumbado de lado, relajado, mece la cola por el suelo y levanta la cabeza (32, bucle)
+  roll          panza arriba revolcándose de un lado a otro con las patitas dobladas (36, bucle)
+  stretch       de pie, estira las patas delanteras con el culete en alto y vuelve (30; empieza y
+                acaba de pie)
+  knead         sentado amasando con las patas delanteras, ojos entornados (24, bucle)
+  gallop        carrera loca: patas delanteras juntas y traseras juntas, orejas atrás (6, bucle)
   blink         parpadeo (4; solo los ojos: se mezcla encima del resto)
   ear_twitch_l  la oreja izquierda se sacude (6; solo esa oreja)
   ear_twitch_r  ídem con la derecha
@@ -268,6 +274,102 @@ def animate(m):
         rots["ear_r"] = (0.25, 0.0, -0.2)
         locs["body"] = (SIT_LOC[0], SIT_LOC[1] + 0.003 * math.sin(2.0 * ph), SIT_LOC[2])
         m.pose("pet", f, rots, locs, scales={"eyes": (1.0, 0.12, 1.0)})
+
+    # Tumbado de lado (sobre el costado derecho): el lomo gira sobre su largo y baja hasta apoyar el costado,
+    # las patas sueltas hacia un lado, la cabeza algo levantada y la cola barriendo el suelo despacio.
+    lie_z = 1.42
+    lie_y = -0.112
+
+    def lie_rots(ph, head_up=0.0):
+        return {
+            "body": (0.0, 0.0, lie_z),
+            "head": (0.15 + 0.1 * head_up, 0.1, -0.95 + 0.35 * head_up),
+            "leg_fl": (0.35 + 0.05 * math.sin(ph), 0.0, 0.1),
+            "leg_fr": (0.55, 0.0, -0.05),
+            "leg_bl": (-0.35, 0.0, 0.1),
+            "leg_br": (-0.15 + 0.04 * math.sin(ph + 1.0), 0.0, -0.05),
+            "tail_1": (-1.1, 0.0, 0.0),
+            "tail_2": (-0.35, 0.35 * math.sin(ph), 0.0),
+            "tail_3": (-0.2, 0.45 * math.sin(ph - 0.8), 0.0),
+        }
+
+    m.action("lie", 32)
+    look = [(0, 0.0), (10, 0.0), (14, 1.0), (22, 1.0), (26, 0.0), (32, 0.0)]
+    for f in range(33):
+        ph = math.tau * f / 32.0
+        m.pose("lie", f, lie_rots(ph, at(look, f)), {"body": (0.0, lie_y + 0.004 * math.sin(ph), 0.0)})
+
+    # Revolcarse panza arriba: el lomo se balancea de un lado a otro sobre la espalda, las patas delanteras
+    # dobladas hacia el pecho, las traseras pataleando un poco, la cabeza hacia atrás mirando de lado.
+    m.action("roll", 36)
+    for f in range(37):
+        ph = math.tau * f / 36.0
+        sway = math.sin(ph)
+        kick = math.sin(2.0 * ph)
+        m.pose("roll", f, {
+            "body": (0.0, 0.0, math.pi + 0.6 * sway),
+            "head": (-0.35, 0.0, -0.45 * sway - 0.2),
+            "leg_fl": (1.25 + 0.25 * max(0.0, kick), 0.0, 0.25),
+            "leg_fr": (1.25 + 0.25 * max(0.0, -kick), 0.0, -0.25),
+            "leg_bl": (0.55 + 0.35 * kick, 0.0, 0.3),
+            "leg_br": (0.55 - 0.35 * kick, 0.0, -0.3),
+            "ear_l": (-0.3, 0.0, 0.25),
+            "ear_r": (-0.3, 0.0, -0.25),
+            "tail_1": (-1.2, 0.0, 0.0),
+            "tail_2": (-0.25, 0.5 * math.sin(ph - 0.6), 0.0),
+            "tail_3": (0.0, 0.5 * math.sin(ph - 1.4), 0.0),
+        }, {"body": (0.0, -0.115 + 0.006 * abs(sway), 0.0)}, scales={"eyes": (1.0, 0.45, 1.0)})
+
+    # Estirarse: el pecho baja hacia el suelo con las patas delanteras estiradas hacia delante, el culete
+    # queda en alto (el lomo gira sobre la cadera), la cola tiesa y los ojos entornados; luego vuelve.
+    m.action("stretch", 30)
+    k_s = [(0, 0.0), (8, 1.0), (20, 1.0), (28, 0.0), (30, 0.0)]
+    for f in range(31):
+        k = at(k_s, f)
+        tilt = 0.42 * k
+        m.pose("stretch", f, {
+            "body": (tilt, 0.0, 0.0),
+            "head": (-0.55 * k, 0.0, 0.0),
+            "leg_fl": (0.95 * k, 0.0, 0.0),
+            "leg_fr": (0.95 * k, 0.0, 0.0),
+            "leg_bl": (-tilt - 0.12 * k, 0.0, 0.0),
+            "leg_br": (-tilt - 0.12 * k, 0.0, 0.0),
+            "tail_1": (-0.2 - 0.5 * k, 0.0, 0.0),
+            "tail_2": (0.0, 0.0, 0.0),
+            "tail_3": (0.3 * k, 0.0, 0.0),
+            "ear_l": (-0.25 * k, 0.0, 0.0),
+            "ear_r": (-0.25 * k, 0.0, 0.0),
+        }, {"body": (0.0, -0.01 * k, 0.0)}, scales={"eyes": (1.0, 1.0 - 0.7 * k, 1.0)})
+
+    # Amasar: sentado, las patas delanteras suben y aprietan por turnos, ojos entornados y la cola quieta.
+    m.action("knead", 24)
+    for f in range(25):
+        ph = math.tau * f / 24.0
+        a = max(0.0, math.sin(ph))
+        b = max(0.0, -math.sin(ph))
+        rots, locs = sit(head=(0.1, 0.05 * math.sin(ph), 0.0), fl=(-0.5 * a, 0.0, 0.0), fr=(-0.5 * b, 0.0, 0.0),
+                         breath=0.004 * math.sin(2.0 * ph))
+        rots["body"] = (SIT_BODY + 0.04 * math.sin(2.0 * ph), 0.0, 0.0)
+        m.pose("knead", f, rots, locs, scales={"eyes": (1.0, 0.35, 1.0)})
+
+    # Carrera loca: galope (delanteras juntas, traseras juntas), el lomo cabecea, las orejas hacia atrás
+    # y la cola recta hacia atrás.
+    m.action("gallop", 6)
+    for f in range(7):
+        ph = math.tau * f / 6.0
+        m.pose("gallop", f, {
+            "body": (0.14 * math.sin(ph), 0.0, 0.0),
+            "head": (-0.14 * math.sin(ph), 0.0, 0.0),
+            "leg_fl": (-0.75 * math.sin(ph + 0.2), 0.0, 0.0),
+            "leg_fr": (-0.75 * math.sin(ph), 0.0, 0.0),
+            "leg_bl": (-0.75 * math.sin(ph + math.pi + 0.2), 0.0, 0.0),
+            "leg_br": (-0.75 * math.sin(ph + math.pi), 0.0, 0.0),
+            "ear_l": (-0.6, 0.0, 0.35),
+            "ear_r": (-0.6, 0.0, -0.35),
+            "tail_1": (-0.9, 0.0, 0.0),
+            "tail_2": (-0.4 + 0.15 * math.sin(ph), 0.0, 0.0),
+            "tail_3": (-0.2, 0.0, 0.0),
+        }, {"body": (0.0, 0.018 * abs(math.sin(ph)), 0.0)})
 
     # Parpadeo: solo los ojos.
     m.action("blink", 4)

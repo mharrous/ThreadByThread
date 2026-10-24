@@ -212,7 +212,7 @@ func _run_cat(shop: Shop, player: Player) -> void:
 	close.make_current()
 	await get_tree().create_timer(0.3).timeout
 	cat._set_animating(true)
-	for pose in [&"stand", &"walk", &"trot", &"sit", &"groom", &"sleep", &"pet"]:
+	for pose in [&"stand", &"walk", &"trot", &"sit", &"groom", &"sleep", &"pet", &"lie", &"roll", &"knead", &"gallop", &"stretch"]:
 		cat._set_pose(pose)
 		await get_tree().create_timer(0.9).timeout
 		await _shot("gato_%s" % pose)
