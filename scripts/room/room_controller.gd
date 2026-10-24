@@ -379,6 +379,7 @@ func _complete_section(s: ShopSection) -> void:
 	Events.section_completed.emit(s)
 	await get_tree().create_timer(0.7, false).timeout
 	s.show_completed(true)
+	shell.unlock_decor(s.section_id, true)
 	Events.decor_unlocked.emit(self, s.section_id)
 
 
@@ -665,6 +666,7 @@ func apply_state(state: Dictionary) -> bool:
 	for s in sections:
 		if done.has(String(s.section_id)) or (s.total_items > 0 and s.placed_items == s.total_items):
 			s.show_completed(false)
+			shell.unlock_decor(s.section_id, false)
 		_emit_section_progress(s)
 	is_completed = bool(state.get("completed", false)) or placed_items == total_items
 	for id in state.get("treasures", []):

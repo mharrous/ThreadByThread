@@ -630,6 +630,24 @@ func set_display_slot(i: int, color: Color, text: String) -> void:
 	_display_plates[i * 2 + 1].text = text
 
 
+const DECOR_LAYER_META := &"decor_layer"
+
+
+## Caja de colisión de una decoración oculta: sin capa hasta que la decoración aparece.
+func add_decor_body(node: Node3D, size: Vector3, pos: Vector3, layers: int = 1) -> void:
+	var body := StaticBody3D.new()
+	body.collision_layer = 0
+	body.collision_mask = 0
+	body.set_meta(DECOR_LAYER_META, layers)
+	body.position = pos
+	var cs := CollisionShape3D.new()
+	var bs := BoxShape3D.new()
+	bs.size = size
+	cs.shape = bs
+	body.add_child(cs)
+	node.add_child(body)
+
+
 ## Registra una decoración oculta hasta que se desbloquee (`unlock_decor`).
 func add_decor(id: StringName, node: Node3D) -> void:
 	node.visible = false
@@ -648,6 +666,10 @@ func unlock_decor(id: StringName, animate: bool = true) -> void:
 	if node == null or node.visible:
 		return
 	node.visible = true
+	# Su colisión solo existe desde que se ve (ver add_decor_body).
+	for body in node.find_children("*", "StaticBody3D", true, false):
+		if body.has_meta(DECOR_LAYER_META):
+			body.collision_layer = body.get_meta(DECOR_LAYER_META)
 	if animate:
 		node.scale = Vector3.ONE * 0.01
 		var tw := create_tween()

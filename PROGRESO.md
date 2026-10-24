@@ -255,6 +255,8 @@ La prueba con las cantidades completas encontró un fallo real que la de 1 objet
 
 - Flecha de orientación (`scripts/ui/target_pointer.gd`): con un objeto en la mano, si su estantería no está en pantalla (o queda a la espalda), una flecha del color de la sección sale en el borde tras 1,2 s y se apaga al mirarla. Prueba automática en la prueba de humo. Sin verificar a ojo: tamaño y color pueden necesitar ajuste.
 
+- Premios de sección (Blender, `art/blender/make_props.py`): al completar cada sección aparece, con un rebote, un objeto nuevo en la tienda. Lanas: un gato canela dormido en su cesta, junto a la ventana oeste. Botones y carretes: una radio de madera con el dial encendido, en la mesa de corte. Telas y cintas: un jarrón con margaritas y lavanda, en la misma mesa. Sastrería: un juego de té en el alféizar de la ventana sur. Se guardan con la sección y tienen colisión solo desde que aparecen. Capturas en `tests/screenshot_runner.gd --filled` (vistas `premio_*`).
+
 ## Problemas conocidos
 
 - Lanzar a la estantería: si el objeto se queda dentro de la estantería de su tipo, entra solo en el hueco libre más cercano ("¡Canasta!", cuenta para la racha). En la de otro tipo, o con la fila llena, sigue quedando suelto sobre la balda.

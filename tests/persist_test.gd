@@ -121,10 +121,10 @@ func _read() -> void:
 	var items := room.get_items()
 	_check(room.placed_items == int(expect["placed"]), "tras reiniciar hay %d objetos colocados (%d)" % [int(expect["placed"]), room.placed_items])
 	var done := room.section_by_id(StringName(expect["section"]))
-	_check(done != null and done.is_completed and done.is_bunting_visible(), "la sección completada conserva su premio")
+	_check(done != null and done.is_completed and done.is_bunting_visible() and room.shell.is_decor_unlocked(done.section_id), "la sección completada conserva su guirnalda y su premio")
 	for s in room.sections:
 		if s != done:
-			_check(not s.is_completed and not s.is_bunting_visible(), "la sección %s sigue sin completar" % s.display_name)
+			_check(not s.is_completed and not s.is_bunting_visible() and not room.shell.is_decor_unlocked(s.section_id), "la sección %s sigue sin completar (ni premio)" % s.display_name)
 	for s: Dictionary in expect["slots"]:
 		var it := items[int(s["i"])]
 		var unit_i := room.get_units().find(it.container) if it.container != null else -1

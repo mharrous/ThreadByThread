@@ -9,6 +9,11 @@ Modelos:
   sewing_machine   máquina de coser antigua, negra con filetes dorados (origen = base)
   cash_register    caja registradora de latón (origen = base)
   shop_door        puerta de entrada con cristal, placa y tirador (origen = suelo, cara hacia +Z)
+  Premios de sección (aparecen al completarla; origen = base, frente hacia +Z):
+  cat_basket       gato canela dormido, enroscado en una cesta de mimbre (lanas)
+  radio            radio de válvulas de madera con dial iluminado (botones y carretes)
+  flower_vase      jarrón de cerámica con margaritas y lavanda (telas y cintas)
+  tea_set          tetera esmaltada con dos tazas (sastrería)
 Se modela en ejes de Godot (Y arriba, Z hacia delante). Los materiales viajan en el GLB.
 """
 import math
@@ -180,6 +185,133 @@ def make_shop_door():
     m.export(center_y=False)
 
 
+# ---------------------------------------------------------------- premio: gato en su cesta
+def make_cat_basket():
+    reset_scene()
+    m = Model("cat_basket", 106)
+    m.add_material("wicker", (0.72, 0.53, 0.30), 0.85)                   # 0 mimbre
+    m.add_material("cushion", (0.66, 0.25, 0.27), 0.9)                   # 1 cojín granate
+    m.add_material("fur", (0.86, 0.55, 0.26), 0.95)                      # 2 pelo canela
+    m.add_material("stripe", (0.62, 0.34, 0.14), 0.95)                   # 3 rayas oscuras
+    m.add_material("pink", (0.93, 0.62, 0.62), 0.7)                      # 4 nariz y orejas
+    m.add_material("dark", (0.12, 0.08, 0.06), 0.6)                      # 5 ojos cerrados
+    # Cesta baja con anillos trenzados, borde grueso y cojín.
+    m.lathe([(0.0, 0.0), (0.2, 0.0), (0.24, 0.03), (0.265, 0.12), (0.27, 0.14), (0.25, 0.14),
+             (0.245, 0.125), (0.22, 0.035), (0.0, 0.03)], 36, mat=0)
+    for k in range(3):
+        m.torus((0, 0.045 + k * 0.035, 0), 0.245 + k * 0.008, 0.011, major_seg=36, minor_seg=6, mat=0)
+    m.torus((0, 0.145, 0), 0.262, 0.016, major_seg=36, minor_seg=7, mat=0)
+    m.cylinder((0, 0.06, 0), 0.215, 0.05, mat=1, round_edge=0.022, segments=32)
+    # Cuerpo enroscado: un anillo grueso aplastado; rayas como aros finos alrededor del lomo.
+    m.torus((0, 0.12, 0), 0.1, 0.07, major_seg=28, minor_seg=12, mat=2, scale=(1.0, 0.75, 0.9))
+    m.sphere((0, 0.135, 0), 0.08, scale=(1.0, 0.6, 1.0), mat=2)
+    for k in range(4):
+        a = 2.2 + k * 0.6
+        c = (math.cos(a) * 0.1, 0.12, math.sin(a) * 0.09)
+        m.torus(c, 0.066, 0.007, axis="x", major_seg=16, minor_seg=4, mat=3,
+                rotate=("Y", -(math.degrees(a) + 90.0), c), scale=(1.0, 0.8, 1.0))
+    # Cabeza apoyada delante, ojos cerrados, orejas y hocico.
+    head = (0.07, 0.17, 0.11)
+    m.sphere(head, 0.065, scale=(1.05, 0.85, 0.95), mat=2)
+    m.sphere((head[0] + 0.015, head[1] - 0.012, head[2] + 0.05), 0.03, scale=(1.1, 0.75, 0.8), mat=2)
+    m.sphere((head[0] + 0.015, head[1] - 0.004, head[2] + 0.077), 0.007, mat=4)
+    for sx in (-1, 1):
+        ex = head[0] + sx * 0.03
+        m.lathe([(0.0, 0.0), (0.024, 0.0), (0.0, 0.045)], 4, center=(ex, head[1] + 0.04, head[2] - 0.01), mat=2)
+        m.lathe([(0.0, 0.0), (0.014, 0.0), (0.0, 0.03)], 4, center=(ex, head[1] + 0.043, head[2] - 0.002), mat=4)
+        m.box((ex + 0.006, head[1] + 0.008, head[2] + 0.058), (0.018, 0.003, 0.003), bevel=0.0, mat=5)
+    # Cola que rodea el cuerpo por delante y patitas bajo la cabeza.
+    tail = []
+    for k in range(9):
+        a = -0.3 + k * 0.32
+        tail.append((math.cos(a) * 0.17, 0.09 + 0.01 * math.sin(k), math.sin(a) * 0.15))
+    m.tube(tail, 0.022, 8, mat=3, taper=0.5)
+    for sx in (-1, 1):
+        m.sphere((head[0] + sx * 0.035, 0.105, head[2] + 0.07), 0.022, scale=(1.0, 0.7, 1.4), mat=2)
+    m.export(center_y=False)
+
+
+# ---------------------------------------------------------------- premio: radio
+def make_radio():
+    reset_scene()
+    m = Model("radio", 107)
+    m.add_material("walnut", (0.38, 0.21, 0.11), 0.4)                    # 0 madera barnizada
+    m.add_material("cloth", (0.82, 0.72, 0.52), 0.95)                    # 1 rejilla de tela
+    m.add_material("brass", BRASS, 0.3, metallic=1.0)                    # 2
+    emissive(m, "dial", (1.0, 0.78, 0.45), 2.5)                          # 3 dial encendido
+    m.add_material("bakelite", (0.12, 0.08, 0.05), 0.35)                 # 4 mandos
+    W, H, D = 0.3, 0.2, 0.15
+    # Caja con la parte de arriba en arco, sobre un zócalo.
+    m.box((0, H * 0.35, 0), (W, H * 0.7, D), grain="x", bevel=0.012, segments=3, mat=0)
+    m.cylinder((0, H * 0.7, 0), W * 0.5, D, axis="z", mat=0, round_edge=0.012, segments=36, scale=(1.0, 0.55, 1.0))
+    m.box((0, 0.012, 0), (W + 0.02, 0.024, D + 0.015), grain="x", bevel=0.006, segments=2, mat=0)
+    # Rejilla del altavoz, con listones de madera delante.
+    m.cylinder((0, H * 0.62, D * 0.5 + 0.001), W * 0.36, 0.004, axis="z", mat=1, segments=32, scale=(1.0, 0.8, 1.0))
+    for k in range(-2, 3):
+        m.box((k * 0.035, H * 0.62, D * 0.5 + 0.006), (0.008, 0.13 - abs(k) * 0.018, 0.006), bevel=0.002, segments=1, mat=0)
+    # Dial iluminado con marco de latón y dos mandos.
+    m.box((0, 0.06, D * 0.5 + 0.004), (0.13, 0.035, 0.004), bevel=0.0, mat=3)
+    m.box((0, 0.06, D * 0.5 + 0.002), (0.145, 0.047, 0.003), bevel=0.0, mat=2)
+    for sx in (-1, 1):
+        m.cylinder((sx * 0.11, 0.055, D * 0.5 + 0.012), 0.018, 0.022, axis="z", mat=4, round_edge=0.005, segments=18)
+        m.cylinder((sx * 0.11, 0.055, D * 0.5 + 0.024), 0.006, 0.004, axis="z", mat=2, segments=10)
+    m.export(center_y=False)
+
+
+# ---------------------------------------------------------------- premio: jarrón con flores
+def make_flower_vase():
+    import random
+    reset_scene()
+    m = Model("flower_vase", 108)
+    m.add_material("ceramic", (0.33, 0.55, 0.62), 0.25)                  # 0 cerámica azul
+    m.add_material("stem", (0.33, 0.52, 0.25), 0.8)                      # 1 tallos
+    m.add_material("petal", (0.98, 0.97, 0.92), 0.7)                     # 2 margarita
+    m.add_material("heart", (0.95, 0.74, 0.20), 0.6)                     # 3 centro amarillo
+    m.add_material("lavender", (0.62, 0.50, 0.80), 0.8)                  # 4
+    m.lathe([(0.0, 0.0), (0.045, 0.0), (0.065, 0.04), (0.07, 0.09), (0.05, 0.15), (0.032, 0.18),
+             (0.04, 0.2), (0.036, 0.2), (0.026, 0.18), (0.0, 0.17)], 28, mat=0)
+    rng = random.Random(9)
+    for k in range(7):
+        a = k * 2.4
+        lean = 0.05 + rng.random() * 0.05
+        top = (math.cos(a) * lean, 0.34 + rng.random() * 0.08, math.sin(a) * lean)
+        m.tube([(0, 0.15, 0), (top[0] * 0.5, 0.25, top[2] * 0.5), top], 0.0035, 5, mat=1, cap=True)
+        if k % 3 == 2:
+            for j in range(5):
+                m.sphere((top[0], top[1] + j * 0.012, top[2]), 0.008, scale=(1.0, 1.3, 1.0), segments=6, rings=4, mat=4)
+            continue
+        m.sphere(top, 0.011, scale=(1.0, 0.5, 1.0), segments=10, rings=6, mat=3)
+        for j in range(8):
+            b = j * math.tau / 8
+            p = (top[0] + math.cos(b) * 0.02, top[1] - 0.002, top[2] + math.sin(b) * 0.02)
+            m.sphere(p, 0.011, scale=(1.0, 0.25, 0.45), segments=8, rings=4, mat=2, rotate=("Y", -math.degrees(b), p))
+    m.export(center_y=False)
+
+
+# ---------------------------------------------------------------- premio: juego de té
+def make_tea_set():
+    reset_scene()
+    m = Model("tea_set", 109)
+    m.add_material("enamel", (0.90, 0.36, 0.30), 0.3)                    # 0 rojo esmaltado
+    m.add_material("china", (0.97, 0.95, 0.90), 0.25)                    # 1 porcelana
+    m.add_material("tea", (0.45, 0.22, 0.08), 0.1)                       # 2
+    # Tetera: cuerpo, tapa con pomo, pitorro y asa.
+    m.lathe([(0.0, 0.0), (0.05, 0.0), (0.075, 0.03), (0.08, 0.07), (0.068, 0.11), (0.04, 0.125), (0.0, 0.126)], 28, mat=0)
+    m.lathe([(0.0, 0.135), (0.042, 0.125), (0.04, 0.122), (0.0, 0.122)], 24, mat=0)
+    m.sphere((0, 0.145, 0), 0.013, mat=1)
+    m.tube([(0.07, 0.06, 0), (0.1, 0.09, 0), (0.12, 0.125, 0)], 0.012, 8, mat=0, taper=0.4)
+    m.tube([(-0.065, 0.1, 0), (-0.11, 0.1, 0), (-0.115, 0.06, 0), (-0.07, 0.035, 0)], 0.008, 6, mat=0)
+    # Dos tazas con plato delante.
+    for cx, cz in ((-0.05, 0.13), (0.09, 0.12)):
+        m.cylinder((cx, 0.004, cz), 0.045, 0.008, mat=1, round_edge=0.003, segments=24)
+        m.lathe([(0.0, 0.008), (0.022, 0.008), (0.032, 0.03), (0.034, 0.05), (0.031, 0.05),
+                 (0.029, 0.032), (0.0, 0.03)], 22, center=(cx, 0, cz), mat=1)
+        m.cylinder((cx, 0.042, cz), 0.03, 0.003, mat=2, segments=20)
+        m.torus((cx + 0.036, 0.03, cz), 0.012, 0.003, axis="z", major_seg=12, minor_seg=4, mat=1)
+    m.export(center_y=False)
+
+
 if __name__ == "__main__":
-    for fn in (make_pendant_lamp, make_dress_form, make_sewing_machine, make_cash_register, make_shop_door):
+    for fn in (make_pendant_lamp, make_dress_form, make_sewing_machine, make_cash_register, make_shop_door,
+               make_cat_basket, make_radio, make_flower_vase, make_tea_set):
         fn()

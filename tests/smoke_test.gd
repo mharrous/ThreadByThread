@@ -583,6 +583,8 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 		_check(_completed_sections.has(section) and section.is_completed, "sección %s completada" % section.display_name)
 		await _wait_until(func(): return section.is_bunting_visible(), 3.0)
 		_check(section.is_bunting_visible(), "la guirnalda de la sección %s aparece" % section.display_name)
+		await _wait_until(func(): return room.shell.is_decor_unlocked(section.section_id), 3.0)
+		_check(room.shell.is_decor_unlocked(section.section_id), "aparece el premio de la sección %s" % section.display_name)
 	_check(failed_items == 0, "los %d objetos ordenados a mano se recogieron y colocaron" % (done - _skipped(room, max_sections)))
 	_check(_placed_events - placed_before == total, "%d eventos item_placed" % total)
 	var expected_collections := types - room.sections.size()

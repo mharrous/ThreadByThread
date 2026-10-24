@@ -54,6 +54,35 @@ func _build_furniture() -> void:
 	_scatter_scraps(110)
 
 
+## Premios de sección (Blender): ocultos hasta completar la sección, que los desbloquea con su id.
+## Gato dormido junto a la ventana (lanas), radio y jarrón en la mesa de corte (botones, telas) y
+## juego de té en el alféizar de la ventana sur (sastrería).
+const REWARDS := [
+	[&"yarn", "res://art/models/cat_basket.glb", Vector3(-5.45, 0.0, -1.25), PI * 0.5, Vector3(0.56, 0.26, 0.56)],
+	[&"buttons", "res://art/models/radio.glb", Vector3(-2.55, 0.76, 1.6), PI, Vector3(0.32, 0.22, 0.17)],
+	[&"fabrics", "res://art/models/flower_vase.glb", Vector3(-3.5, 0.76, 1.58), 0.0, Vector3(0.14, 0.4, 0.14)],
+	[&"store", "res://art/models/tea_set.glb", Vector3(2.4, 0.94, 4.43), PI, Vector3(0.26, 0.15, 0.28)],
+]
+
+
+func _build_decor() -> void:
+	super()
+	for r: Array in REWARDS:
+		if not ResourceLoader.exists(r[1]):
+			push_warning("Falta el modelo %s (ejecuta art/blender/make_props.py)" % r[1])
+			continue
+		var root := Node3D.new()
+		root.name = "Reward_" + String(r[0])
+		root.position = r[2]
+		root.rotation.y = r[3]
+		root.add_child((load(r[1]) as PackedScene).instantiate())
+		add_decor_body(root, r[4], Vector3(0.0, r[4].y * 0.5, 0.0))
+		add_decor(r[0], root)
+		# Que no caigan objetos donde aparecerá el premio del suelo.
+		if r[2].y < 0.1:
+			blocked_rects.append(Rect2(r[2].x - r[4].x * 0.5, r[2].z - r[4].z * 0.5, r[4].x, r[4].z))
+
+
 ## Atrezo de Blender con su caja de colisión (para que los objetos no lo atraviesen al caer o dejarlos).
 func _add_prop(path: String, base: Vector3, yaw: float, box: Vector3) -> void:
 	_instance_model(path, base, yaw)

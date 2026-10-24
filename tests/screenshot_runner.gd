@@ -14,6 +14,12 @@ const POSES := [
 	{"name": "suelo", "pos": Vector3(2.0, 0, 2.6), "look": Vector3(-1.5, 0.0, 0.0)},
 	{"name": "esquina", "pos": Vector3(4.6, 0, 2.6), "look": Vector3(-5.5, 0.6, -3.5)},
 ]
+## Premios de sección (solo con --filled, cuando ya han aparecido).
+const REWARD_POSES := [
+	{"name": "premio_gato", "pos": Vector3(-4.2, 0, -0.5), "look": Vector3(-5.45, 0.1, -1.25)},
+	{"name": "premio_mesa_corte", "pos": Vector3(-3.0, 0, 0.5), "look": Vector3(-3.0, 0.8, 1.6)},
+	{"name": "premio_te", "pos": Vector3(2.0, 0, 3.0), "look": Vector3(2.4, 0.95, 4.43)},
+]
 
 var _out_dir := ""
 var _filled := false
@@ -195,9 +201,13 @@ func _run() -> void:
 		return
 	var tag := "lleno" if _filled else "caos"
 	var room := shop.room
+	var poses: Array = POSES.duplicate()
 	if _filled:
 		_fill_room(room)
-	for pose: Dictionary in POSES:
+		for s in room.sections:
+			room.shell.unlock_decor(s.section_id, false)
+		poses.append_array(REWARD_POSES)
+	for pose: Dictionary in poses:
 		await _look_from(player, room, pose["pos"], pose["look"])
 		await _shot("%s_%s" % [pose["name"], tag])
 	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
