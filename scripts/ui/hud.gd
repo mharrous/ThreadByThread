@@ -46,6 +46,7 @@ class Crosshair extends Control:
 
 var _root: Control
 var _crosshair: Crosshair
+var _pointer: TargetPointer
 var _prompt_box: VBoxContainer
 var _prompt_action: Label
 var _prompt_title: Label
@@ -101,6 +102,10 @@ func _build() -> void:
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
+
+	# Flecha hacia la estantería del objeto en la mano cuando no está a la vista
+	_pointer = TargetPointer.new()
+	_root.add_child(_pointer)
 
 	# Punto de mira
 	_crosshair = Crosshair.new()

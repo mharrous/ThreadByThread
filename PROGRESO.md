@@ -242,7 +242,7 @@ La prueba con las cantidades completas encontró un fallo real que la de 1 objet
 
 - **Nada de audio se ha escuchado.** Volumen, tono y frecuencia de bocinas, timbres, ladridos, motores y del resto de sonidos son una primera versión. Prueba: abre el juego, ve a la ventana oeste y espera un par de minutos.
 - **Duración de la demo**: no medida. 450 objetos en una sola sala probablemente pasan de 25 min. Si sobra tiempo, se baja `spawn_count` por tipo (solo datos).
-- Si encontrar la sección de cada objeto cuesta: hoy hay carteles, un pulso de luz en la fila destino y el texto del HUD. No hay flecha ni minimapa.
+- Si encontrar la sección de cada objeto cuesta: hoy hay carteles, un pulso de luz en la fila destino y el texto del HUD. Desde 2026-10-24 hay una flecha en el borde de la pantalla cuando la estantería no está a la vista; no hay minimapa.
 - El *feel* del lanzamiento, de la sensibilidad y de la distancia de la mano solo se valida a mano.
 - Si la calle te parece demasiado tranquila o demasiado animada: `StreetLife.min_gap` / `max_gap` (hoy 14 y 40 s) en `scripts/room/street_life.gd`.
 - Estética de personas, coches y árboles: es estilo "low-poly" cálido hecho con Blender; si quieres más realismo hay que decidir cuánto presupuesto de arte dedicarle.
@@ -252,6 +252,8 @@ La prueba con las cantidades completas encontró un fallo real que la de 1 objet
 - `build/ThreadByThread.exe`, versión 0.4.0: icono propio (`icon.ico`, generado desde `icon.svg` con `tools/make_icon.gd`), nombre, descripción y copyright en las propiedades del archivo. Sin ventana de consola. El icono también sale en la barra de título (`config/windows_native_icon`).
 - `export_presets.cfg` está en `.gitignore`: los cambios del preset (icono, versión, `modify_resources`) solo viven en este equipo.
 - Precarga de shaders: bajo el velo negro de la pantalla de título la cámara da una vuelta completa en 16 frames, así lo que aún no se ha visto se compila antes de jugar. Godot además guarda la caché en disco, así que el tirón de 49 ms solo podía darse en la primera partida. No se puede medir de forma fiable en este equipo (la caché ya está caliente).
+
+- Flecha de orientación (`scripts/ui/target_pointer.gd`): con un objeto en la mano, si su estantería no está en pantalla (o queda a la espalda), una flecha del color de la sección sale en el borde tras 1,2 s y se apaga al mirarla. Prueba automática en la prueba de humo. Sin verificar a ojo: tamaño y color pueden necesitar ajuste.
 
 ## Problemas conocidos
 

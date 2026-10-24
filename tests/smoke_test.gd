@@ -379,6 +379,34 @@ func _test_basket(room: RoomController, items: Array) -> void:
 	other.global_position = room.to_global(Vector3(-1.0, other.half_height, 3.3))
 
 
+## Con un objeto en la mano y su estantería a la espalda sale la flecha del borde; mirándola, se apaga.
+func _test_pointer(room: RoomController, items: Array) -> void:
+	print("-- Flecha hacia la estantería")
+	var hud := main.get_node("HUD")
+	var it: PickableItem = null
+	for c: PickableItem in items:
+		if c.state == PickableItem.State.LOOSE and not room.find_row(c.data.sort_key).is_empty():
+			it = c
+			break
+	var home := it.global_transform if it != null else Transform3D()
+	if it == null or not await _pick(room, it):
+		_check(false, "coger un objeto para la flecha")
+		return
+	var found := room.find_row(it.data.sort_key)
+	var unit: StorageUnit = found["unit"]
+	var shelf := unit.slot_world_position(found["row"], 0, it)
+	var eye := player.global_position
+	player.look_at_point(eye + (eye - shelf) * Vector3(1, 0, 1))
+	await get_tree().create_timer(TargetPointer.DELAY + 0.8).timeout
+	_check(hud._pointer._alpha > 0.5, "con la estantería a la espalda sale la flecha (%.2f)" % hud._pointer._alpha)
+	player.look_at_point(shelf)
+	await get_tree().create_timer(0.6).timeout
+	_check(hud._pointer._alpha < 0.05, "mirando a la estantería la flecha se apaga (%.2f)" % hud._pointer._alpha)
+	holder.release_held()
+	it.global_transform = home
+	await _frames(5)
+
+
 ## En un montón (telas dobladas apiladas) solo se puede coger la de arriba: si se apunta a la de abajo,
 ## el juego coge la de arriba y las demás no quedan flotando.
 func _test_stacks(room: RoomController) -> void:
@@ -515,6 +543,7 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 
 	await _test_wall_throws(room, items)
 	await _test_basket(room, items)
+	await _test_pointer(room, items)
 
 	var failed_items := 0
 	var done := 0
