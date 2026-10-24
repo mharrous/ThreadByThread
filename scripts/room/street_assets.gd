@@ -30,6 +30,18 @@ static func model(model_name: String) -> Node3D:
 	return scene.instantiate() as Node3D
 
 
+## Un nodo que sigue a un hueso del esqueleto del modelo (la mano de un peatón, la pata de un perro...).
+static func bone_node(model: Node, bone_name: String) -> Node3D:
+	var skeletons := model.find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty():
+		return null
+	var ba := BoneAttachment3D.new()
+	ba.name = bone_name
+	ba.bone_name = bone_name
+	skeletons[0].add_child(ba)
+	return ba
+
+
 ## Aplica materiales por nombre de superficie a todas las mallas de un modelo; el resto usa
 ## los materiales compartidos de la calle. Desactiva las sombras (la calle no tapa el sol de la sala).
 static func skin(node: Node, overrides: Dictionary = {}) -> void:

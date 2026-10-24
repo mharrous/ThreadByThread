@@ -16,8 +16,12 @@ var gait: Gait = Gait.NONE
 var arms: Array[Node3D] = []
 var legs: Array[Node3D] = []
 var cranks: Array[Node3D] = []
-## Las cuatro patas de un perro que acompaña a la persona (orden: delante izq/der, detrás izq/der).
+## Las cuatro patas del perro que acompaña a la persona (orden: delante izq/der, detrás izq/der):
+## nodos pegados a los huesos de su esqueleto, que se mueven con su animación.
 var dog_legs: Array[Node3D] = []
+## Esqueletos animados (peatones y perro de Blender): {player: AnimationPlayer, anim, natural (m/s)}.
+## Cada ciclo se acelera o frena con la marcha: a la velocidad `natural` va a su ritmo.
+var rigs: Array[Dictionary] = []
 var bob_target: Node3D
 var bob_base_y := 0.0
 var bob_amount := 0.0
@@ -35,6 +39,20 @@ var _last_z := 0.0
 func _ready() -> void:
 	_phase = randf() * TAU
 	_last_z = position.z
+	for r in rigs:
+		var player: AnimationPlayer = r["player"]
+		player.get_animation(r["anim"]).loop_mode = Animation.LOOP_LINEAR
+		player.play(r["anim"])
+		player.seek(randf() * player.current_animation_length, true)
+
+
+## Anima el esqueleto de un modelo con su ciclo `anim_name` (se reproduce al entrar en escena).
+func add_rig(model: Node, anim_name: StringName, natural_speed: float) -> void:
+	var player := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if player == null or not player.has_animation(anim_name):
+		push_warning("StreetActor: el modelo %s no tiene la animación %s" % [model.name, anim_name])
+		return
+	rigs.append({"player": player, "anim": anim_name, "natural": natural_speed})
 
 
 func _process(delta: float) -> void:
@@ -44,6 +62,8 @@ func _process(delta: float) -> void:
 		w.rotation.x += speed / wheel_radius * delta
 	_phase += speed * limb_rate * delta
 	_animate()
+	for r in rigs:
+		(r["player"] as AnimationPlayer).speed_scale = speed / float(r["natural"])
 	if engine != null:
 		engine.pitch_scale = engine_pitch * (0.92 + minf(speed, 16.0) * 0.012)
 	_run_scheduled()
@@ -78,13 +98,6 @@ func _animate() -> void:
 			legs[1].rotation.x = -0.95 - s * 0.45
 			for c in cranks:
 				c.rotation.x = _phase * 1.2
-	if dog_legs.size() == 4:
-		# Trote del perro: patas en diagonal, más rápido que el paso de la persona.
-		var d := sin(_phase * 1.9)
-		dog_legs[0].rotation.x = d * 0.6
-		dog_legs[3].rotation.x = d * 0.6
-		dog_legs[1].rotation.x = -d * 0.6
-		dog_legs[2].rotation.x = -d * 0.6
 
 
 func _run_scheduled() -> void:

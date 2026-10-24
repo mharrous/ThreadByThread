@@ -3,18 +3,19 @@
 Uso:
   blender --background --factory-startup --python art/blender/make_street.py -- art/models/street
 
-Vehículos (miran a +Z, origen en el suelo, ruedas aparte para poder girarlas), personas y
-perros (por piezas, para animar el paso), casas, farolas, árboles y seto.
+Vehículos (miran a +Z, origen en el suelo, ruedas aparte para poder girarlas), ciclistas y
+motoristas (por piezas, para animar el pedaleo), los dos peatones y el perro (con esqueleto y
+animación, al estilo de la clienta), casas, farolas, árboles y seto.
 Las superficies se llaman "paint", "glass", "trim", "tire", "chrome", "light_front",
-"light_rear", "wall", "roof", "door", "skin", "hair", "shirt", "pants", "shoes", "fur"...:
-scripts/room/street_actors.gd les pone el material y el color de cada ejemplar.
+"light_rear", "wall", "roof", "door", "skin", "hair", "shirt", "pants", "shoes", "clothes",
+"fur"...: scripts/room/street_assets.gd y street_life.gd les ponen el material y el color de cada ejemplar.
 """
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import Model, OUT_DIR, reset_scene  # noqa: E402
+from common import Model, OUT_DIR, Rig, reset_scene  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -177,26 +178,288 @@ def make_helmet():
     m.export(center_y=False)
 
 
-# ------------------------------------------------------------------ perro
-def make_dog():
-    m = new("dog_body", 41)
-    mat(m, "fur", (0.7, 0.5, 0.3), 0.9)
-    mat(m, "skin", (0.12, 0.08, 0.07), 0.5)
-    m.sphere((0, 0.0, 0), 0.17, scale=(0.9, 0.95, 1.55), segments=14, rings=10, mat=0)         # cuerpo
-    m.sphere((0, 0.04, 0.17), 0.15, scale=(0.9, 1.0, 1.0), segments=12, rings=8, mat=0)        # pecho
-    m.sphere((0, 0.17, 0.33), 0.1, scale=(0.9, 1.0, 1.0), segments=12, rings=8, mat=0)         # cabeza
-    m.box((0, 0.145, 0.43), (0.075, 0.065, 0.12), bevel=0.02, segments=2, mat=0)               # hocico
-    m.sphere((0, 0.16, 0.49), 0.022, segments=6, rings=4, mat=1)                               # nariz
-    for sx in (-1, 1):
-        m.box((sx * 0.075, 0.22, 0.31), (0.035, 0.1, 0.07), bevel=0.01, segments=1, mat=0, rotate=("Z", sx * 18.0, (sx * 0.075, 0.22, 0.31)))  # orejas
-    m.tube([(0, 0.08, -0.25), (0, 0.17, -0.34), (0.0, 0.26, -0.37)], 0.022, 6, mat=0, taper=0.4)  # cola
-    m.export(center_y=False)
+# ------------------------------------------------------------------ peatones y perro
+# Al estilo de la clienta (make_customer.py): una malla con esqueleto sencillo (cada pieza pesada
+# entera a su hueso) y animaciones de common.Rig a 12 fps. Origen = suelo, miran hacia +Z.
+# Huesos de las personas: los de la clienta más hand_l / hand_r (el centro de la mano, donde
+# street_life.gd engancha la correa). Superficies: skin, hair, clothes, pants, details, accent.
+# El perro: body, head (su cabeza está en el collar), tail y leg_fl / leg_fr / leg_bl / leg_br.
+# Superficies: fur, fur_light, details, collar. El juego cambia el tono de "skin" y de "fur".
 
-    m = new("dog_leg", 42)
-    mat(m, "fur", (0.7, 0.5, 0.3), 0.9)
-    m.cylinder((0, -0.12, 0), 0.032, 0.24, mat=0, segments=8)
-    m.sphere((0, -0.25, 0.012), 0.036, scale=(1, 0.7, 1.3), segments=8, rings=6, mat=0)
-    m.export(center_y=False)
+SKIN, HAIR, CLOTHES, PANTS, DETAILS, ACCENT = range(6)
+
+
+def person_bones(hip_y, neck_y, head_top, shoulder_x, elbow_y, wrist_y, hand_y, leg_x):
+    return [
+        ("hips", (0.0, hip_y, 0.0), (0.0, hip_y + 0.12, 0.0), None),
+        ("spine", (0.0, hip_y + 0.12, 0.0), (0.0, neck_y, 0.0), "hips"),
+        ("head", (0.0, neck_y + 0.04, 0.0), (0.0, head_top, 0.0), "spine"),
+        ("upper_arm_l", (shoulder_x, neck_y - 0.065, 0.0), (shoulder_x + 0.025, elbow_y, 0.01), "spine"),
+        ("forearm_l", (shoulder_x + 0.025, elbow_y, 0.01), (shoulder_x + 0.035, wrist_y, 0.04), "upper_arm_l"),
+        ("hand_l", (shoulder_x + 0.037, hand_y, 0.045), (shoulder_x + 0.04, hand_y - 0.06, 0.05), "forearm_l"),
+        ("upper_arm_r", (-shoulder_x, neck_y - 0.065, 0.0), (-shoulder_x - 0.025, elbow_y, 0.01), "spine"),
+        ("forearm_r", (-shoulder_x - 0.025, elbow_y, 0.01), (-shoulder_x - 0.035, wrist_y, 0.04), "upper_arm_r"),
+        ("hand_r", (-shoulder_x - 0.037, hand_y, 0.045), (-shoulder_x - 0.04, hand_y - 0.06, 0.05), "forearm_r"),
+        ("thigh_l", (leg_x, hip_y, 0.0), (leg_x, (hip_y + 0.07) * 0.5 + 0.02, 0.0), "hips"),
+        ("shin_l", (leg_x, (hip_y + 0.07) * 0.5 + 0.02, 0.0), (leg_x, 0.07, 0.0), "thigh_l"),
+        ("thigh_r", (-leg_x, hip_y, 0.0), (-leg_x, (hip_y + 0.07) * 0.5 + 0.02, 0.0), "hips"),
+        ("shin_r", (-leg_x, (hip_y + 0.07) * 0.5 + 0.02, 0.0), (-leg_x, 0.07, 0.0), "thigh_r"),
+    ]
+
+
+def bone(bones, name):
+    return next(b for b in bones if b[0] == name)
+
+
+def lerp3(a, b, t):
+    return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+
+
+def person_face(m, cy, r, nose_r=0.022):
+    """Cara como la de la clienta: nariz, orejas, ojos y sonrisa. cy = centro de la cabeza."""
+    zf = r * 0.92
+    m.sphere((0.0, cy - 0.015, r + 0.008), nose_r, scale=(0.9, 1.0, 0.8), segments=8, rings=5, mat=SKIN)
+    for s in (-1, 1):
+        m.sphere((s * r, cy - 0.005, 0.0), 0.024, scale=(0.5, 1.0, 0.8), segments=8, rings=5, mat=SKIN)
+        m.sphere((s * 0.041, cy + 0.015, zf - 0.004), 0.013, segments=8, rings=5, mat=DETAILS)
+    m.tube([(-0.03, cy - 0.052, zf - 0.012), (-0.015, cy - 0.062, zf - 0.003), (0.0, cy - 0.065, zf - 0.001),
+            (0.015, cy - 0.062, zf - 0.003), (0.03, cy - 0.052, zf - 0.012)], 0.0045, sides=4, mat=DETAILS)
+
+
+def person_arms(m, bones, sleeve_r, cuff_t=0.8):
+    """Mangas hasta la muñeca (pesadas al brazo y al antebrazo) y manos (al hueso de la mano)."""
+    for side in ("l", "r"):
+        up, fo, ha = bone(bones, "upper_arm_" + side), bone(bones, "forearm_" + side), bone(bones, "hand_" + side)
+        m.bone = up[0]
+        m.sphere(up[1], sleeve_r * 1.06, segments=10, rings=6, mat=CLOTHES)
+        m.tube([up[1], up[2]], sleeve_r, sides=8, mat=CLOTHES, cap=False)
+        m.bone = fo[0]
+        m.sphere(fo[1], sleeve_r * 0.96, segments=10, rings=6, mat=CLOTHES)
+        cuff = lerp3(fo[1], fo[2], cuff_t)
+        m.tube([fo[1], cuff], sleeve_r * 0.92, sides=8, mat=CLOTHES)
+        m.tube([cuff, fo[2]], 0.031, sides=8, mat=SKIN, cap=False)
+        m.bone = ha[0]
+        m.sphere(ha[1], 0.042, scale=(0.8, 1.0, 1.0), segments=10, rings=6, mat=SKIN)
+
+
+def person_legs(m, bones, thigh_r, shin_r, shoe=(1.0, 0.85, 1.9)):
+    for side in ("l", "r"):
+        th, sh = bone(bones, "thigh_" + side), bone(bones, "shin_" + side)
+        x = th[1][0]
+        m.bone = th[0]
+        m.tube([th[1], th[2]], thigh_r, sides=8, mat=PANTS, cap=False)
+        m.bone = sh[0]
+        m.sphere(sh[1], thigh_r * 0.9, segments=8, rings=5, mat=PANTS)
+        m.tube([sh[1], (x, 0.085, 0.0)], shin_r, sides=8, mat=PANTS, taper=0.12, cap=False)
+        m.sphere((x, 0.045, 0.035), 0.05, scale=shoe, segments=10, rings=6, mat=DETAILS)
+
+
+def person_walk(m, arm_swing, stride=0.36, lean=0.03, bounce=0.016):
+    """Ciclo de paso de 8 fotogramas (el 8 repite el 0) como el de la clienta, con los dos brazos sueltos."""
+    m.action("walk", 8)
+    for f in range(9):
+        ph = math.tau * (f % 8) / 8.0
+        s, c = math.sin(ph), math.cos(ph)
+        rots = {
+            "thigh_l": (-stride * s, 0.0, 0.0),
+            "thigh_r": (stride * s, 0.0, 0.0),
+            "shin_l": (0.55 * max(0.0, c), 0.0, 0.0),
+            "shin_r": (0.55 * max(0.0, -c), 0.0, 0.0),
+            "hips": (0.0, 0.07 * s, 0.0),
+            "spine": (lean, -0.11 * s, 0.0),
+            "head": (-lean, 0.05 * s, 0.0),
+            "upper_arm_r": (-arm_swing * s, 0.0, 0.0),
+            "forearm_r": (-0.12 - 0.12 * max(0.0, s), 0.0, 0.0),
+            "upper_arm_l": (arm_swing * s, 0.0, 0.0),
+            "forearm_l": (-0.12 - 0.12 * max(0.0, -s), 0.0, 0.0),
+        }
+        m.pose("walk", f, rots, {"hips": (0.0, bounce * abs(c) - bounce * 0.5, 0.0)})
+
+
+def make_walker():
+    """Un chico joven, alto y delgado: parka verde oliva con capucha, bufanda mostaza, pantalón marrón,
+    zapatillas y pelo rizado oscuro. Va con paso largo y braceando."""
+    reset_scene()
+    bones = person_bones(0.94, 1.46, 1.80, 0.20, 1.14, 0.90, 0.855, 0.09)
+    m = Rig("walker", bones, 35)
+    m.add_material("skin", (0.86, 0.58, 0.44), 0.7)
+    m.add_material("hair", (0.16, 0.09, 0.06), 0.85)
+    m.add_material("clothes", (0.36, 0.38, 0.17), 0.9)
+    m.add_material("pants", (0.30, 0.17, 0.10), 0.9)
+    m.add_material("details", (0.20, 0.11, 0.12), 0.6)
+    m.add_material("accent", (0.86, 0.55, 0.12), 0.9)
+
+    # Cadera: pantalón (asoma bajo la parka).
+    m.bone = "hips"
+    m.lathe([(0.0, 1.06), (0.15, 1.06), (0.165, 0.98), (0.162, 0.88), (0.0, 0.86)],
+            segments=12, mat=PANTS, scale=(1.0, 1.0, 0.8))
+
+    # Tronco: parka hasta la cadera con cremallera, bolsillos y capucha caída; bufanda.
+    m.bone = "spine"
+    m.lathe([(0.0, 0.85), (0.19, 0.85), (0.193, 0.91), (0.178, 1.04), (0.184, 1.20), (0.19, 1.33),
+             (0.168, 1.42), (0.105, 1.47), (0.0, 1.48)], segments=14, mat=CLOTHES, scale=(1.0, 1.0, 0.8))
+    m.tube([(0.0, 0.86, 0.156), (0.0, 1.04, 0.146), (0.0, 1.20, 0.151), (0.0, 1.33, 0.156)], 0.006, sides=4, mat=DETAILS)
+    for s in (-1, 1):
+        m.box((s * 0.105, 0.96, 0.145), (0.085, 0.012, 0.03), bevel=0.004, segments=1, mat=DETAILS,
+              rotate=("Y", s * 34.0, (s * 0.105, 0.96, 0.145)))
+    m.sphere((0.0, 1.415, -0.115), 0.085, scale=(1.35, 0.75, 0.6), segments=10, rings=6, mat=CLOTHES)
+    m.cylinder((0.0, 1.50, -0.005), 0.045, 0.1, segments=10, mat=SKIN)
+    m.torus((0.0, 1.465, 0.0), 0.075, 0.032, major_seg=14, minor_seg=6, mat=ACCENT, scale=(1.0, 1.0, 0.92))
+    m.box((0.055, 1.32, 0.168), (0.07, 0.21, 0.024), bevel=0.008, segments=1, mat=ACCENT,
+          rotate=("Z", 6.0, (0.055, 1.32, 0.168)))
+    for y in (1.255, 1.285):
+        m.box((0.048, y, 0.181), (0.072, 0.013, 0.006), bevel=0.002, segments=1, mat=CLOTHES,
+              rotate=("Z", 6.0, (0.055, 1.32, 0.168)))
+
+    # Cabeza: cara, cejas y pelo rizado (un casquete y rizos sueltos por encima).
+    m.bone = "head"
+    cy = 1.645
+    m.sphere((0.0, cy, 0.01), 0.115, scale=(1.0, 1.1, 1.0), segments=14, rings=10, mat=SKIN)
+    person_face(m, cy, 0.115)
+    for s in (-1, 1):
+        m.tube([(s * 0.062, cy + 0.045, 0.094), (s * 0.024, cy + 0.05, 0.106)], 0.006, sides=4, mat=HAIR)
+    m.lathe([(0.0, 1.785), (0.07, 1.774), (0.11, 1.742), (0.127, 1.695), (0.128, 1.655), (0.0, 1.655)],
+            segments=14, mat=HAIR, scale=(1.02, 1.0, 1.04), center=(0.0, 0.0, -0.01))
+    m.sphere((0.0, 1.63, -0.05), 0.1, scale=(1.08, 1.0, 0.75), segments=12, rings=8, mat=HAIR)
+    for (x, z) in ((-0.06, 0.07), (0.0, 0.085), (0.065, 0.065), (-0.1, 0.0), (0.1, 0.005), (-0.07, -0.07),
+                   (0.07, -0.065), (0.0, -0.02), (0.0, -0.1), (-0.035, 0.03), (0.04, 0.025)):
+        y = 1.66 + math.sqrt(max(0.0, 0.128 ** 2 - x * x - z * z)) * 0.95
+        m.sphere((x, y, z - 0.006), 0.038, segments=8, rings=5, mat=HAIR)
+
+    person_arms(m, bones, 0.054)
+    person_legs(m, bones, 0.062, 0.054, shoe=(1.05, 0.9, 2.0))
+    person_walk(m, arm_swing=0.32, stride=0.38)
+    m.export(fps=12)
+
+
+def make_dog_walker():
+    """Un señor mayor, más bajo y ancho: abrigo largo color camello con botones, gorra plana y bufanda
+    granates, pelo y bigote canosos, pantalón gris y zapatos marrones. Pasea tranquilo con el perro."""
+    reset_scene()
+    bones = person_bones(0.88, 1.38, 1.70, 0.215, 1.07, 0.84, 0.795, 0.095)
+    m = Rig("dog_walker", bones, 36)
+    m.add_material("skin", (0.86, 0.58, 0.44), 0.7)
+    m.add_material("hair", (0.62, 0.60, 0.57), 0.85)
+    m.add_material("clothes", (0.62, 0.40, 0.20), 0.9)
+    m.add_material("pants", (0.20, 0.18, 0.19), 0.9)
+    m.add_material("details", (0.20, 0.10, 0.07), 0.6)
+    m.add_material("accent", (0.42, 0.10, 0.10), 0.9)
+
+    # Cadera: el faldón del abrigo hasta la rodilla, con bolsillos.
+    m.bone = "hips"
+    m.lathe([(0.0, 1.0), (0.2, 1.0), (0.212, 0.9), (0.228, 0.70), (0.24, 0.52), (0.23, 0.50), (0.0, 0.50)],
+            segments=14, mat=CLOTHES, scale=(1.0, 1.0, 0.85))
+    for s in (-1, 1):
+        m.box((s * 0.12, 0.80, 0.168), (0.1, 0.014, 0.035), bevel=0.005, segments=1, mat=CLOTHES,
+              rotate=("Y", s * 35.0, (s * 0.12, 0.80, 0.168)))
+    m.tube([(0.0, 0.51, 0.205), (0.0, 0.70, 0.196), (0.0, 0.90, 0.182), (0.0, 1.0, 0.172)], 0.005, sides=4, mat=DETAILS, cap=False)
+
+    # Tronco: abrigo con barriga, botones, cuello subido y bufanda.
+    m.bone = "spine"
+    m.lathe([(0.0, 0.94), (0.204, 0.94), (0.218, 1.03), (0.228, 1.13), (0.214, 1.25), (0.194, 1.33),
+             (0.125, 1.385), (0.0, 1.395)], segments=14, mat=CLOTHES, scale=(1.0, 1.0, 0.86))
+    m.tube([(0.0, 0.96, 0.178), (0.0, 1.08, 0.198), (0.0, 1.20, 0.192), (0.0, 1.30, 0.172)], 0.005, sides=4, mat=DETAILS, cap=False)
+    for y, z in ((0.99, 0.188), (1.09, 0.2), (1.19, 0.194)):
+        m.sphere((0.028, y, z), 0.014, segments=6, rings=4, mat=DETAILS)
+    m.cylinder((0.0, 1.42, -0.005), 0.05, 0.1, segments=10, mat=SKIN)
+    m.torus((0.0, 1.385, 0.0), 0.075, 0.03, major_seg=14, minor_seg=6, mat=ACCENT)
+    m.lathe([(0.11, 1.345), (0.118, 1.37), (0.104, 1.43), (0.095, 1.43)], segments=14, mat=CLOTHES,
+            scale=(1.0, 1.0, 0.95), center=(0.0, 0.0, -0.015))
+    m.box((0.03, 1.31, 0.17), (0.06, 0.08, 0.02), bevel=0.006, segments=1, mat=ACCENT)
+
+    # Cabeza: cara redonda, nariz grande, bigote, cejas pobladas, pelo canoso y gorra plana.
+    m.bone = "head"
+    cy = 1.555
+    m.sphere((0.0, cy, 0.01), 0.12, scale=(1.03, 1.05, 1.0), segments=14, rings=10, mat=SKIN)
+    person_face(m, cy, 0.12, nose_r=0.028)
+    m.sphere((0.0, cy - 0.04, 0.113), 0.042, scale=(1.35, 0.42, 0.5), segments=10, rings=5, mat=HAIR)
+    for s in (-1, 1):
+        m.tube([(s * 0.066, cy + 0.043, 0.098), (s * 0.022, cy + 0.05, 0.11)], 0.009, sides=5, mat=HAIR)
+        m.sphere((s * 0.108, cy + 0.03, -0.01), 0.04, scale=(0.6, 1.0, 1.0), segments=8, rings=5, mat=HAIR)
+    m.sphere((0.0, cy - 0.005, -0.055), 0.105, scale=(1.08, 0.82, 0.75), segments=12, rings=8, mat=HAIR)
+    m.lathe([(0.0, 1.70), (0.085, 1.697), (0.123, 1.674), (0.132, 1.64), (0.128, 1.615), (0.0, 1.615)],
+            segments=14, mat=ACCENT, scale=(1.04, 1.0, 1.12), center=(0.0, 0.0, -0.012))
+    m.sphere((0.0, 1.622, 0.12), 0.085, scale=(1.3, 0.16, 0.85), segments=12, rings=5, mat=ACCENT)
+    m.sphere((0.0, 1.70, -0.005), 0.014, segments=6, rings=4, mat=ACCENT)
+
+    person_arms(m, bones, 0.058, cuff_t=0.85)
+    person_legs(m, bones, 0.062, 0.052)
+    person_walk(m, arm_swing=0.2, stride=0.3, lean=0.06, bounce=0.012)
+    m.export(fps=12)
+
+
+FUR, FUR_LIGHT, DOG_DETAILS, COLLAR = range(4)
+
+DOG_BONES = [
+    ("body", (0.0, 0.40, -0.16), (0.0, 0.40, 0.16), None),
+    ("head", (0.0, 0.48, 0.20), (0.0, 0.62, 0.28), "body"),
+    ("tail", (0.0, 0.46, -0.21), (0.0, 0.58, -0.33), "body"),
+    ("leg_fl", (0.07, 0.36, 0.15), (0.07, 0.04, 0.15), "body"),
+    ("leg_fr", (-0.07, 0.36, 0.15), (-0.07, 0.04, 0.15), "body"),
+    ("leg_bl", (0.07, 0.36, -0.15), (0.07, 0.04, -0.15), "body"),
+    ("leg_br", (-0.07, 0.36, -0.15), (-0.07, 0.04, -0.15), "body"),
+]
+
+
+def make_dog():
+    """Un perro mediano de orejas caídas: pelo de color (lo cambia el juego), hocico, pecho, patitas y
+    punta de la cola claros, collar rojo. Animación "trot" de 8 fotogramas, patas en diagonal."""
+    reset_scene()
+    m = Rig("dog", DOG_BONES, 41)
+    m.add_material("fur", (0.62, 0.38, 0.19), 0.95)
+    m.add_material("fur_light", (0.90, 0.80, 0.66), 0.95)
+    m.add_material("details", (0.12, 0.07, 0.06), 0.5)
+    m.add_material("collar", (0.70, 0.13, 0.10), 0.6)
+
+    m.bone = "body"
+    m.lathe([(0.0, -0.245), (0.07, -0.24), (0.115, -0.2), (0.135, -0.1), (0.14, 0.03), (0.132, 0.14),
+             (0.10, 0.21), (0.0, 0.235)], segments=14, axis="z", mat=FUR, center=(0.0, 0.40, 0.0),
+            scale=(0.82, 1.0, 1.0))
+    m.sphere((0.0, 0.345, 0.03), 0.1, scale=(0.85, 0.55, 1.5), segments=12, rings=6, mat=FUR_LIGHT)
+    m.sphere((0.0, 0.41, 0.175), 0.08, scale=(0.95, 1.05, 0.7), segments=10, rings=6, mat=FUR_LIGHT)
+    m.torus((0.0, 0.49, 0.205), 0.062, 0.013, major_seg=14, minor_seg=5, mat=COLLAR,
+            rotate=("X", 38.0, (0.0, 0.49, 0.205)))
+    m.sphere((0.0, 0.437, 0.262), 0.014, segments=6, rings=4, mat=DOG_DETAILS)
+
+    m.bone = "head"
+    m.tube([(0.0, 0.45, 0.17), (0.0, 0.53, 0.235)], 0.058, sides=8, mat=FUR, cap=False)
+    m.sphere((0.0, 0.585, 0.27), 0.092, scale=(0.95, 0.95, 1.0), segments=12, rings=8, mat=FUR)
+    m.sphere((0.0, 0.555, 0.355), 0.054, scale=(0.85, 0.78, 1.2), segments=10, rings=6, mat=FUR_LIGHT)
+    m.sphere((0.0, 0.572, 0.418), 0.02, scale=(1.25, 0.9, 0.9), segments=8, rings=5, mat=DOG_DETAILS)
+    m.tube([(-0.02, 0.528, 0.398), (0.0, 0.523, 0.405), (0.02, 0.528, 0.398)], 0.004, sides=4, mat=DOG_DETAILS)
+    for s in (-1, 1):
+        m.sphere((s * 0.042, 0.61, 0.337), 0.013, segments=8, rings=5, mat=DOG_DETAILS)
+        m.sphere((s * 0.083, 0.565, 0.25), 0.052, scale=(0.32, 1.05, 0.62), segments=8, rings=6, mat=FUR,
+                 rotate=("Z", s * 14.0, (s * 0.083, 0.6, 0.25)))
+
+    m.bone = "tail"
+    m.tube([(0.0, 0.455, -0.205), (0.0, 0.52, -0.285), (0.0, 0.585, -0.32)], 0.026, sides=6, mat=FUR, taper=0.45, cap=False)
+    m.sphere((0.0, 0.595, -0.325), 0.017, segments=6, rings=4, mat=FUR_LIGHT)
+
+    for name, x, z, front in (("leg_fl", 0.07, 0.15, True), ("leg_fr", -0.07, 0.15, True),
+                              ("leg_bl", 0.07, -0.15, False), ("leg_br", -0.07, -0.15, False)):
+        m.bone = name
+        m.sphere((x, 0.34, z), 0.055 if front else 0.063, scale=(0.8, 1.0, 1.15 if front else 1.35),
+                 segments=8, rings=6, mat=FUR)
+        m.tube([(x, 0.34, z), (x, 0.06, z + 0.005)], 0.033, sides=7, mat=FUR, taper=0.15, cap=False)
+        m.sphere((x, 0.035, z + 0.018), 0.036, scale=(1.0, 0.75, 1.3), segments=8, rings=5, mat=FUR_LIGHT)
+
+    # Trote: 8 fotogramas, el 8 repite el 0; patas en diagonal (delante izq. con detrás der.).
+    m.action("trot", 8)
+    for f in range(9):
+        ph = math.tau * (f % 8) / 8.0
+        s, c = math.sin(ph), math.cos(ph)
+        rots = {
+            "leg_fl": (-0.5 * s, 0.0, 0.0),
+            "leg_br": (-0.5 * s, 0.0, 0.0),
+            "leg_fr": (0.5 * s, 0.0, 0.0),
+            "leg_bl": (0.5 * s, 0.0, 0.0),
+            "body": (0.025 * c, 0.0, 0.0),
+            "head": (-0.06 * abs(s), 0.0, 0.0),
+            "tail": (0.0, 0.4 * math.sin(2.0 * ph), 0.0),
+        }
+        m.pose("trot", f, rots, {"body": (0.0, 0.014 * abs(c) - 0.007, 0.0)})
+    m.export(fps=12)
 
 
 # ------------------------------------------------------------------ bici y moto
@@ -368,6 +631,8 @@ def run():
     make_person_arm()
     make_person_leg()
     make_helmet()
+    make_walker()
+    make_dog_walker()
     make_dog()
     make_bike()
     make_moto()

@@ -30,6 +30,10 @@ const SHIRTS: Array[Color] = [
 const PANTS: Array[Color] = [Color("2c3e50"), Color("4a4a52"), Color("6e5a46"), Color("1f2a3a"), Color("8a8f98")]
 const SKINS: Array[Color] = [Color("f0c8a0"), Color("d9a67a"), Color("b07a52"), Color("7a4e32"), Color("f6d7bd")]
 const HAIRS: Array[Color] = [Color("2b1b10"), Color("5a3a1e"), Color("c9a05a"), Color("1a1a1a"), Color("8a8a8a"), Color("7a2a14")]
+## Velocidades (m/s) a las que los ciclos de paso de los modelos van a su ritmo natural.
+const WALKER_NATURAL_SPEED := 1.4
+const DOG_WALKER_NATURAL_SPEED := 1.15
+const DOG_NATURAL_SPEED := 0.9
 const FUR: Array[Color] = [Color("b98a55"), Color("e8dcc4"), Color("3a2c22"), Color("8a6a45"), Color("d9b27a")]
 
 var _clock: Timer
@@ -187,21 +191,20 @@ func _make_bike() -> StreetActor:
 
 # --- Personas y perros ---------------------------------------------------
 
+## Un peatón (art/models/street/walker.glb) o un señor que pasea al perro (dog_walker.glb y dog.glb),
+## hechos con esqueleto y animación como la clienta. Solo cambia el tono de piel y el pelo del perro.
 func _make_walker(with_dog: bool) -> StreetActor:
 	var a := StreetActor.new()
-	var person := _make_person(0.0, false)
+	var person := StreetAssets.model("dog_walker" if with_dog else "walker")
+	StreetAssets.skin(person, {"skin": StreetAssets.flat(SKINS[randi() % SKINS.size()], 0.7)})
+	person.scale = Vector3.ONE * randf_range(0.95, 1.05)
 	a.add_child(person)
-	for leg in person.get_meta(&"legs"):
-		a.legs.append(leg)
-	for arm in person.get_meta(&"arms"):
-		a.arms.append(arm)
-	a.gait = StreetActor.Gait.WALK
-	a.bob_target = person
-	a.bob_base_y = 0.9
-	a.bob_amount = 0.025
-	a.limb_rate = 2.6
-	person.position = Vector3(0, 0.9, 0)
-	var speed := randf_range(1.15, 1.5)
+	for bone in ["thigh_l", "thigh_r"]:
+		a.legs.append(StreetAssets.bone_node(person, bone))
+	for bone in ["upper_arm_l", "upper_arm_r"]:
+		a.arms.append(StreetAssets.bone_node(person, bone))
+	a.add_rig(person, &"walk", DOG_WALKER_NATURAL_SPEED if with_dog else WALKER_NATURAL_SPEED)
+	var speed := randf_range(1.0, 1.25) if with_dog else randf_range(1.2, 1.55)
 	var south := randf() < 0.5
 	var near_side := randf() < 0.65
 	var x := (NEAR_WALK_X if near_side else FAR_WALK_X) + randf_range(-0.3, 0.3)
@@ -212,11 +215,16 @@ func _make_walker(with_dog: bool) -> StreetActor:
 		var dog := _make_dog()
 		var world_side := -1.0 if near_side else 1.0        # la calzada queda al oeste de la acera cercana y al este de la lejana
 		var side := world_side if south else -world_side    # si el actor va hacia -Z está girado media vuelta
-		dog.position = Vector3(side * 0.8, 0.0, 0.6)
+		dog.position = Vector3(side * 0.75, 0.0, 0.55)
 		a.add_child(dog)
-		for leg in dog.get_meta(&"dog_legs"):
-			a.dog_legs.append(leg)
-		a.add_child(_make_leash(Vector3(side * 0.3, 0.8, 0.12), Vector3(side * 0.8, 0.52, 0.5)))
+		for bone in ["leg_fl", "leg_fr", "leg_bl", "leg_br"]:
+			a.dog_legs.append(StreetAssets.bone_node(dog, bone))
+		a.add_rig(dog, &"trot", DOG_NATURAL_SPEED)
+		# Su izquierda es +X: lleva la correa en la mano del lado del perro.
+		var leash := Leash.new()
+		leash.from = StreetAssets.bone_node(person, "hand_l" if side > 0.0 else "hand_r")
+		leash.to = StreetAssets.bone_node(dog, "head")
+		a.add_child(leash)
 		if randf() < 0.6:
 			var z0 := randf_range(-13.0, 8.0) if south else randf_range(-8.0, 13.0)
 			var count := randi_range(1, 3)
@@ -263,36 +271,36 @@ func _make_person(lean: float, rider: bool) -> Node3D:
 
 
 func _make_dog() -> Node3D:
-	var root := Node3D.new()
-	var fur := StreetAssets.flat(FUR[randi() % FUR.size()], 0.95)
-	var mats := {"fur": fur, "skin": StreetAssets.flat(Color(0.1, 0.07, 0.06), 0.5)}
-	var body := StreetAssets.model("dog_body")
-	StreetAssets.skin(body, mats)
-	body.position.y = 0.36
-	root.add_child(body)
-	var legs: Array[Node3D] = []
-	for z in [0.2, -0.2]:
-		for sx in [-1.0, 1.0]:
-			var leg := StreetAssets.model("dog_leg")
-			StreetAssets.skin(leg, mats)
-			leg.position = Vector3(sx * 0.09, 0.28, z)
-			root.add_child(leg)
-			legs.append(leg)
-	root.scale = Vector3.ONE * randf_range(0.8, 1.2)
-	root.set_meta(&"dog_legs", legs)
-	return root
+	var dog := StreetAssets.model("dog")
+	StreetAssets.skin(dog, {"fur": StreetAssets.flat(FUR[randi() % FUR.size()], 0.95)})
+	dog.scale = Vector3.ONE * randf_range(0.85, 1.15)
+	return dog
 
 
-## Correa: una varilla fina entre la mano y el collar.
-func _make_leash(from: Vector3, to: Vector3) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(0.014, 0.014, from.distance_to(to))
-	mi.mesh = box
-	mi.material_override = StreetAssets.flat(Color(0.75, 0.15, 0.12), 0.7)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.transform = Transform3D(Basis.looking_at(to - from, Vector3.UP), (from + to) * 0.5)
-	return mi
+## Correa: una varilla fina entre la mano y el collar, que se recoloca en cada fotograma
+## (los dos extremos se mueven con las animaciones).
+class Leash extends MeshInstance3D:
+	var from: Node3D
+	var to: Node3D
+
+	func _ready() -> void:
+		var box := BoxMesh.new()
+		box.size = Vector3(0.014, 0.014, 1.0)
+		mesh = box
+		material_override = StreetAssets.flat(Color(0.75, 0.15, 0.12), 0.7)
+		cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		top_level = true
+		_process(0.0)
+
+	func _process(_delta: float) -> void:
+		if from == null or to == null:
+			return
+		var a := from.global_position
+		var b := to.global_position
+		var length := a.distance_to(b)
+		if length < 0.02:
+			return
+		global_transform = Transform3D(Basis.looking_at(b - a, Vector3.UP) * Basis.from_scale(Vector3(1.0, 1.0, length)), (a + b) * 0.5)
 
 
 # --- Utilidades ----------------------------------------------------------

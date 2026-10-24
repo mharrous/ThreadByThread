@@ -167,7 +167,44 @@ func _run_street(main: Node, player: Player) -> void:
 	for x in shop.room.shell.south_windows:
 		await _look_from(player, shop.room, Vector3(x, 0.0, 2.8), Vector3(x, 1.55, 10.0))
 		await _shot("ventana_sur")
+	await _street_people_closeup(shop.room, life, player)
 	print("rendimiento: fps=", Engine.get_frames_per_second(), " draw_calls=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
+
+
+## Los peatones de la calle y el perro de cerca, dentro de la tienda junto a la clienta, para comparar
+## el estilo: quietos a media zancada, de frente, de tres cuartos y de perfil.
+func _street_people_closeup(room: RoomController, life: StreetLife, player: Player) -> void:
+	var c := Customer.new()
+	room.add_child(c)
+	c.position = Vector3(0.0, 0.0, 0.6)
+	var actors: Array[StreetActor] = []
+	for kind: StringName in [&"walker", &"dogwalker"]:
+		var actor := life.spawn(kind)
+		actor.set_process(false)
+		actor.global_position = room.to_global(Vector3(-0.9 if kind == &"walker" else 1.0, 0.0, 0.6))
+		actor.global_rotation = Vector3.ZERO
+		actors.append(actor)
+	await get_tree().process_frame
+	for actor in actors:
+		for r in actor.rigs:
+			var p: AnimationPlayer = r["player"]
+			p.seek(p.current_animation_length * 0.25, true)
+			p.pause()
+	await _look_from(player, room, Vector3(0.0, 0.0, 3.4), Vector3(0.0, 0.9, 0.6))
+	await get_tree().create_timer(0.3).timeout
+	await _shot("peatones_frente")
+	await _look_from(player, room, Vector3(2.4, 0.0, 2.8), Vector3(0.0, 0.9, 0.6))
+	await _shot("peatones_tres_cuartos")
+	for actor in actors:
+		actor.global_rotation.y = PI * 0.5
+	c.rotation.y = PI * 0.5
+	await _look_from(player, room, Vector3(0.0, 0.0, 3.4), Vector3(0.0, 0.9, 0.6))
+	await get_tree().create_timer(0.2).timeout
+	await _shot("peatones_perfil")
+	for actor in actors:
+		actor.queue_free()
+		life._actors.erase(actor)
+	c.queue_free()
 
 
 func _run_customer(shop: Shop, player: Player) -> void:
