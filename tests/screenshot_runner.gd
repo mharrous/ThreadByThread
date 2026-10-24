@@ -34,6 +34,7 @@ var _access := false    # --access: menú de pausa y HUD con el texto a ×1,5 y 
 var _menu := false      # --menu (con --show-title): la pantalla de título en español e inglés y los ajustes
 var _boxes := false     # --boxes: cajas de cartón (tiradas, aplanar, llevar, montón y atadas)
 var _top := false       # --top: planta de la sala desde arriba (cámara ortográfica) para colocar cosas
+var _signs := false     # --signs: los carteles de cerca (principal, secciones, puerta girando, montón de cartón)
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
 
 
@@ -67,6 +68,8 @@ func _ready() -> void:
 			_boxes = true
 		elif arg == "--menu":
 			_menu = true
+		elif arg == "--signs":
+			_signs = true
 	if _out_dir == "":
 		_out_dir = ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -320,11 +323,59 @@ func _run_boxes(shop: Shop, player: Player) -> void:
 	await _shot("cajas_7_lado")
 
 
+## Carteles de cerca, con una cámara suelta: la pared norte entera, el principal, cada sección, la placa
+## de la puerta (cerrada, girando y abierta), la tablilla del montón de cartón y el premio de ¡ABIERTO!.
+func _run_signs(shop: Shop, player: Player) -> void:
+	var room := shop.room
+	var shell := room.shell
+	var cam := Camera3D.new()
+	cam.fov = 55.0
+	room.add_child(cam)
+	cam.make_current()
+	var frame := func(from: Vector3, at: Vector3) -> void:
+		cam.position = from
+		cam.look_at(room.to_global(at))
+	frame.call(Vector3(0.0, 1.7, 0.2), Vector3(0.0, 2.3, -4.5))
+	await get_tree().create_timer(0.5).timeout
+	await _shot("carteles_1_norte")
+	frame.call(Vector3(-0.3, 2.1, -2.2), Vector3(0.0, 2.45, -4.5))
+	await _shot("carteles_2_principal")
+	for section in room.sections:
+		var sign := section.get_node("Sign") as Node3D
+		var p := room.to_local(sign.global_position)
+		var out := room.global_basis.inverse() * sign.global_basis.z
+		frame.call(p + out * 1.7 + Vector3(0.0, -0.25, 0.0), p)
+		await get_tree().create_timer(0.2).timeout
+		await _shot("carteles_3_seccion_%s" % section.section_id)
+	var door := room.to_local(shell.door_sign.global_position) + Vector3(0.0, DoorSign.PLATE_Y, 0.0)
+	frame.call(door + Vector3(-0.85, -0.12, 0.35), door)
+	await get_tree().create_timer(0.2).timeout
+	await _shot("carteles_4_puerta_cerrado")
+	shell.door_sign.set_open(true, true)
+	await get_tree().create_timer(0.3).timeout
+	await _shot("carteles_5_puerta_girando")
+	await get_tree().create_timer(2.0).timeout
+	await _shot("carteles_6_puerta_abierto")
+	var pile := ShopBoxes.PILE_AT + Vector3(0.0, 1.15, 0.0)
+	frame.call(pile + Vector3(-1.0, -0.1, -0.35), pile)
+	await get_tree().create_timer(0.2).timeout
+	await _shot("carteles_7_carton")
+	shell.unlock_decor(&"open_sign", false)
+	room.sections[0].show_completed(false)
+	frame.call(Vector3(-0.8, 1.9, -1.9), Vector3(-0.6, 2.2, -4.5))
+	await get_tree().create_timer(0.3).timeout
+	await _shot("carteles_8_abierto_y_completa")
+	cam.queue_free()
+	player.camera.make_current()
+
+
 func _run_opening(main: Node, shop: Shop, player: Player) -> void:
 	var opening := main.get_node("ShopOpening") as ShopOpening
 	player.teleport(shop.room.to_global(Vector3(1.6, 0.0, -0.6)))
 	player.look_at_point(shop.room.to_global(Vector3(6.0, 1.3, 2.2)))
 	shop.floor_sweep().finish_instantly()
+	# Sin las cajas en el montón la apertura no empieza.
+	shop.cardboard().finish_instantly()
 	shop.room.solve_instantly()
 	for s in [[&"door", 2.6, "apertura_1_puerta"], [&"enter", 1.6, "apertura_2_letrero"], [&"look", 1.8, "apertura_3_cliente"]]:
 		while opening.step != s[0]:
@@ -366,6 +417,10 @@ func _run() -> void:
 		return
 	if _boxes:
 		await _run_boxes(shop, player)
+		get_tree().quit()
+		return
+	if _signs:
+		await _run_signs(shop, player)
 		get_tree().quit()
 		return
 	if _top:

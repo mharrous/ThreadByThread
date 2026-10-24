@@ -219,30 +219,23 @@ func _build_marker() -> void:
 		mi.position = c + e[1]
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_marker.add_child(mi)
-	# Nota de papel clavada en la pared con el texto escrito a mano.
-	var paper := MeshInstance3D.new()
-	var pm := BoxMesh.new()
-	pm.size = Vector3(0.01, 0.2, 0.34)
-	paper.mesh = pm
-	var paper_mat := StandardMaterial3D.new()
-	paper_mat.albedo_color = Color("fbf3e2")
-	paper_mat.roughness = 0.95
-	paper.material_override = paper_mat
-	paper.position = Vector3(PILE_AT.x - 0.03, 1.05, PILE_AT.z)
-	paper.rotation.x = 0.04
-	_marker.add_child(paper)
-	_note = Label3D.new()
-	_note.text = "Cartón\npara tirar"
-	_note.font_size = 40
-	_note.font = UiStyle.font(&"hand")
-	_note.pixel_size = 0.0021
-	_note.modulate = Color("6b4a2b")
-	_note.outline_size = 0
+	# Tablilla de madera colgada de un clavo (como los carteles de sección) con el icono de una caja
+	# desmontada y el texto escrito a mano. Mira hacia el oeste, a la sala.
+	var sign_root := Node3D.new()
+	sign_root.name = "PileSign"
+	# Por encima de la moldura del friso y con la espalda contra la pared (x = 6).
+	sign_root.position = Vector3(PILE_AT.x + 0.039, 1.12, PILE_AT.z)
+	sign_root.rotation.y = -PI * 0.5
+	_marker.add_child(sign_root)
+	sign_root.add_child(ShopSign.skinned("sign_small", {
+		"wood": ShopSign.wood(ShopSign.OAK),
+		"frame": ShopSign.paint(Color("8a6446"), 0.6),
+	}))
+	sign_root.add_child(ShopSign.icon("box", Vector3(-0.125, 0.0, 0.011), 0.62))
+	_note = ShopSign.label("Cartón\npara tirar", &"hand", 40, ShopSign.INK, 0.0021, Vector2(0.24, 0.19))
 	_note.line_spacing = -4.0
-	_note.position = Vector3(PILE_AT.x - 0.037, 1.05, PILE_AT.z)
-	_note.rotation.y = -PI * 0.5
-	_note.rotation.z = 0.04
-	_marker.add_child(_note)
+	_note.position = Vector3(0.075, 0.0, 0.013)
+	sign_root.add_child(_note)
 
 
 ## Cordel atado alrededor del montón (dos vueltas), oculto hasta que están todos.
