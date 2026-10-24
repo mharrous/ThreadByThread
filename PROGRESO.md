@@ -255,7 +255,7 @@ La prueba con las cantidades completas encontró un fallo real que la de 1 objet
 
 ## Problemas conocidos
 
-- Un ovillo lanzado dentro de una estantería queda sobre la balda como objeto suelto (se puede recoger); no cuenta como colocado.
+- Lanzar a la estantería: si el objeto se queda dentro de la estantería de su tipo, entra solo en el hueco libre más cercano ("¡Canasta!", cuenta para la racha). En la de otro tipo, o con la fila llena, sigue quedando suelto sobre la balda.
 - Los trozos de tela y botones del suelo son decoración (MultiMesh), no recogibles.
 - Al salir, Godot avisa de instancias de audio sin liberar: son los reproductores del autoload de sonido, inofensivo.
 - Pulidos con Audacity 55 sonidos (incluidos el destello de racha y el tic de acierto). Los bucles y la calle no se pulen: ya pasan por el bus "Outdoor". La música lleva una reverb suave en su bus.

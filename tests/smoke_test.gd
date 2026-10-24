@@ -347,6 +347,38 @@ func _test_wall_throws(room: RoomController, items: Array) -> void:
 			item.global_position = room.to_global(Vector3(-2.0 + 0.45 * next_item, item.half_height, 3.3))
 
 
+## Un objeto que cae dentro de la estantería de su tipo entra solo en un hueco (canasta); en la de otro
+## tipo se queda suelto.
+func _test_basket(room: RoomController, items: Array) -> void:
+	print("-- Canasta: lanzar a la estantería")
+	var it: PickableItem = null
+	var other: PickableItem = null
+	for c: PickableItem in items:
+		if c.state != PickableItem.State.LOOSE or room.find_row(c.data.sort_key).is_empty():
+			continue
+		if it == null:
+			it = c
+		elif other == null and room.find_row(c.data.sort_key)["unit"] != room.find_row(it.data.sort_key)["unit"]:
+			other = c
+	if it == null or other == null:
+		_check(false, "hay objetos para la canasta")
+		return
+	var found := room.find_row(it.data.sort_key)
+	var unit: StorageUnit = found["unit"]
+	var target := unit.slot_world_position(found["row"], unit.first_free_slot(found["row"]), it)
+	var before := room.placed_items
+	it.global_position = target + Vector3.UP * 0.05
+	it.launch(Vector3.ZERO, Vector3.ZERO)
+	var ok := await _wait_until(func(): return it.state == PickableItem.State.PLACED, 4.0)
+	_check(ok and it.container == unit and room.placed_items == before + 1, "un objeto que cae en su estantería entra en un hueco (%s)" % it.data.id)
+	other.global_position = target + Vector3.UP * 0.05
+	other.launch(Vector3.ZERO, Vector3.ZERO)
+	await _wait_until(func(): return other.state != PickableItem.State.THROWN, 4.0)
+	await _frames(25)
+	_check(other.state == PickableItem.State.LOOSE and room.placed_items == before + 1, "en la estantería de otro tipo se queda suelto (%s)" % other.data.id)
+	other.global_position = room.to_global(Vector3(-1.0, other.half_height, 3.3))
+
+
 ## En un montón (telas dobladas apiladas) solo se puede coger la de arriba: si se apunta a la de abajo,
 ## el juego coge la de arriba y las demás no quedan flotando.
 func _test_stacks(room: RoomController) -> void:
@@ -482,6 +514,7 @@ func _test_room(room: RoomController, max_sections: int) -> void:
 	_check(first.collision_layer == PickableItem.LAYER_ITEMS and first.freeze, "vuelve a ser recogible y está congelado")
 
 	await _test_wall_throws(room, items)
+	await _test_basket(room, items)
 
 	var failed_items := 0
 	var done := 0

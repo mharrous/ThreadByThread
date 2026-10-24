@@ -72,6 +72,7 @@ func _ready() -> void:
 	Events.item_removed.connect(_on_item_removed)
 	Events.item_picked.connect(_on_item_picked)
 	Events.treasure_found.connect(_on_treasure_found)
+	Events.item_landed.connect(_on_item_landed)
 	_emit_progress.call_deferred()
 
 
@@ -420,6 +421,53 @@ func solve_instantly(section: ShopSection = null) -> void:
 		it.set_pickable(true)
 		it.global_transform = unit.slot_transform(row, slot, it)
 		Events.item_placed.emit(it, unit)
+
+
+## Un objeto lanzado que se queda dentro de la estantería de su tipo entra solo en el hueco libre más
+## cercano, como una canasta. En la estantería de otro tipo, o con su fila llena, se queda suelto.
+func _on_item_landed(it: PickableItem) -> void:
+	if it.room != self or it.is_display or it.state != PickableItem.State.LOOSE:
+		return
+	var q := PhysicsPointQueryParameters3D.new()
+	q.position = it.global_position
+	q.collision_mask = StorageUnit.AIM_LAYER
+	for hit in get_world_3d().direct_space_state.intersect_point(q, 4):
+		var body := hit["collider"] as Node
+		if body == null or not body.has_meta(StorageUnit.AIM_META):
+			continue
+		var unit := body.get_meta(StorageUnit.AIM_META) as StorageUnit
+		var row := unit.row_for_key(it.data.sort_key)
+		var slot := _nearest_free_slot(unit, row, it.global_position, it) if row >= 0 else -1
+		if slot < 0:
+			return
+		unit.reserve(row, slot, it)
+		it.container = unit
+		it.slot_row = row
+		it.slot_index = slot
+		it.state = PickableItem.State.MOVING
+		it.set_pickable(false)
+		var tw := it.create_tween()
+		tw.tween_property(it, "global_transform", unit.slot_transform(row, slot, it), 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.tween_callback(func():
+			it.state = PickableItem.State.PLACED
+			it.set_pickable(true)
+			it.squash(1.0)
+			Events.item_placed.emit(it, unit)
+			Events.hint_requested.emit("¡Canasta!"))
+		return
+
+
+func _nearest_free_slot(unit: StorageUnit, row: int, pos: Vector3, it: PickableItem) -> int:
+	var best := -1
+	var best_d := INF
+	for slot in unit.slots_per_row:
+		if not unit.has_room(row, slot):
+			continue
+		var d := unit.slot_world_position(row, slot, it).distance_squared_to(pos)
+		if d < best_d:
+			best_d = d
+			best = slot
+	return best
 
 
 # --- Tesoros ---------------------------------------------------------------
