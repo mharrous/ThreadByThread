@@ -23,6 +23,10 @@ var text_scale := 1.0
 ## Colores para daltonismo: la mira y el objeto fantasma usan azul (cabe) y naranja (no cabe) en vez
 ## de verde y rojo. La forma también cambia siempre (una X cuando no cabe), así no depende solo del color.
 var colorblind := false
+## Idioma de todos los textos (interfaz, carteles de la tienda y nombres de los objetos): "es" o "en".
+## Los textos del juego están escritos en español y son la clave de las traducciones (data/i18n/*.csv).
+var language := "es"
+const LANGUAGES := ["es", "en"]
 
 ## Las pruebas automáticas (--test-mode) usan otro fichero para no tocar tu configuración.
 var _path := PATH
@@ -31,7 +35,16 @@ var _path := PATH
 func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--test-mode"):
 		_path = TEST_PATH
+	# Sin ajustes guardados: el idioma del sistema (español, o inglés para cualquier otro).
+	language = "es" if OS.get_locale_language() == "es" else "en"
 	load_settings()
+	# Las pruebas comprueban los textos en español (salvo que se pida otro con --lang=).
+	if _path == TEST_PATH:
+		language = "es"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--lang="):
+			language = arg.trim_prefix("--lang=")
+	apply_language()
 	apply_display()
 
 
@@ -50,6 +63,9 @@ func load_settings() -> void:
 	tutorial_done = bool(cf.get_value("progress", "tutorial_done", false))
 	text_scale = clampf(float(cf.get_value("accessibility", "text_scale", 1.0)), 1.0, 1.5)
 	colorblind = bool(cf.get_value("accessibility", "colorblind", false))
+	var lang := str(cf.get_value("general", "language", language))
+	if lang in LANGUAGES:
+		language = lang
 
 
 ## Cerrar la ventana con Alt+F4 o la X tambien guarda los ajustes.
@@ -71,6 +87,7 @@ func save_settings() -> void:
 	cf.set_value("progress", "tutorial_done", tutorial_done)
 	cf.set_value("accessibility", "text_scale", text_scale)
 	cf.set_value("accessibility", "colorblind", colorblind)
+	cf.set_value("general", "language", language)
 	var err := cf.save(_path)
 	if err != OK:
 		push_warning("No se pudo guardar la configuración (%s)" % error_string(err))
@@ -97,6 +114,21 @@ func aim_ok_color() -> Color:
 
 func aim_deny_color() -> Color:
 	return Color(1.0, 0.64, 0.16) if colorblind else Color(1.0, 0.50, 0.45)
+
+
+## Cambia el idioma de todo el juego. Los textos que se escriben solos (Label, Button, Label3D con el
+## texto tal cual) se traducen al momento; los que se componen por código escuchan NOTIFICATION_TRANSLATION_CHANGED.
+func apply_language() -> void:
+	if not language in LANGUAGES:
+		language = "es"
+	TranslationServer.set_locale(language)
+
+
+## El siguiente idioma de la lista (botón del menú).
+func cycle_language() -> void:
+	language = LANGUAGES[(LANGUAGES.find(language) + 1) % LANGUAGES.size()]
+	apply_language()
+	changed.emit()
 
 
 ## Llamar tras modificar cualquier valor desde la interfaz.

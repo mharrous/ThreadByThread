@@ -243,7 +243,7 @@ func try_place() -> void:
 		StorageUnit.SlotStatus.ROW_FULL:
 			_reject("Este hueco ya está completo")
 		_:
-			Events.hint_requested.emit("Apunta a su estantería o bandeja para colocarlo")
+			Events.hint_requested.emit(tr("Apunta a su estantería o bandeja para colocarlo"))
 
 
 ## Lanza el objeto sostenido. La fuerza depende de cuánto se mantuvo pulsado (0..1).
@@ -283,12 +283,12 @@ func try_set_down() -> void:
 	_cancel_charge()
 	var hit := _raycast(MASK_SETTABLE)
 	if hit.is_empty() or (hit["normal"] as Vector3).y < 0.7:
-		Events.hint_requested.emit("Apúntalo al suelo o a una mesa para dejarlo")
+		Events.hint_requested.emit(tr("Apúntalo al suelo o a una mesa para dejarlo"))
 		return
 	var pos: Vector3 = (hit["position"] as Vector3) + Vector3.UP * held.half_height
 	var target := Transform3D(Basis(Vector3.UP, held.rest_yaw), pos)
 	if _is_blocked(target):
-		Events.hint_requested.emit("Ahí no cabe")
+		Events.hint_requested.emit(tr("Ahí no cabe"))
 		return
 	_place_kind = PlaceKind.SURFACE
 	_start_place(target)
@@ -448,7 +448,7 @@ func _start_place(target: Transform3D) -> void:
 func _reject(reason: String) -> void:
 	_wobble = 1.0
 	Events.item_rejected.emit(held, reason)
-	Events.hint_requested.emit(reason)
+	Events.hint_requested.emit(tr(reason))
 
 
 # --- Puntería y utilidades ----------------------------------------------

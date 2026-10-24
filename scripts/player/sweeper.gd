@@ -62,7 +62,7 @@ func take(s: ShopSweep) -> void:
 	_aim(true)
 	Events.held_item_changed.emit(null)
 	if not GameSettings.tutorial_done or s.loads_done == 0:
-		Events.hint_requested.emit("Mantén el clic para barrer · Recogedor lleno: a la papelera")
+		Events.hint_requested.emit(tr("Mantén el clic para barrer · Recogedor lleno: a la papelera"))
 
 
 ## Las devuelve a la pared (E, coger otra cosa o la escena de apertura).
@@ -148,7 +148,7 @@ func _hit() -> void:
 	elif sweep.pan_full() and not _full_hint_shown:
 		_full_hint_shown = true
 		AudioManager.play(&"deny", sweep.to_global(mouth), -8.0)
-		Events.hint_requested.emit("Recogedor lleno: vacíalo en la papelera")
+		Events.hint_requested.emit(tr("Recogedor lleno: vacíalo en la papelera"))
 
 
 ## La escoba va al punto de barrido inclinada hacia la mano del jugador; el recogedor, en el suelo,
@@ -201,7 +201,7 @@ func _aiming_at_bin() -> bool:
 func _publish(at_bin: bool) -> void:
 	# Una sola línea bajo la mira: las herramientas ya ocupan la parte de abajo de la pantalla.
 	var n := sweep.pan_count()
-	var load_text := "Recogedor %d / %d" % [n, ShopSweep.PAN_CAPACITY]
+	var load_text := tr("Recogedor %d / %d") % [n, ShopSweep.PAN_CAPACITY]
 	var info := {"title": "", "detail": "", "hint": ""}
 	if sweep.is_dumping():
 		info.merge({"key": "", "action": "", "kind": "hold"})
@@ -212,7 +212,7 @@ func _publish(at_bin: bool) -> void:
 	elif sweep.scraps_left() == 0 and n > 0:
 		info.merge({"key": "", "action": "Suelo limpio: vacía el recogedor en la papelera", "kind": "hold"})
 	else:
-		info.merge({"key": "Clic", "action": "Barrer   ·   %s   ·   E dejar" % load_text, "kind": "hold"})
+		info.merge({"key": "Clic", "action": tr("Barrer   ·   %s   ·   E dejar") % load_text, "kind": "hold"})
 	if info != _last_info:
 		_last_info = info
 		Events.target_changed.emit(info)

@@ -31,6 +31,7 @@ var _customer := false  # --customer: la clienta de la apertura (quieta, andando
 var _cat := false       # --cat: el gato en cada pose (de lado y de frente), el zarpazo y la caricia
 var _sweep := false     # --sweep: barrer en primera persona (coger, barrer, recogedor lleno, vaciar)
 var _access := false    # --access: menú de pausa y HUD con el texto a ×1,5 y colores para daltonismo
+var _menu := false      # --menu (con --show-title): la pantalla de título en español e inglés y los ajustes
 var _boxes := false     # --boxes: cajas de cartón (tiradas, aplanar, llevar, montón y atadas)
 var _top := false       # --top: planta de la sala desde arriba (cámara ortográfica) para colocar cosas
 var _street := false    # --street: solo fotografía la vista de la ventana con cada tipo de suceso de la calle
@@ -64,6 +65,8 @@ func _ready() -> void:
 			_top = true
 		elif arg == "--boxes":
 			_boxes = true
+		elif arg == "--menu":
+			_menu = true
 	if _out_dir == "":
 		_out_dir = ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
@@ -344,6 +347,23 @@ func _run() -> void:
 		await get_tree().process_frame
 	var shop: Shop = main.get_node("Shop")
 	var player: Player = main.get_node("Player")
+	if _menu:
+		var title := main.get_node_or_null("TitleScreen")
+		await get_tree().create_timer(3.8).timeout
+		await _shot("menu_titulo_es")
+		GameSettings.language = "en"
+		GameSettings.apply_language()
+		GameSettings.changed.emit()
+		await get_tree().create_timer(0.6).timeout
+		await _shot("menu_titulo_en")
+		if title != null:
+			title._open_settings()
+			await get_tree().create_timer(0.6).timeout
+			await _shot("menu_ajustes_en")
+		GameSettings.language = "es"
+		GameSettings.apply_language()
+		get_tree().quit()
+		return
 	if _boxes:
 		await _run_boxes(shop, player)
 		get_tree().quit()

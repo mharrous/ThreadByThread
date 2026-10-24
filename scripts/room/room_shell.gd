@@ -331,6 +331,7 @@ func _build_sign() -> void:
 	var label := Label3D.new()
 	label.text = sign_title
 	label.font_size = 96
+	label.font = UiStyle.font(&"title")
 	label.pixel_size = 0.0028 if sign_title.length() < 20 else 0.0021
 	label.outline_size = 0
 	label.modulate = Color("fff3dc")
@@ -339,6 +340,7 @@ func _build_sign() -> void:
 	var sub := Label3D.new()
 	sub.text = sign_subtitle
 	sub.font_size = 48
+	sub.font = UiStyle.font(&"hand")
 	sub.pixel_size = 0.0022
 	sub.outline_size = 0
 	sub.modulate = Color("f3d7a8")
@@ -739,6 +741,7 @@ func _make_open_sign() -> Node3D:
 	var label := Label3D.new()
 	label.text = "¡ABIERTO!"
 	label.font_size = 72
+	label.font = UiStyle.font(&"title")
 	label.pixel_size = 0.0024
 	label.outline_size = 0
 	label.modulate = Color("ffe08a")

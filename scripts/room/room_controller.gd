@@ -454,7 +454,7 @@ func _on_item_landed(it: PickableItem) -> void:
 			it.set_pickable(true)
 			it.squash(1.0)
 			Events.item_placed.emit(it, unit)
-			Events.hint_requested.emit("¡Canasta!"))
+			Events.hint_requested.emit(tr("¡Canasta!")))
 		return
 	_rescue_if_stuck(it)
 
@@ -524,7 +524,7 @@ func _slide_out(it: PickableItem, to: Vector3, message: String) -> void:
 		it.state = PickableItem.State.LOOSE
 		it.set_pickable(true)
 		it.squash(0.6)
-		Events.hint_requested.emit(message))
+		Events.hint_requested.emit(tr(message)))
 
 
 func _nearest_free_slot(unit: StorageUnit, row: int, pos: Vector3, it: PickableItem) -> int:

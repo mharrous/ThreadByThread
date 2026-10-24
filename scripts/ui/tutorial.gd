@@ -1,12 +1,10 @@
 extends CanvasLayer
-## Tutorial mínimo: una tarjeta arriba con el paso actual. Avanza sola al hacer
+## Tutorial mínimo: una tarjeta de papel arriba con el paso actual. Avanza sola al hacer
 ## cada cosa (recoger, apuntar, colocar, lanzar) y no vuelve a aparecer.
 
-const CREAM := Color("fff4e0")
-const SOFT := Color("e9d3b0")
-const ACCENT := Color("f2a65a")
-const GOOD := Color("b8f0c0")
-const INK := Color(0.14, 0.09, 0.05, 0.95)
+const INK := UiStyle.INK
+const ACCENT := UiStyle.RED
+const GOOD := UiStyle.TEAL
 
 const STEPS := [
 	{"text": "Acércate a cualquier cosa del suelo y pulsa E para cogerla", "event": "pick"},
@@ -49,14 +47,7 @@ func _build() -> void:
 
 	_panel = PanelContainer.new()
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.13, 0.09, 0.06, 0.55)
-	sb.set_corner_radius_all(16)
-	sb.content_margin_left = 22
-	sb.content_margin_right = 26
-	sb.content_margin_top = 12
-	sb.content_margin_bottom = 13
-	_panel.add_theme_stylebox_override(&"panel", sb)
+	_panel.add_theme_stylebox_override(&"panel", UiStyle.paper(18, 0.95, Vector4(16, 10, 26, 11)))
 	_panel.anchor_left = 0.5
 	_panel.anchor_right = 0.5
 	_panel.anchor_top = 0.0
@@ -69,28 +60,31 @@ func _build() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 14)
 	_panel.add_child(row)
-	_step_label = _label("1 / %d" % STEPS.size(), 15, ACCENT)
-	row.add_child(_step_label)
-	_text_label = _label("", 19, CREAM)
+	# Número del paso en una pastilla roja (o "Listo" al final).
+	var badge := PanelContainer.new()
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bsb := StyleBoxFlat.new()
+	bsb.bg_color = ACCENT
+	bsb.set_corner_radius_all(14)
+	bsb.content_margin_left = 12
+	bsb.content_margin_right = 12
+	bsb.content_margin_top = 2
+	bsb.content_margin_bottom = 3
+	bsb.anti_aliasing = true
+	badge.add_theme_stylebox_override(&"panel", bsb)
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(badge)
+	_step_label = UiStyle.label("1 / %d" % STEPS.size(), 16, Color("fff6e6"), &"title")
+	badge.add_child(_step_label)
+	_text_label = UiStyle.label("", 20, INK, &"bold")
 	row.add_child(_text_label)
-
-
-func _label(text: String, size: int, color: Color) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override(&"font_size", size)
-	l.add_theme_color_override(&"font_color", color)
-	l.add_theme_color_override(&"font_outline_color", INK)
-	l.add_theme_constant_override(&"outline_size", 4)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return l
 
 
 func _show_step(index: int, animate: bool = true) -> void:
 	_index = index
 	_step_label.text = "%d / %d" % [index + 1, STEPS.size()]
 	_text_label.text = STEPS[index]["text"]
-	_text_label.add_theme_color_override(&"font_color", CREAM)
+	_text_label.add_theme_color_override(&"font_color", INK)
 	if animate:
 		_panel.modulate.a = 0.0
 		create_tween().tween_property(_panel, "modulate:a", 1.0, 0.35).set_trans(Tween.TRANS_SINE)

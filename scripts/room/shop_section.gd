@@ -172,6 +172,7 @@ func _build_sign() -> void:
 	var title := Label3D.new()
 	title.text = display_name.to_upper()
 	title.font_size = 80
+	title.font = UiStyle.font(&"title")
 	title.pixel_size = 0.0024 if display_name.length() < 16 else 0.0019
 	title.outline_size = 0
 	title.modulate = Color("fff3dc")
@@ -180,6 +181,7 @@ func _build_sign() -> void:
 	_sign_sub = Label3D.new()
 	_sign_sub.text = sign_subtitle
 	_sign_sub.font_size = 44
+	_sign_sub.font = UiStyle.font(&"hand")
 	_sign_sub.pixel_size = 0.0019
 	_sign_sub.outline_size = 0
 	_sign_sub.modulate = Color("f3d7a8")

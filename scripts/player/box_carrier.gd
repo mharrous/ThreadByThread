@@ -52,7 +52,7 @@ func take(b: CardboardBox) -> void:
 	_from = b.global_transform
 	_take_t = 0.0
 	if boxes != null and boxes.stacked_count() == 0:
-		Events.hint_requested.emit("Llévalo al montón de junto a la puerta y haz clic para dejarlo")
+		Events.hint_requested.emit(tr("Llévalo al montón de junto a la puerta y haz clic para dejarlo"))
 
 
 ## E: lo suelta plano en el suelo, delante del jugador.
@@ -86,7 +86,7 @@ func click() -> void:
 		_end()
 		boxes.stack(b)
 	else:
-		Events.hint_requested.emit("Déjalo en el montón de junto a la puerta de la calle")
+		Events.hint_requested.emit(tr("Déjalo en el montón de junto a la puerta de la calle"))
 
 
 ## Cada fotograma con el cartón en la mano (lo llama ItemHolder._process).

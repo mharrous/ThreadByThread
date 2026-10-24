@@ -3,7 +3,11 @@ extends CanvasLayer
 ## Menú de pausa con aspecto de mercería: una pieza de tela de bordes en zigzag (como cortada con
 ## tijeras dentadas) con puntadas rojas, un título sobre cinta de raso, botones cosidos, deslizadores
 ## que son cintas métricas y casillas que son botones de costura. Incluye el libro de colecciones.
-## Todo se dibuja por código: sin imágenes ni fuentes externas.
+## Todo se dibuja por código, sin imágenes; las fuentes son las de la interfaz (UiStyle).
+## Desde el título se abre como "Ajustes" (open(true)): sin pausar el juego y volviendo al título al cerrar.
+
+## Se cierra (para quien lo abrió desde el título).
+signal closed
 
 const PAPER := Color("f6ecd6")
 const PAPER_EDGE := Color("e3d1ad")
@@ -23,7 +27,10 @@ var _main_panel: Control
 var _book_panel: Control
 var _book_content: VBoxContainer
 var _opened := false
+var _from_title := false
 var _auto_pause := true
+var _lang_buttons: Dictionary = {}
+var _ribbon: Ribbon
 var _open_tween: Tween
 
 
@@ -119,11 +126,16 @@ class Ribbon extends Control:
 		draw_polyline(closed, PauseMenu.RED_DARK, 2.0, true)
 		PauseMenu.draw_sewn_button(self, Vector2(tail + 8.0, h * 0.5), 11.0, PauseMenu.PAPER)
 		PauseMenu.draw_sewn_button(self, Vector2(w - tail - 8.0, h * 0.5), 11.0, PauseMenu.PAPER)
-		var font := ThemeDB.fallback_font
-		var ts := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+		var font := UiStyle.font(&"title")
+		var shown := tr(text)
+		var ts := font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 		var base := Vector2((w - ts.x) * 0.5, h * 0.5 + font_size * 0.35)
-		draw_string(font, base + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TEXT_SHADOW)
-		draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color("fff6e6"))
+		draw_string(font, base + Vector2(1, 1), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TEXT_SHADOW)
+		draw_string(font, base, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color("fff6e6"))
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_TRANSLATION_CHANGED:
+			queue_redraw()
 
 
 # --- Ayudas estáticas ------------------------------------------------------
@@ -250,17 +262,31 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and _auto_pause and not _opened and is_inside_tree():
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and _auto_pause and not _opened and is_inside_tree() \
+			and get_tree().get_first_node_in_group(&"title_screen") == null:
 		open()
+	elif what == NOTIFICATION_TRANSLATION_CHANGED and _book_panel != null and _book_panel.visible:
+		_fill_book()
 
 
-func open() -> void:
+func is_open() -> bool:
+	return _opened
+
+
+## from_title: abierto desde el título como "Ajustes" (el juego sigue detrás y al cerrar se vuelve al título).
+func open(from_title: bool = false) -> void:
 	if _opened:
 		return
 	_opened = true
+	_from_title = from_title
 	_root.visible = true
 	_show_book(false)
-	get_tree().paused = true
+	_resume.text = "Volver" if from_title else "Continuar"
+	_ribbon.text = "Ajustes" if from_title else "Pausa"
+	_ribbon.queue_redraw()
+	_style_languages()
+	if not from_title:
+		get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Events.pause_toggled.emit(true)
 	_resume.grab_focus()
@@ -281,9 +307,14 @@ func close() -> void:
 	_opened = false
 	_root.visible = false
 	GameSettings.save_settings()
+	if _from_title:
+		_from_title = false
+		closed.emit()
+		return
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Events.pause_toggled.emit(false)
+	closed.emit()
 
 
 # --- Construcción --------------------------------------------------------
@@ -317,6 +348,7 @@ func _build_main() -> Control:
 
 	var ribbon := Ribbon.new()
 	ribbon.text = "Pausa"
+	_ribbon = ribbon
 	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vb.add_child(ribbon)
 
@@ -367,6 +399,8 @@ func _build_main() -> Control:
 	right.add_theme_constant_override(&"separation", 9)
 	right.custom_minimum_size = Vector2(430, 0)
 	cols.add_child(right)
+	right.add_child(_section("Idioma"))
+	right.add_child(_language_row())
 	right.add_child(_section("Manos"))
 	right.add_child(_slider_row("Sensibilidad del ratón", 0.2, 3.0, 0.05, GameSettings.mouse_sensitivity,
 		func(v: float): GameSettings.mouse_sensitivity = v))
@@ -392,6 +426,41 @@ func _build_main() -> Control:
 	right.add_child(_check_row("Colores para daltonismo (azul / naranja)", GameSettings.colorblind,
 		func(on: bool): GameSettings.colorblind = on))
 	return panel
+
+
+## Idioma: una pastilla por idioma (escrita en ese idioma); la elegida, rellena de rojo.
+func _language_row() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 10)
+	for code in GameSettings.LANGUAGES:
+		var b := Button.new()
+		b.text = {"es": "Español", "en": "English"}.get(code, code)
+		b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		b.custom_minimum_size = Vector2(140, 38)
+		b.add_theme_font_override(&"font", UiStyle.font(&"title"))
+		b.add_theme_font_size_override(&"font_size", 17)
+		b.pressed.connect(func():
+			AudioManager.play(&"ui_click")
+			GameSettings.language = code
+			GameSettings.apply_language()
+			GameSettings.changed.emit()
+			_style_languages())
+		row.add_child(b)
+		_lang_buttons[code] = b
+	_style_languages()
+	return row
+
+
+func _style_languages() -> void:
+	for code in _lang_buttons:
+		var b: Button = _lang_buttons[code]
+		var on: bool = code == GameSettings.language
+		b.add_theme_stylebox_override(&"normal", _pill(RED if on else Color("efe0c2"), RED_DARK if on else PAPER_EDGE.darkened(0.15)))
+		b.add_theme_stylebox_override(&"hover", _pill(RED.lightened(0.1) if on else Color("f5e8cf"), RED_DARK))
+		b.add_theme_stylebox_override(&"pressed", _pill(RED.darkened(0.1), RED_DARK))
+		b.add_theme_stylebox_override(&"focus", _pill(RED.lightened(0.1) if on else Color("f5e8cf"), Color("fff0c8")))
+		for c in [&"font_color", &"font_hover_color", &"font_focus_color", &"font_pressed_color"]:
+			b.add_theme_color_override(c, Color("fff6e6") if on else INK)
 
 
 ## Tarjeta con las teclas, como una etiqueta de patrón pegada.
@@ -459,7 +528,7 @@ func _fill_book() -> void:
 	if shop == null or shop.room == null:
 		return
 	var room := shop.room
-	var summary := _book_label("Ordenados %d de %d  ·  Tesoros encontrados: %d de %d" % [room.placed_items, room.total_items, room.treasures_found(), room.treasures_total()], 18, GOLD_INK)
+	var summary := _book_label(tr("Ordenados %d de %d  ·  Tesoros encontrados: %d de %d") % [room.placed_items, room.total_items, room.treasures_found(), room.treasures_total()], 18, GOLD_INK)
 	_book_content.add_child(summary)
 	for section in room.sections:
 		_book_content.add_child(_thread_line())
@@ -502,11 +571,11 @@ func _section_header(section: ShopSection) -> Control:
 	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	col.add_theme_constant_override(&"separation", 2)
 	row.add_child(col)
-	col.add_child(_book_label(section.display_name + ("  ·  ¡completada!" if section.is_completed else ""), 19, RED_DARK))
+	col.add_child(_book_label(tr(section.display_name) + (tr("  ·  ¡completada!") if section.is_completed else ""), 19, RED_DARK))
 	var bar := CollectionCard.ThreadBar.new()
 	bar.ratio = 0.0 if section.total_items == 0 else float(section.placed_items) / float(section.total_items)
 	bar.color = TEAL if section.is_completed else RED
-	bar.text = "ordenados %d de %d" % [section.placed_items, section.total_items]
+	bar.text = tr("ordenados %d de %d") % [section.placed_items, section.total_items]
 	col.add_child(bar)
 	return row
 
@@ -630,6 +699,7 @@ func _check_row(text: String, value: bool, on_change: Callable) -> CheckBox:
 
 func _make_theme() -> Theme:
 	var t := Theme.new()
+	t.default_font = UiStyle.font(&"body")
 	t.set_color(&"font_color", &"Label", INK)
 	t.set_font_size(&"font_size", &"Label", 17)
 	t.set_color(&"font_color", &"CheckBox", INK)

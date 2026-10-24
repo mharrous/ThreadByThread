@@ -452,7 +452,7 @@ func _go(to: Vector3, speed: float, pose: StringName, gen: int) -> bool:
 	_arrived = false
 	_set_pose(pose)
 	while gen == _gen and not _arrived:
-		await get_tree().process_frame
+		await _frame()
 	if gen != _gen:
 		return false
 	return true
@@ -493,7 +493,7 @@ func _turn_to(target: Vector3, gen: int) -> void:
 	while gen == _gen and absf(angle_difference(rotation.y, goal)) > 0.05 and t < 1.0:
 		rotation.y = lerp_angle(rotation.y, goal, 1.0 - exp(-TURN_SPEED * get_process_delta_time()))
 		t += get_process_delta_time()
-		await get_tree().process_frame
+		await _frame()
 
 
 func _face(dir: Vector3, delta: float) -> void:
@@ -569,8 +569,19 @@ func _player_near(dist: float) -> bool:
 	return _shell.to_local(_player.global_position).distance_to(position) < dist
 
 
+## Fuera del árbol (la escena se está liberando: volver al menú) se cancela todo lo que estaba haciendo.
 func _wait(seconds: float) -> void:
+	if not is_inside_tree():
+		_gen += 1
+		return
 	await get_tree().create_timer(seconds, false).timeout
+
+
+func _frame() -> void:
+	if not is_inside_tree():
+		_gen += 1
+		return
+	await get_tree().process_frame
 
 
 # --- El ovillo -------------------------------------------------------------

@@ -57,10 +57,9 @@ func _build() -> void:
 		if ResourceLoader.exists(path):
 			icons.add_child(ItemIcon.new(load(path), false, 56.0))
 	_content.add_child(icons)
-	var serif := SystemFont.new()
-	serif.font_names = PackedStringArray(["Georgia", "Palatino Linotype", "Book Antiqua", "Times New Roman", "serif"])
-	_content.add_child(_label("Thread by Thread", 92, INK, serif))
-	_content.add_child(_label("Gracias por ordenar la mercería", 30, INK_SOFT, serif))
+	_content.add_child(_label("Thread by Thread", 96, INK, UiStyle.font(&"title")))
+	var thanks := _label("Gracias por ordenar la mercería", 34, INK_SOFT, UiStyle.font(&"hand"))
+	_content.add_child(thanks)
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 26)
 	_content.add_child(gap)
@@ -103,17 +102,4 @@ func _label(text: String, size: int, color: Color, font: Font) -> Label:
 
 
 func _button(text: String, color: Color) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(0, 56)
-	b.add_theme_font_size_override(&"font_size", 22)
-	for state in [&"font_color", &"font_hover_color", &"font_focus_color", &"font_pressed_color"]:
-		b.add_theme_color_override(state, Color("fff6e6"))
-	for state in [["normal", color], ["hover", color.lightened(0.12)], ["pressed", color.darkened(0.12)], ["focus", color.lightened(0.12)], ["disabled", color.darkened(0.2)]]:
-		var s := StyleBoxFlat.new()
-		s.bg_color = state[1]
-		s.set_corner_radius_all(28)
-		s.border_color = color.darkened(0.3)
-		s.set_border_width_all(2)
-		b.add_theme_stylebox_override(StringName(state[0]), s)
-	return b
+	return UiStyle.button(text, color, 22, 56)

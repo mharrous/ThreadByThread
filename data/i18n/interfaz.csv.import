@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bjx2rrsbww5ud"
+
+[deps]
+
+files=["res://data/i18n/interfaz.es.translation", "res://data/i18n/interfaz.en.translation"]
+
+source_file="res://data/i18n/interfaz.csv"
+dest_files=["res://data/i18n/interfaz.es.translation", "res://data/i18n/interfaz.en.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=true
+unescape_translations=true

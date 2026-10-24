@@ -93,9 +93,9 @@ func _open_or_hint() -> void:
 	if playing:
 		return
 	if not _floor_clean():
-		Events.hint_requested.emit(SWEEP_HINT)
+		Events.hint_requested.emit(tr(SWEEP_HINT))
 	elif not _boxes_done():
-		Events.hint_requested.emit(BOXES_HINT)
+		Events.hint_requested.emit(tr(BOXES_HINT))
 	else:
 		play()
 
@@ -114,6 +114,9 @@ func _boxes_done() -> bool:
 func _resume_pending() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# Con el título delante, espera a que se entre a jugar.
+	while get_tree().get_first_node_in_group(&"title_screen") != null:
+		await get_tree().create_timer(0.3).timeout
 	if not _find() or _shop.shop_opened or not _shop.room.is_completed or playing or not _floor_clean() or not _boxes_done():
 		return
 	await _wait(1.5)
@@ -174,7 +177,7 @@ func play() -> void:
 	shell.open_shop(true, 3.0)
 	_confetti(room)
 	if _hud != null:
-		_hud.show_title_card(OPEN_TEXT, 4.0)
+		_hud.show_title_card(tr(OPEN_TEXT), 4.0)
 	var inside: Array[Vector3] = [Vector3(hw - 1.0, 0.0, dz + 0.25), Vector3(4.4, 0.0, 2.65), Vector3(2.4, 0.0, 2.75)]
 	var stop := _stop_point(room, inside[inside.size() - 1])
 	var path := inside.duplicate()

@@ -1,6 +1,6 @@
 # THREAD BY THREAD — Progreso
 
-Última actualización: 2026-10-24 · Fases 1–3 cerradas · **Fase 4 en curso: final de la demo hecho (barrer a mano, apertura, pantalla final, gato por la sala)**
+Última actualización: 2026-10-24 · Fases 1–3 cerradas · **Fase 4 en curso: final de la demo hecho (barrer, cajas, apertura, gato vivo, interfaz cozy, inglés y tráiler)**
 
 ## Resumen de fases
 
@@ -11,6 +11,103 @@
 | 3 · Progresión (familias, estanterías, salas, colecciones, desbloqueos, guardado) | Cerrada |
 | 4 · Demo comercial (15–25 min, ejecutable de Windows) | **En curso**: sala única hecha (ver abajo) |
 | 5 · Pruebas y expansión | No empezada |
+
+## Fase 4 — Cajas de cartón, gato vivo, interfaz cozy, inglés y tráiler (2026-10-24, tercera parte)
+
+### Cajas de cartón (después de barrer)
+
+- Cinco cajas vacías tiradas por la tienda (`scripts/room/shop_boxes.gd` y `cardboard_box.gd`). Unas están derechas y otras tumbadas.
+- **E** apuntando a una caja: da un saltito y se aplasta, con un crujido sintetizado (`cardboard_fold`) y polvo. El cartón plano viene a la mano, bajo el brazo derecho (`scripts/player/box_carrier.gd`).
+- **Clic** apuntando al montón de junto a la puerta de la calle (al sur de la puerta, con una marca en el suelo y una nota "Cartón para tirar"): el cartón vuela, se apoya en la pared y suena (`cardboard_drop`). **E** lo suelta plano en el suelo y se puede volver a coger.
+- Con las cinco en el montón se atan con un cordel. Para hacer sitio al montón, el rincón sureste ya no tiene la caja pequeña.
+- **La tienda abre con todo ordenado, el suelo barrido y las cajas en el montón**, en cualquier orden. Si falta algo, un aviso dice qué falta.
+- Se guarda qué cajas están en el montón y dónde está cada cartón suelto (clave `boxes`).
+
+### El gato
+
+- **Ronroneo de verdad**: dos grabaciones de gatos reales de dominio público (Wikimedia Commons), limpiadas y en bucle. Están en `art/audio/sfx/cat_purr_1.wav` y `_2.wav`, con sus créditos en `art/audio/sfx/CREDITOS_SONIDOS.txt`.
+  - En cada caricia suena una al azar, con el volumen igualado según su nivel medido.
+  - No se encontró ningún "mrrp" real con licencia válida, así que el "mrrp" sigue siendo sintetizado.
+- **Animaciones nuevas** (`make_cat.py`):
+  - `lie`: tumbado de lado;
+  - `roll`: panza arriba, revolcándose;
+  - `stretch`: se estira con el culete en alto;
+  - `knead`: amasa;
+  - `gallop`: carrera loca.
+- **Comportamiento**:
+  - se tumba y se revuelca un rato;
+  - amasa sentado;
+  - se estira al pararse y al despertar;
+  - de vez en cuando le dan carreras locas por la sala, solo con el jugador lejos.
+
+### Interfaz cozy (fuentes OFL en `art/fonts`)
+
+- Fuentes: **Nunito** para el texto (variante 650 para todo, `nunito_ui.tres`), **Fredoka** para títulos y cifras, y **Patrick Hand** para notas a mano. Las tres tienen licencia SIL OFL y su texto de licencia va en la carpeta. Los carteles de la tienda usan Fredoka y Patrick Hand.
+- `scripts/ui/ui_style.gd`: colores, fuentes, tarjetas de papel, teclas dibujadas y botones cosidos, comunes a todos los menús.
+- **HUD**:
+  - Arriba a la izquierda, una nota de papel cosida con:
+    - el progreso;
+    - la **lista de tareas**: cada cosa a su sitio, barrer el suelo, cajas al montón y tesoros. La tarea en curso va en rojo y las hechas se marcan con un botón turquesa;
+    - al pie, el siguiente paso escrito a mano.
+  - Bajo la mira, una píldora con la tecla dibujada.
+  - Los avisos van en tarjetitas de papel, doradas para los logros.
+  - La racha es una cinta roja.
+  - Los controles salen con teclas dibujadas.
+  - El tutorial y la pantalla final siguen el mismo estilo.
+- **Pantalla de título nueva**:
+  - La tienda de verdad se ve detrás, con una cámara que se mece despacio; el juego no está en pausa y el gato sigue a lo suyo.
+  - Velo cálido a la izquierda, el título grande y un hilo que se cose solo.
+  - Botones cosidos que entran uno a uno: Jugar/Continuar, Nueva partida, **Ajustes** (abre el menú de pausa encima) y Salir.
+  - Arriba a la derecha, el idioma.
+  - Al jugar, la cámara vuela hasta los ojos del jugador.
+- **Menú de pausa**: fuentes nuevas y fila **Idioma**. Desde el título se abre como "Ajustes".
+
+### Inglés
+
+- Todos los textos tienen inglés: interfaz, avisos, indicadores, nombres y detalles de los objetos, carteles grandes y pequeños de la tienda, la nota del cartón, la puerta (CERRADO/ABIERTO), el gato, la apertura y el tráiler.
+- Traducciones en `data/i18n/interfaz.csv` (73 textos) y `data/i18n/juego.csv` (256). La clave es el texto en español, que es el que hay en el código.
+  - Se generan con `python tools/i18n_interfaz.py` y `python tools/i18n_juego.py`.
+- `GameSettings.language`: la primera vez se usa el idioma del sistema (español si el sistema está en español, inglés si no). Se guarda en los ajustes.
+  - Los textos cambian al momento.
+  - En pruebas siempre es español, salvo que se pase `--lang=en`.
+
+### Tráiler
+
+- `powershell -File tools\trailer\grabar_trailer.ps1` graba `build\trailer\thread_by_thread_trailer_es.mp4` y `_en.mp4`.
+  - Formato: 1920×1080, 30 fps, H.264 + AAC, 63 s.
+  - Usa el Movie Maker de Godot: es el juego de verdad, con su música y sus sonidos, siguiendo un guion de planos (`tools/trailer/trailer.gd`).
+  - Tarda unos 3 minutos por idioma. Mientras graba hay una ventana sin bordes de 1920×1080 encima de todo.
+- Planos, en orden:
+  1. la tienda hecha un lío;
+  2. colocar ovillos en primera persona, con su racha;
+  3. antes y después de una pared;
+  4. el gato revolcándose y la caricia, con corazones y ronroneo;
+  5. barrer y vaciar el recogedor;
+  6. aplanar una caja y llevarla al montón;
+  7. la apertura: campanillas, puerta, clienta, confeti y "La mercería está abierta";
+  8. el logotipo con "Próximamente".
+- Los rótulos van en tarjetas de papel cosidas, en el idioma de cada versión.
+
+### Pruebas (2026-10-24, tercera parte)
+
+- `run_smoke.ps1 -Count 1`: **pasa**. Nuevas comprobaciones:
+  - barrido pero con las cajas por el suelo, la tienda no abre y la tarea en curso son las cajas;
+  - aplanar las cinco con E, soltar una con E y volver a cogerla, dejarlas con clic en el montón, cordel, HUD marcado y guardado.
+- `run_persist.ps1`: **pasa**, con dos cajas en el montón y un cartón suelto entre dos procesos.
+- `run_end_screen.ps1`: **pasa**. Se ha adaptado al título nuevo: el juego ya no está en pausa debajo y el jugador no se mueve.
+- Capturas nuevas:
+  - `--top`: planta de la sala desde arriba;
+  - `--boxes`: las cajas;
+  - `--menu --show-title`: título en español e inglés y ajustes.
+  - Con `--lang=en`, cualquier vista sale en inglés.
+
+Sin comprobar a mano:
+- el sonido del ronroneo real (no lo he podido escuchar; lo elegí por sus niveles y su espectro);
+- el crujido del cartón;
+- cómo se siente llevar el cartón;
+- si las carreras locas del gato distraen.
+
+El tráiler lo he revisado por fotogramas sueltos, no viéndolo entero con sonido. No se ha exportado el ejecutable.
 
 ## Fase 4 — Barrer a mano, gato por toda la sala y caricias (2026-10-24, segunda parte)
 

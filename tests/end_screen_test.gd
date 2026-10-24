@@ -87,10 +87,10 @@ func _run() -> void:
 	var main := get_tree().current_scene
 	await _frames(10)
 	var title := main.get_node_or_null("TitleScreen")
-	_check(title != null and get_tree().paused, "al empezar sale el título y el juego está en pausa")
+	_check(title != null and (main.get_node("Player") as Player).input_locked, "al empezar sale el título y el jugador no se mueve (la tienda sigue viva detrás)")
 	if title != null:
 		await _press_play(title)
-	_check(not get_tree().paused, "clic en Jugar: se quita la pausa")
+	_check(not get_tree().paused and not (main.get_node("Player") as Player).input_locked, "clic en Jugar: la cámara vuela al jugador y se juega")
 	Engine.time_scale = 3.0
 
 	var shop := main.get_node("Shop") as Shop
@@ -130,8 +130,8 @@ func _run() -> void:
 	_check(main != null and main.scene_file_path == MAIN, "se carga la tienda de nuevo")
 	title = main.get_node_or_null("TitleScreen") if main != null else null
 	_check(title != null and title.visible, "sale la pantalla de título")
-	_check(get_tree().paused, "el juego está en pausa bajo el título")
-	_check(get_tree().get_nodes_in_group(&"modal_ui").is_empty(), "no queda ninguna pantalla final")
+	_check((main.get_node("Player") as Player).input_locked, "el jugador no se mueve bajo el título")
+	_check(get_tree().get_nodes_in_group(&"modal_ui").all(func(n): return n == title), "no queda ninguna pantalla final (solo el título)")
 	var shop2 := main.get_node("Shop") as Shop
 	_check(shop2.shop_opened and shop2.room.shell.is_shop_open(), "la partida cargada recuerda la tienda abierta")
 	var sweep := shop2.room.shell.get_node_or_null("ShopSweep") as ShopSweep
@@ -141,7 +141,7 @@ func _run() -> void:
 	_check(orphans == 0, "sin nodos huérfanos tras la recarga (%d)" % orphans)
 	if title != null:
 		await _press_play(title)
-	_check(not get_tree().paused, "clic en Continuar: vuelta al juego")
+	_check(not get_tree().paused and not (main.get_node("Player") as Player).input_locked, "clic en Continuar: vuelta al juego")
 	await _frames(60)
 	_check(not _opening().playing, "con la tienda ya abierta la apertura no se repite")
 

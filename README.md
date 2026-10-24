@@ -57,8 +57,10 @@ Usa los mismos guardados y ajustes que el juego abierto desde el editor. (`expor
 8. **Tesoros**: ocho objetos de lujo, dos por sección (encima de estanterías altas, del cajón y de las pilas de cajas). Se ven destellos dorados muy leves de cerca; el panel de arriba a la izquierda dice cuántos hay. Al cogerlos se enseñan un momento y aparecen en la repisa de la pared sur (sus pastillas llevan el color y el nombre del tesoro). Los de lo alto de una estantería se apuntan con una ayuda de puntería: basta mirar hacia ellos desde 1–3 m. Los ya expuestos se pueden **examinar** con E (vienen a la mano, giran y vuelven).
 9. Esc → **Libro de colecciones**: un capítulo por sección con su barra de progreso, el dibujo de cada colección, escarapela al completarla y los tesoros (silueta con "?" hasta encontrarlos). **Completar esta sección** es un atajo de pruebas: ordena de golpe la sección del objeto que llevas o la de los muebles más cercanos.
 10. **Barrer**: la escoba y el recogedor están en la pared sur, junto a la papelera (bajo la ventana). E para cogerlos, mantén el clic mirando al suelo para barrer, y clic apuntando a la papelera para vaciar el recogedor (le caben 30 papelitos). E los devuelve. La tienda abre con todo colocado **y** el suelo barrido.
-11. **El gato** anda por toda la tienda: juega con su ovillo, se lava, se echa la siesta. Apúntale con las manos vacías y pulsa E para acariciarlo.
-12. Cierra el juego a medias y vuelve a abrirlo: todo debe seguir donde lo dejaste. Los guardados de la versión de cuatro salas no se cargan: se empieza de cero.
+11. **Cajas de cartón**: hay cinco tiradas. E aplana una y te la llevas; clic apuntando al montón de junto a la puerta de la calle la deja allí (E la suelta en el suelo). La tienda abre con todo colocado, el suelo barrido **y** las cajas en el montón.
+12. **El gato** anda por toda la tienda: juega con su ovillo, se lava, amasa, se revuelca panza arriba, se estira, le dan carreras locas y se echa la siesta. Apúntale con las manos vacías y pulsa E para acariciarlo (ronronea de verdad).
+13. **Idioma**: en el título (arriba a la derecha) o en Esc → Idioma. Todo cambia al momento a inglés, carteles de la tienda incluidos.
+14. Cierra el juego a medias y vuelve a abrirlo: todo debe seguir donde lo dejaste. Los guardados de la versión de cuatro salas no se cargan: se empieza de cero.
 
 Dime qué sientes raro: fuerza del lanzamiento, sonidos (nada de audio se ha escuchado aún), frecuencia de la calle, sensibilidad, dificultad de encontrar los tesoros.
 
@@ -146,6 +148,18 @@ Eso regenera `data/items/*.tres` y los catálogos. Cada fila de estantería/celd
 ```
 
 Las texturas son PNG normales: puedes retocarlas en Krita o GIMP y Godot las reimporta solo. Las texturas de la calle (asfalto, acera, hierba, tejas) deben importarse con mipmaps y compresión VRAM; las de relieve, como mapa de normales (ya está configurado en sus `.import`).
+
+## Tráiler
+
+```powershell
+powershell -File tools\trailer\grabar_trailer.ps1            # español e inglés
+powershell -File tools\trailer\grabar_trailer.ps1 -Lang en   # solo uno
+```
+Graba el juego de verdad con el Movie Maker de Godot (unos 3 minutos por idioma, con una ventana de 1920×1080 encima de todo) y lo pasa a mp4 con ffmpeg: `build	railer	hread_by_thread_trailer_<idioma>.mp4`. Los planos están en `tools/trailer/trailer.gd`.
+
+## Idiomas
+
+Español e inglés. Las traducciones están en `data/i18n/interfaz.csv` y `data/i18n/juego.csv` (clave = texto en español del código). Se regeneran con `python tools/i18n_interfaz.py` y `python tools/i18n_juego.py`; después, `godot --headless --path . --import`.
 
 ## Música
 

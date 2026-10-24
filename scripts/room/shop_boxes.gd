@@ -233,7 +233,8 @@ func _build_marker() -> void:
 	_marker.add_child(paper)
 	_note = Label3D.new()
 	_note.text = "Cartón\npara tirar"
-	_note.font_size = 36
+	_note.font_size = 40
+	_note.font = UiStyle.font(&"hand")
 	_note.pixel_size = 0.0021
 	_note.modulate = Color("6b4a2b")
 	_note.outline_size = 0

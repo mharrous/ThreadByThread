@@ -151,6 +151,7 @@ func _add_shop_door(at_wall: Vector3) -> void:
 	door_sign = Label3D.new()
 	door_sign.text = "CERRADO"
 	door_sign.font_size = 64
+	door_sign.font = UiStyle.font(&"title")
 	door_sign.pixel_size = 0.0022
 	door_sign.outline_size = 8
 	door_sign.outline_modulate = Color("f6ecd8")

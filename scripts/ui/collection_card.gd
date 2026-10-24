@@ -41,7 +41,7 @@ func _draw() -> void:
 		_draw_treasure_text(font)
 		return
 	# Nombre (hasta dos líneas) y progreso.
-	draw_multiline_string(font, Vector2(4, 76), label, HORIZONTAL_ALIGNMENT_CENTER, size.x - 8.0, 13, 2, PauseMenu.INK)
+	draw_multiline_string(font, Vector2(4, 76), tr(label), HORIZONTAL_ALIGNMENT_CENTER, size.x - 8.0, 13, 2, PauseMenu.INK)
 	var ratio := 0.0 if total == 0 else clampf(float(placed) / float(total), 0.0, 1.0)
 	var bar := Rect2(Vector2(12, size.y - 20), Vector2(size.x - 24, 7))
 	draw_rect(bar, PauseMenu.PAPER_EDGE)
@@ -58,12 +58,12 @@ func _draw() -> void:
 func _draw_treasure_text(font: Font) -> void:
 	var x := 92.0
 	if found:
-		draw_string(font, Vector2(x, 32), label, HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 10, 17, PauseMenu.GOLD_INK)
-		draw_multiline_string(font, Vector2(x, 54), detail, HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 12, 13, 2, PauseMenu.INK_SOFT)
+		draw_string(font, Vector2(x, 32), tr(label), HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 10, 17, PauseMenu.GOLD_INK)
+		draw_multiline_string(font, Vector2(x, 54), tr(detail), HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 12, 13, 2, PauseMenu.INK_SOFT)
 		_rosette(Vector2(size.x - 18, 18))
 	else:
 		draw_string(font, Vector2(x, 32), "???", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, PauseMenu.INK_SOFT)
-		draw_multiline_string(font, Vector2(x, 54), "Escondido en algún rincón de la sala. Busca destellos dorados.", HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 12, 13, 2, PauseMenu.INK_SOFT)
+		draw_multiline_string(font, Vector2(x, 54), tr("Escondido en algún rincón de la sala. Busca destellos dorados."), HORIZONTAL_ALIGNMENT_LEFT, size.x - x - 12, 13, 2, PauseMenu.INK_SOFT)
 
 
 ## Escarapela dorada con una marca de verificación (colección completa, tesoro hallado).
@@ -93,8 +93,9 @@ class ThreadBar extends Control:
 		PauseMenu.draw_dashed(self, PackedVector2Array([Vector2(0, 11), Vector2(size.x * clampf(ratio, 0.0, 1.0), 11)]), Color(1, 1, 1, 0.55), 1.2, 4.0, 3.0)
 		if text != "":
 			var font := ThemeDB.fallback_font
-			var ts := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
-			draw_string(font, Vector2(size.x - ts.x, 5), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PauseMenu.INK_SOFT)
+			var shown := tr(text)
+			var ts := font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+			draw_string(font, Vector2(size.x - ts.x, 5), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, PauseMenu.INK_SOFT)
 
 
 ## Candado de una sala que aún no se ha desbloqueado.

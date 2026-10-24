@@ -88,13 +88,13 @@ func skip_section() -> void:
 	if section == null:
 		return
 	if section.is_completed and section.placed_items == section.total_items:
-		Events.hint_requested.emit("La sección %s ya está completa" % section.display_name)
+		Events.hint_requested.emit(tr("La sección %s ya está completa") % tr(section.display_name))
 		return
 	var holder := _player.get_node_or_null("ItemHolder") as ItemHolder if _player != null else null
 	if holder != null:
 		holder.release_held()
 	room.solve_instantly(section)
-	Events.hint_requested.emit("%s: completada con el atajo" % section.display_name)
+	Events.hint_requested.emit(tr("%s: completada con el atajo") % tr(section.display_name))
 
 
 # --- Guardado ------------------------------------------------------------

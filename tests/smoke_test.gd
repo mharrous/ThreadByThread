@@ -671,7 +671,7 @@ func _test_opening(room: RoomController, hud: Node) -> void:
 	await get_tree().create_timer(3.0).timeout
 	_check(not opening.playing, "barrido pero con las cajas de cartón por el suelo no abre")
 	_check(hud._objective.text == hud.OBJECTIVE_BOXES, "el objetivo pasa a las cajas (%s)" % hud._objective.text)
-	_check(hud._boxes_label.visible, "el HUD enseña las cajas al montón al terminar de barrer")
+	_check(hud._boxes_label.is_visible_in_tree() and hud._rows[&"boxes"]["dot"].current, "en la lista del HUD, las cajas son la tarea en curso")
 	await _test_boxes(room, hud)
 	_check(await _wait_until(func(): return opening.playing, 8.0), "con todo hecho empieza la escena de apertura")
 	_check(not holder.sweeper.active, "la escoba vuelve a la pared al empezar la escena")
@@ -893,7 +893,7 @@ func _test_sweep(room: RoomController, hud: Node) -> void:
 	_check(dumps[0] >= ceili(float(total) / ShopSweep.PAN_CAPACITY), "%d vaciados en la papelera" % dumps[0])
 	_check(puffs == dumps[0], "nube de polvo en cada vaciado (%d)" % puffs)
 	_check(sweep.is_clean(), "suelo limpio y recogedor vacío")
-	_check(hud._floor_label.text == "Suelo barrido  100 %", "el HUD lo cuenta (%s)" % hud._floor_label.text)
+	_check(hud._floor_label.text == "100 %" and hud._rows[&"sweep"]["dot"].done, "el HUD lo cuenta y lo marca (%s)" % hud._floor_label.text)
 	await _frames(3)
 	var floor_state: Dictionary = SaveGame.read().get("floor", {})
 	_check((floor_state.get("swept", []) as Array).size() == total, "el guardado tiene el suelo barrido")
@@ -951,7 +951,7 @@ func _test_boxes(room: RoomController, hud: Node) -> void:
 		_check(await _wait_until(func(): return boxes.stacked_count() == before + 1, 2.0), "clic deja el cartón %d en el montón (%d / %d)" % [b.index, before + 1, boxes.total()])
 	await get_tree().create_timer(1.2).timeout
 	_check(boxes.is_done() and boxes._twine.visible, "todas en el montón y atadas con el cordel")
-	_check(hud._boxes_label.text == "Cajas al montón  5 / 5", "el HUD lo cuenta (%s)" % hud._boxes_label.text)
+	_check(hud._boxes_label.text == "5 / 5" and hud._rows[&"boxes"]["dot"].done, "el HUD lo cuenta y lo marca (%s)" % hud._boxes_label.text)
 	await _frames(3)
 	var st: Dictionary = SaveGame.read().get("boxes", {})
 	_check((st.get("stacked", []) as Array).size() == boxes.total(), "el guardado tiene las cajas en el montón")
