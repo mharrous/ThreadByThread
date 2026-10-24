@@ -12,6 +12,40 @@
 | 4 · Demo comercial (15–25 min, ejecutable de Windows) | **En curso**: sala única hecha (ver abajo) |
 | 5 · Pruebas y expansión | No empezada |
 
+## Fase 4 — Gato nuevo y puntadas del HUD (2026-10-24, cuarta parte)
+
+### El gato, rehecho
+
+- **Modelo** (`art/blender/make_cat.py` → `art/models/cat.glb`, unos 14.200 triángulos):
+  - Antes era de piezas sueltas (bolas y tubos con huecos en las uniones). Ahora el pelaje es **una sola malla suave**: las formas (lomo, pecho, grupa, tripa, cuello, cabeza, mofletes, hocico, orejas, patas y cola) se funden con un remallado por vóxeles, se suavizan y se reducen.
+  - La cabeza es más grande, con mofletes mullidos y ojos grandes con brillo; tiene nariz rosa, boca en "w" y bigotes.
+- **Pelo pintado en los vértices**: atigrado gris con lomo más oscuro, rayas por los costados, muslos y patas, anillos en la cola y punta oscura, "M" en la frente y rayitas en los mofletes. Hocico, pechera, tripa y patitas son blancos y el interior de las orejas es rosa.
+  - `shop_cat.gd` activa el color de vértice (sRGB) en la superficie `fur`, con un poco de luz de borde para que se lea el pelo.
+- **Esqueleto de 24 huesos** con pesos suaves (calculados por Blender):
+  - cadera, pecho, cuello y cabeza;
+  - patas en tres tramos (hombro-codo, codo-muñeca, patita; cadera-rodilla, rodilla-corvejón, patita);
+  - cola en cinco tramos.
+  - Los nombres que usa el juego no cambian (`eyes`, `ear_l`, `ear_r` y las 16 animaciones).
+- **Animaciones rehechas** con codos, rodillas y columna:
+  - al andar y trotar dobla codo, muñeca y rodilla para levantar la patita;
+  - sentado, la cola rodea el cuerpo por el suelo;
+  - la siesta es ahora "barra de pan", con la barbilla sobre las patas;
+  - al estirarse baja el pecho al suelo con las patas delanteras estiradas;
+  - de pie, sentado, tumbado y durmiendo, el pecho respira.
+- El script puede renderizar vistas de cada animación sin abrir el juego (segunda carpeta tras `--`).
+- `art/blender/common.py`: `Rig.export` se ha partido en `build_armature`, `bake_actions` y `write_glb`, que reutiliza el gato. La clienta exporta igual que antes (mismo archivo, byte a byte de tamaño).
+
+### HUD
+
+- La puntada discontinua de la nota de tareas, de la cinta "Racha" y del banner final se pintaba encima del texto, porque se ajustaba al contenido y no al panel. Ahora sigue el borde del panel (`Stitch.cover_parent`).
+
+### Pruebas
+
+- `run_smoke.ps1 -Count 1`, `run_persist.ps1` y `run_end_screen.ps1`: **pasan**.
+- Capturas `--cat` de todas las poses en el juego, y vistas de Blender de cada animación.
+
+Sin comprobar a mano: las animaciones en movimiento dentro del juego (solo las he visto en fotogramas sueltos), sobre todo el revolcarse y la carrera loca. El tráiler sigue mostrando el gato antiguo: hay que volver a grabarlo.
+
 ## Fase 4 — Cajas de cartón, gato vivo, interfaz cozy, inglés y tráiler (2026-10-24, tercera parte)
 
 ### Cajas de cartón (después de barrer)

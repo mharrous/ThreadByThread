@@ -70,6 +70,7 @@ func _ready() -> void:
 		return
 	var model := (load(MODEL) as PackedScene).instantiate() as Node3D
 	add_child(model)
+	_use_fur_colors(model)
 	_add_yarn()
 	_anim = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _anim != null:
@@ -654,6 +655,23 @@ func _yarn_home() -> void:
 
 func yarn_position() -> Vector3:
 	return _yarn.position if _yarn != null else Vector3.INF
+
+
+## El pelo (rayas, pechera, patitas blancas) va pintado en los vértices de la superficie "fur".
+func _use_fur_colors(model: Node3D) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := (mi as MeshInstance3D).mesh
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i) as StandardMaterial3D
+			if mat != null and mat.resource_name == "fur":
+				var fur := mat.duplicate() as StandardMaterial3D
+				fur.vertex_color_use_as_albedo = true
+				fur.vertex_color_is_srgb = true
+				fur.rim_enabled = true
+				fur.rim = 0.12
+				fur.rim_tint = 0.7
+				fur.albedo_color = Color.WHITE
+				(mi as MeshInstance3D).set_surface_override_material(i, fur)
 
 
 # --- Animación -------------------------------------------------------------

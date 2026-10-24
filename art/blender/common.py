@@ -296,6 +296,25 @@ class Rig(Model):
             obj.vertex_groups.new(name=b)
         scene.render.fps = fps
 
+        arm = self.build_armature()
+        obj.parent = arm
+        mod = obj.modifiers.new("Armature", "ARMATURE")
+        mod.object = arm
+
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(shade_angle))
+        self.bake_actions(arm)
+        self.write_glb(obj, arm)
+        tris = sum(len(p.vertices) - 2 for p in mesh.polygons)
+        size = self.max - self.min
+        print("EXPORTADO: %s  triangulos=%d  huesos=%d  animaciones=%s  tamaño(x,y,z)=(%.3f, %.3f, %.3f)" % (
+            self.name, tris, len(self.bones), ",".join(self.actions), size.x, size.y, size.z))
+
+    def build_armature(self):
+        """Crea el esqueleto (en la pose de reposo) y lo deja enlazado a la escena."""
+        scene = bpy.context.scene
         arm_data = bpy.data.armatures.new(self.name + "_rig")
         arm = bpy.data.objects.new(self.name + "_rig", arm_data)
         scene.collection.objects.link(arm)
@@ -310,16 +329,10 @@ class Rig(Model):
                 eb.parent = arm_data.edit_bones[parent]
                 eb.use_connect = False
         bpy.ops.object.mode_set(mode="OBJECT")
-        obj.parent = arm
-        mod = obj.modifiers.new("Armature", "ARMATURE")
-        mod.object = arm
+        return arm
 
-        bpy.ops.object.select_all(action="DESELECT")
-        obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
-        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(shade_angle))
-
-        # Giros en ejes de Godot (espacio del modelo) -> giro local de cada hueso.
+    def bake_actions(self, arm):
+        """Convierte las poses (giros en ejes de Godot) en acciones del esqueleto, una pista NLA por acción."""
         axes = {0: Vector((1, 0, 0)), 1: Vector((0, 0, 1)), 2: Vector((0, -1, 0))}
         arm.animation_data_create()
         arm.rotation_mode = "XYZ"
@@ -353,6 +366,7 @@ class Rig(Model):
             pb.location = (0, 0, 0)
             pb.scale = (1, 1, 1)
 
+    def write_glb(self, obj, arm):
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
         arm.select_set(True)
@@ -360,7 +374,3 @@ class Rig(Model):
         bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_yup=True, export_normals=True,
                                   use_selection=True, export_animations=True, export_animation_mode="NLA_TRACKS",
                                   export_force_sampling=True, export_optimize_animation_size=False)
-        tris = sum(len(p.vertices) - 2 for p in mesh.polygons)
-        size = self.max - self.min
-        print("EXPORTADO: %s  triangulos=%d  huesos=%d  animaciones=%s  tamaño(x,y,z)=(%.3f, %.3f, %.3f)" % (
-            self.name, tris, len(self.bones), ",".join(self.actions), size.x, size.y, size.z))
