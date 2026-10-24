@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://8fd5bee3qkf0"
-path="res://.godot/imported/dog_body.glb-05494795a3a7d153a8e685164931905f.scn"
+uid="uid://7i25hmt4uewd"
+path="res://.godot/imported/dog.glb-23d2cbedcf05bb7ff286b3cc8bfbcb39.scn"
 
 [deps]
 
-source_file="res://art/models/street/dog_body.glb"
-dest_files=["res://.godot/imported/dog_body.glb-05494795a3a7d153a8e685164931905f.scn"]
+source_file="res://art/models/street/dog.glb"
+dest_files=["res://.godot/imported/dog.glb-23d2cbedcf05bb7ff286b3cc8bfbcb39.scn"]
 
 [params]
 

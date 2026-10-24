@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://2ox81fybbvl3"
-path="res://.godot/imported/dog_leg.glb-36ee732c31b819e3fd3369d52b53a9e0.scn"
+uid="uid://dpbb5vxtg1mjl"
+path="res://.godot/imported/walker.glb-2f15cfe3bc2bdb7e2c3608e0d100da3b.scn"
 
 [deps]
 
-source_file="res://art/models/street/dog_leg.glb"
-dest_files=["res://.godot/imported/dog_leg.glb-36ee732c31b819e3fd3369d52b53a9e0.scn"]
+source_file="res://art/models/street/walker.glb"
+dest_files=["res://.godot/imported/walker.glb-2f15cfe3bc2bdb7e2c3608e0d100da3b.scn"]
 
 [params]
 
