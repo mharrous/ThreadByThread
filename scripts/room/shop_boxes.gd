@@ -6,20 +6,21 @@ extends Node3D
 ## falta para abrir la tienda (ShopOpening), con todo ordenado y el suelo barrido.
 ## Va en coordenadas de la sala (hijo de RoomShell); lo que guarda está en capture_state().
 
-## Dónde están: x, z, giro y, tumbada de lado, tamaño y altura (las de los rincones, una encima de otra).
+## Dónde están: x, z, giro y, tumbada de lado, tamaño, altura y cerrada (las apiladas de los rincones van
+## cerradas y precintadas: con las solapas abiertas se cruzaban con la de encima).
 ## Las cinco primeras, tiradas por el suelo; las demás, apiladas en los rincones noroeste y sureste (encima
 ## de las de arriba hay un tesoro escondido). Todas van al montón.
 const SPOTS := [
-	[-1.0, -3.0, 0.4, false, 0.78, 0.0],
-	[2.4, -3.2, -0.7, true, 0.72, 0.0],
-	[-4.6, 0.3, 1.1, false, 0.8, 0.0],
-	[2.75, -0.2, 0.25, false, 0.7, 0.0],
-	[1.2, 3.2, 2.2, true, 0.76, 0.0],
-	[-5.43, -3.28, -0.3, false, 0.8, 0.42],
-	[-5.45, -3.3, 0.12, false, 1.0, 0.0],
-	[-5.25, -2.6, 0.5, false, 0.72, 0.0],
-	[5.42, 3.87, -0.3, false, 0.8, 0.42],
-	[5.4, 3.85, 0.12, false, 1.0, 0.0],
+	[-1.0, -3.0, 0.4, false, 0.78, 0.0, false],
+	[2.4, -3.2, -0.7, true, 0.72, 0.0, false],
+	[-4.6, 0.3, 1.1, false, 0.8, 0.0, false],
+	[2.75, -0.2, 0.25, false, 0.7, 0.0, false],
+	[1.2, 3.2, 2.2, true, 0.76, 0.0, false],
+	[-5.43, -3.28, -0.3, false, 0.8, 0.42, true],
+	[-5.45, -3.3, 0.12, false, 1.0, 0.0, true],
+	[-5.25, -2.6, 0.5, false, 0.72, 0.0, false],
+	[5.42, 3.87, -0.3, false, 0.8, 0.42, true],
+	[5.4, 3.85, 0.12, false, 1.0, 0.0, true],
 ]
 ## Montón para tirar: los cartones de pie apoyados en la pared este, al sur de la puerta de la calle.
 const PILE_AT := Vector3(5.95, 0.0, 3.2)
@@ -53,6 +54,7 @@ func _ready() -> void:
 		var b := CardboardBox.new()
 		b.name = "Box%d" % i
 		b.setup(i, Vector3(s[0], s[5], s[1]), s[2], s[3], s[4])
+		b.closed = s[6]
 		b.boxes = self
 		add_child(b)
 		boxes.append(b)
@@ -127,6 +129,7 @@ func finish_instantly() -> void:
 	for b in boxes:
 		b.transform = pile_slot(b.index, b)
 	_tie(false)
+	_settle_treasures()
 	_emit_progress()
 
 
@@ -156,14 +159,36 @@ func _settle_loose() -> void:
 			o.position.y = 0.0
 
 
+## Tesoros que estaban encima de las cajas de los rincones: si la caja ya no está, quedan sobre lo que
+## haya debajo (la caja de abajo o el suelo). Para cargar partida, sin animación.
+func _settle_treasures() -> void:
+	var room := get_parent().get_parent() as RoomController
+	if room == null:
+		return
+	for t in room.hidden_treasures():
+		if not is_instance_valid(t) or t.state != PickableItem.State.LOOSE:
+			continue
+		var p := to_local(t.global_position)
+		var near := false
+		var support := 0.0
+		for b in boxes:
+			if Vector2(p.x - b.position.x, p.z - b.position.z).length() > 0.45 * b.size:
+				continue
+			near = true
+			if b.state == CardboardBox.State.LOOSE:
+				support = maxf(support, b.position.y + b._dims().y)
+		if near and p.y - t.half_height > support + 0.01:
+			t.global_position = to_global(Vector3(p.x, support + t.half_height, p.z))
+
+
 ## Objetos que se habían quedado encima de una caja: al aplanarla, caen.
 func drop_items_on(b: CardboardBox) -> void:
 	var room := get_parent().get_parent() as RoomController
 	if room == null:
 		return
 	var center := b.global_position
-	for it in room.get_items():
-		if it.state != PickableItem.State.LOOSE:
+	for it in room.get_items() + room.hidden_treasures():
+		if not is_instance_valid(it) or it.state != PickableItem.State.LOOSE:
 			continue
 		var d := it.global_position - center
 		if Vector2(d.x, d.z).length() < 0.45 * b.size + 0.1 and d.y > 0.12:
@@ -205,6 +230,7 @@ func apply_state(state: Dictionary) -> void:
 		boxes[i].flatten_instantly()
 		boxes[i].lay_flat(_inside(Vector3(float(v[1]), 0.0, float(v[2]))), float(v[3]))
 	_settle_loose()
+	_settle_treasures()
 	if is_done():
 		_tie(false)
 	_emit_progress()

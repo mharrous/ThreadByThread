@@ -8,6 +8,8 @@ extends Node3D
 enum State { LOOSE, FLAT, CARRIED, STACKED }
 
 const MODEL := "res://art/models/cardboard_box.glb"
+## Cerrada y precintada (las apiladas de los rincones).
+const MODEL_CLOSED := "res://art/models/cardboard_box_closed.glb"
 ## Medidas del modelo con tamaño 1 (ancho, alto, fondo).
 const BOX := Vector3(0.62, 0.42, 0.5)
 
@@ -16,6 +18,7 @@ var state := State.LOOSE
 var size := 1.0
 ## Tumbada de lado (la boca hacia un lado) en vez de derecha.
 var tipped := false
+var closed := false
 var boxes: ShopBoxes
 ## Mientras dura la animación de aplanarse: aún no se puede llevar.
 var busy := false
@@ -48,8 +51,9 @@ func _ready() -> void:
 	if tipped:
 		_visual.rotation.x = PI * 0.5
 	_squash.add_child(_visual)
-	if ResourceLoader.exists(MODEL):
-		var model := (load(MODEL) as PackedScene).instantiate() as Node3D
+	var path := MODEL_CLOSED if closed and ResourceLoader.exists(MODEL_CLOSED) else MODEL
+	if ResourceLoader.exists(path):
+		var model := (load(path) as PackedScene).instantiate() as Node3D
 		model.scale = Vector3.ONE * size
 		model.position = Vector3(0.0, -BOX.y * size * 0.5, 0.0)
 		MaterialLibrary.apply(model, MaterialLibrary.get_material(&"cardboard"))

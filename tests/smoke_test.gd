@@ -255,6 +255,35 @@ func _test_treasures(room: RoomController) -> void:
 		var q := PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -0.4, 0), 1 | 16)
 		var hit := space.intersect_ray(q)
 		_check(not hit.is_empty() and from.y - hit["position"].y < t.half_height + 0.1 + 0.03, "'%s' reposa sobre un apoyo (a %.3f m)" % [t.data.id, (from.y - hit["position"].y) if not hit.is_empty() else -1.0])
+	# Un tesoro encima de la pila de cajas del rincón: si se quita la caja de arriba, cae a la de abajo
+	# (no se queda flotando). Luego todo vuelve a su sitio para el resto de la prueba.
+	var boxes := room.shell.get_node_or_null("ShopBoxes") as ShopBoxes
+	if boxes != null:
+		var top: CardboardBox = boxes.boxes[5]
+		var on_top: PickableItem = null
+		for t: PickableItem in spots:
+			var d := t.global_position - top.global_position
+			if Vector2(d.x, d.z).length() < 0.3 and d.y > 0.2:
+				on_top = t
+		_check(on_top != null, "hay un tesoro encima de la pila de cajas del rincón")
+		if on_top != null:
+			var was := on_top.global_transform
+			var landed_before := _landed
+			var bounces_before := _bounces
+			top._set_solid(false)
+			top.visible = false
+			boxes.drop_items_on(top)
+			await _wait_until(func(): return on_top.state == PickableItem.State.LOOSE and on_top.freeze, 4.0)
+			var below := boxes.boxes[6]
+			var rest := on_top.global_position.y - on_top.half_height - room.global_position.y
+			_check(on_top.state == PickableItem.State.LOOSE and absf(rest - (below.position.y + below._dims().y)) < 0.04,
+					"al quitar la caja de arriba el tesoro cae sobre la de abajo (apoyado a %.2f m)" % rest)
+			top._set_solid(true)
+			top.visible = true
+			on_top.freeze = true
+			on_top.global_transform = was
+			_landed = landed_before
+			_bounces = bounces_before
 	var total_before := room.total_items
 	var seen: Array = []
 	var handler := func(item): seen.append(item)
@@ -674,6 +703,9 @@ func _test_heavy_drop(room: RoomController, items: Array) -> void:
 		return
 	var base := room.to_global(Vector3(0.4, 0.0, 1.0))
 	var starts: Array[Vector3] = []
+	var homes: Array[Transform3D] = []
+	for it in heavy:
+		homes.append(it.global_transform)
 	for i in heavy.size():
 		var it := heavy[i]
 		# Dos juntas en el suelo y las demás caen encima, empujadas de lado.
@@ -695,6 +727,10 @@ func _test_heavy_drop(room: RoomController, items: Array) -> void:
 	_check(heavy.all(func(it: PickableItem): return it.state == PickableItem.State.LOOSE), "se quedan quietas (%.1f s)" % waited)
 	_check(max_travel < 0.7, "no salen despedidas: recorren como mucho %.2f m" % max_travel)
 	_check(max_rise < 0.06, "no saltan hacia arriba al chocar (suben %.3f m)" % max_rise)
+	# Vuelven adonde estaban: amontonadas en medio estorbarían al resto de la prueba (el gato, los lanzamientos).
+	for i in heavy.size():
+		heavy[i].freeze = true
+		heavy[i].global_transform = homes[i]
 
 
 ## Lo que hay en las bandejas toca el fondo: no flota (ni el centro ni la malla quedan por encima).
@@ -862,6 +898,8 @@ func _test_cat(room: RoomController) -> void:
 		saw_walk = saw_walk or cat.current_pose() == &"walk"
 		await get_tree().process_frame
 		t += get_process_delta_time()
+	if cat.position.distance_to(start) <= 1.0:
+		print("    (diagnóstico) gato de %s a %s: ruta %s" % [start, to, cat._route(start, to)])
 	_check(cat.position.distance_to(start) > 1.0, "anda por la sala (%.2f m)" % cat.position.distance_to(start))
 	_check(saw_walk, "con la animación de andar")
 	_check(on_furniture == 0, "sin pisar muebles (%d fotogramas)" % on_furniture)

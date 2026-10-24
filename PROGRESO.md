@@ -104,6 +104,14 @@
 - La correa une la mano y el collar en cada fotograma.
 - Los ciclistas y los de la moto siguen con el modelo antiguo.
 
+### Arreglos tras probarlo (mismo día)
+
+- **Recogedor y escoba sobre la alfombra:** la alfombra tiene grosor y tapaba el fondo del recogedor. Ahora la escoba y el recogedor se apoyan a la altura de la alfombra (`Sweeper._pose`).
+- **Cajas apiladas de los rincones, cerradas y precintadas:** usan el modelo nuevo `cardboard_box_closed.glb` (`make_cardboard(closed=True)`). Con las solapas abiertas, las de la caja de abajo se cruzaban con la de encima.
+- **Tesoros encima de las cajas:** al aplanar la caja, ahora también caen (`RoomController.hidden_treasures()` entra en `drop_items_on`). Al cargar partida, o con el atajo, un tesoro cuya caja ya no está queda sobre la de abajo o en el suelo (`_settle_treasures`). La prueba de humo lo comprueba.
+- **Prueba de cajas pesadas:** ahora devuelve las cajas a su sitio. Si no, se quedaban amontonadas en medio y estorbaban al gato y a los lanzamientos del resto de la prueba.
+- **Estado de las pruebas:** de las últimas 5 pasadas de la prueba de humo, 4 pasan y 1 tuvo un fallo que no quedó registrado. La de guardado y la de pantalla final pasan.
+
 ### Cómo se ha hecho
 
 - La escoba, los carteles y los peatones los han hecho tres agentes en paralelo, cada uno en su rama. Se han integrado sin conflictos.

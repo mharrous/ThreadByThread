@@ -162,10 +162,16 @@ func _pose(delta: float, dumping: bool) -> void:
 		# De delante hacia el recogedor (rápido) y vuelta (lento).
 		push = sin(PI * clampf(_stroke / STROKE_HIT, 0.0, 1.0) * 0.5) if _stroke < STROKE_HIT else 1.0 - smoothstep(STROKE_HIT, 1.0, _stroke)
 	var foot := _target + _fwd * lerpf(0.22, -0.12, push)
+	var pan_at := _target - _fwd * PAN_BACK
+	# Encima de la alfombra el suelo está algo más alto: ni la escoba ni el recogedor se meten en ella.
+	var shell := sweep.get_parent() as RoomShell
+	if shell != null:
+		foot.y = shell.floor_height(foot)
+		pan_at.y = shell.floor_height(pan_at)
 	var up := (hand - foot).normalized()
 	var face := (-_fwd - up * up.dot(-_fwd)).normalized()
 	var broom_xf := Transform3D(Basis(up.cross(face), up, face).orthonormalized(), foot)
-	var pan_xf := Transform3D(Basis(Vector3.UP, atan2(_fwd.x, _fwd.z)), _target - _fwd * PAN_BACK)
+	var pan_xf := Transform3D(Basis(Vector3.UP, atan2(_fwd.x, _fwd.z)), pan_at)
 	if _take_t < 1.0:
 		_take_t = minf(_take_t + delta / TAKE_TIME, 1.0)
 		var e := _take_t * _take_t * (3.0 - 2.0 * _take_t)

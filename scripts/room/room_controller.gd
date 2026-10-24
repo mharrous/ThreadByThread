@@ -80,6 +80,11 @@ func get_items() -> Array[PickableItem]:
 	return _items
 
 
+## Tesoros aún escondidos (sin encontrar).
+func hidden_treasures() -> Array[PickableItem]:
+	return _treasures
+
+
 func get_units() -> Array[StorageUnit]:
 	return _units
 

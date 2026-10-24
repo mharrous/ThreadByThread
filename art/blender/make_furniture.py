@@ -236,9 +236,9 @@ def make_crate():
 # ------------------------------------------------------------------------
 # Caja de cartón abierta con solapas: 0.62 x 0.42 x 0.50
 # ------------------------------------------------------------------------
-def make_cardboard():
+def make_cardboard(closed=False):
     reset_scene()
-    m = Model("cardboard_box", seed=9)
+    m = Model("cardboard_box_closed" if closed else "cardboard_box", seed=9)
     m.add_material("cardboard", (0.79, 0.64, 0.42), 0.95)
     X, Y, Z, T = 0.62, 0.42, 0.50, 0.012
     m.box((0, T / 2, 0), (X, T, Z), grain="x", bevel=0.002, segments=1)
@@ -246,10 +246,18 @@ def make_cardboard():
         m.box((0, Y / 2, sz * (Z / 2 - T / 2)), (X, Y, T), grain="x", bevel=0.002, segments=1)
     for sx in (-1, 1):
         m.box((sx * (X / 2 - T / 2), Y / 2, 0), (T, Y, Z - 2 * T), grain="z", bevel=0.002, segments=1)
-    # Solapas abiertas hacia fuera
-    for sz, ang in ((1, 118), (-1, -118)):
-        m.box((0, Y + 0.004, sz * (Z / 2 + 0.12)), (X - 0.01, 0.008, 0.24), grain="x", bevel=0.001, segments=1,
-              rotate=("X", -ang * sz, (0, Y, sz * Z / 2)))
+    if closed:
+        # Solapas cerradas que se juntan en medio y una tira de cinta que baja por los costados.
+        for sz in (-1, 1):
+            m.box((0, Y - 0.004, sz * Z / 4), (X - 0.004, 0.008, Z / 2 - 0.004), grain="x", bevel=0.001, segments=1)
+        m.box((0, Y + 0.0012, 0), (0.07, 0.0024, Z + 0.004), grain="z", bevel=0.0, segments=1)
+        for sz in (-1, 1):
+            m.box((0, Y - 0.05, sz * (Z / 2 + 0.0012)), (0.07, 0.1, 0.0024), grain="y", bevel=0.0, segments=1)
+    else:
+        # Solapas abiertas hacia fuera
+        for sz, ang in ((1, 118), (-1, -118)):
+            m.box((0, Y + 0.004, sz * (Z / 2 + 0.12)), (X - 0.01, 0.008, 0.24), grain="x", bevel=0.001, segments=1,
+                  rotate=("X", -ang * sz, (0, Y, sz * Z / 2)))
     m.export()
 
 
@@ -340,3 +348,4 @@ if __name__ == "__main__":
     make_shelf(0.40, 1.45)
     for fn in (make_table, make_crate, make_cardboard, make_plant, make_tray):
         fn()
+    make_cardboard(closed=True)
